@@ -380,7 +380,7 @@ function loadChatList(){
     });
     if(host&&ADMIN&&!host.children.length)host.textContent="Aucune discussion à superviser.";
     if(livehost&&!livehost.children.length)livehost.textContent="Aucune discussion en direct pour le moment.";
-    loadSpittaItems();
+    loadSpittaItems();if(ADMIN)loadAdminChats();
     if(userhost&&!userhost.children.length)userhost.textContent="Aucune discussion de lanceur en cours.";
     if(spittahost&&!spittahost.children.length)spittahost.textContent="Aucune demande reçue en tant que spitta.";
     
