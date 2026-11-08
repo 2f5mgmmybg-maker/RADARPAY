@@ -274,8 +274,6 @@ def handle(msg):
 
     if cmd in ("start", "menu", "radar"):
         send_menu(chat, private)
-        if cmd == "start" and is_owner and private:
-            say(chat, AIDE)
         return
 
     if not (is_owner and private):
