@@ -347,7 +347,7 @@ function call(path,body){
       var data;
       try{data=JSON.parse(raw)}catch(e){throw new Error("Réponse API invalide (JSON).")}
       if(!data || typeof data!=="object") throw new Error("Réponse API invalide.");
-      if(!r.ok) throw new Error(data.error||("Erreur HTTP "+r.status));
+      if(!r.ok){var message=data.error||("Erreur HTTP "+r.status);if(r.status===401&&message.indexOf("Ouvre l'app depuis Telegram")!==-1)message="Session Telegram expirée. Ferme puis rouvre RADAR PAYMENT depuis Telegram.";throw new Error(message);}
       return data;
     });
   }).catch(function(e){
