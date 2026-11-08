@@ -22,6 +22,15 @@ RATE_LOCK = threading.Lock()
 RATE_LIMITS = {}
 RATE_WINDOW = 60
 RATE_MAX = 60
+# Seuls les liens définis dans le catalogue de la mini-app peuvent être enregistrés.
+CATALOG_SITES = {
+    "Cartes cadeaux ON": "https://www.on.com/en-es/products/digital-gift-card-907644gc",
+    "Prada": "https://www.prada.com",
+    "Farfetch": "https://www.farfetch.com",
+    "Zeitauktion": "https://www.zeitauktion.com/fr",
+    "Watchdeluxe.it": "https://www.watchdeluxe.it",
+    "Paysafe Card": "https://www.paysafecard.com",
+}
 
 
 API = f"https://api.telegram.org/bot{TOKEN}"
@@ -556,8 +565,8 @@ def api(path, b):
             return {"error": "Réservé aux comptes Lanceur."}
         site = str(b.get("site", "")).strip()[:100]
         url = str(b.get("url", "")).strip()[:500]
-        if not site or not url.startswith(("https://", "http://")):
-            return {"error": "Site invalide."}
+        if not site or CATALOG_SITES.get(site) != url:
+            return {"error": "Site invalide ou absent du catalogue autorisé."}
         now = int(time.time())
         with LOCK:
             pdata = private_load()
@@ -873,7 +882,9 @@ class Ping(BaseHTTPRequestHandler):
         self._s({"ok": True})
 
     def do_OPTIONS(self):
-        self._s({})
+        # Les navigateurs envoient une prérequête CORS avant les POST JSON.
+        # Elle doit réussir sans authentification pour laisser passer le POST réel.
+        self._s({"ok": True})
 
     def do_POST(self):
         try:
