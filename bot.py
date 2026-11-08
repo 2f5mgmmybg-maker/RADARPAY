@@ -305,7 +305,8 @@ def handle_cb(cb):
     tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
        reply_markup={"inline_keyboard": [[{"text": "💬 Parler au client", "url": p["url"]}]]})
     if kind == "y":
-        say(p["client"], "✅ Le spitta a confirmé. Il s'est engagé à prendre cette commande. Vous pouvez échanger dans la discussion.")
+        chat_update(rid, status="vendor_confirmed")
+        say(p["client"], "✅ Le spitta a confirmé la disponibilité. Ouvre la discussion RADAR PAYMENT et appuie sur « Accepter la vente » pour lancer le délai de 2 minutes demandé au spitta.")
     else:
         say(p["client"], "❌ Le spitta indique que ce produit n'est plus disponible.")
 
@@ -354,7 +355,7 @@ def api(path, b):
         threading.Timer(50, expire, [rid]).start()
         return {"ok": True, "chat": rid, "notification": True}
     r = role(user, b.get("code"))
-    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send"):
+    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/accept", "/api/chat/proof"):
         return {"role": None, "error": "Code incorrect ou accès bloqué 10 minutes."}
     if path == "/api/chat/list":
         chats_data, _ = chats_load()
@@ -372,8 +373,51 @@ def api(path, b):
         c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
         if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
             return {"error": "Discussion introuvable ou accès refusé."}
+        if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
+            c["status"] = "proof_expired"
+            c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
         return {"ok": True, "chat": {k: c.get(k) for k in
-                ("id", "client", "vendor", "price", "client_name", "status", "messages")}}
+                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "messages")}}
+    if path == "/api/chat/accept":
+        rid = str(b.get("id", ""))
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid != c.get("client"):
+                return {"error": "Seul le lanceur peut accepter cette vente."}
+            if c.get("status") != "vendor_confirmed":
+                return {"error": "Cette vente n'attend pas ton acceptation."}
+            c["status"] = "proof_pending"
+            c["proof_deadline"] = int(time.time()) + 120
+            chats_save(chats_data, None)
+        try:
+            say(c["vendor"], "⏱️ Le lanceur a accepté la vente. Tu as 2 minutes pour envoyer la capture d’écran dans la discussion RADAR PAYMENT.")
+        except Exception as e:
+            print("notification délai preuve impossible:", repr(e))
+        return {"ok": True}
+    if path == "/api/chat/proof":
+        rid, image = str(b.get("id", "")), str(b.get("image", ""))
+        if not image.startswith("data:image/") or len(image) > 4_200_000:
+            return {"error": "Capture invalide ou trop lourde. Réessaie avec une image plus légère."}
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid != c.get("vendor"):
+                return {"error": "Seul le spitta peut envoyer la capture."}
+            if c.get("status") != "proof_pending" or time.time() > c.get("proof_deadline", 0):
+                if c.get("status") == "proof_pending":
+                    c["status"] = "proof_expired"
+                chats_save(chats_data, None)
+                return {"error": "Le délai de 2 minutes est terminé. La vente est bloquée."}
+            c["status"] = "proof_received"
+            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
+                "text": "📸 Capture d’écran envoyée — preuve reçue.", "image": image, "time": int(time.time())})
+            chats_save(chats_data, None)
+        try:
+            say(c["client"], "📸 Le spitta a envoyé sa capture. La discussion est maintenant ouverte.")
+        except Exception as e:
+            print("notification capture impossible:", repr(e))
+        return {"ok": True}
     if path == "/api/chat/send":
         rid, msg = str(b.get("id", "")), str(b.get("text", "")).strip()[:1500]
         if not msg:
@@ -383,6 +427,8 @@ def api(path, b):
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid not in (c.get("client"), c.get("vendor")):
                 return {"error": "Discussion introuvable ou accès refusé."}
+            if c.get("status") != "proof_received":
+                return {"error": "La discussion est verrouillée jusqu’à la réception de la capture du spitta."}
             c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
                                                   "text": msg, "time": int(time.time())})
             chats_save(chats_data, sha_ch)
