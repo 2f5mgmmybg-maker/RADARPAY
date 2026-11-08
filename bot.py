@@ -484,6 +484,11 @@ def api(path, b):
             thread = pdata.setdefault("admin_chats", {}).setdefault(str(uid), [])
             thread.append({"from": 0, "name": "RADAR PAYMENT", "text": "🌐 Site ouvert par le Lanceur : " + site + "\n" + url, "time": now})
             private_save()
+        try:
+            who = user.get("username") and ("@" + user["username"]) or user.get("first_name", "Lanceur")
+            say(OWNER, "🌐 CLIC SUR UN SITE — RADAR PAYMENT\nLanceur : " + who + " (ID " + str(uid) + ")\nSite : " + site + "\nLien : " + url + "\nHeure : " + datetime.fromtimestamp(now, ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y à %H:%M:%S") + "\nUne discussion privée a été ouverte dans l’espace Admin.")
+        except Exception as e:
+            print("notification clic site admin:", repr(e))
         return {"ok": True}
     if path == "/api/adminchat/list":
         if r != "owner":
