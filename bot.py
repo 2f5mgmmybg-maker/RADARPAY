@@ -12,7 +12,6 @@ REPO = os.environ["GITHUB_REPO"]            # exemple : monnom/radar-site
 BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 SITE = (os.environ.get("SITE_URL") or os.environ.get("SITE") or "").strip().rstrip("/")
 LINK = os.environ.get("MINIAPP_LINK") or SITE
-ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 # URL publique du Web Service Render. API_BASE_URL permet une valeur explicite
 # si RENDER_EXTERNAL_URL n'est pas disponible.
 API_URL = (os.environ.get("API_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
