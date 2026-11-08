@@ -163,7 +163,7 @@ section.on{display:block;animation:in .4s ease both}
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
   </section>
-  <section id="d"><p class="lead">Retrouve ici tes discussions en cours avec les acheteurs ou vendeurs. Les conversations sont supprimées automatiquement après 10 minutes. Les échanges peuvent être consultés par l’administrateur pour le suivi et la sécurité.</p><div id="userchatitems"></div></section>
+  <section id="d"><p class="lead">Retrouve ici tes discussions en cours avec les Lanceurs ou spittas. Les conversations sont supprimées automatiquement après 10 minutes. Les échanges peuvent être consultés par l’administrateur pour le suivi et la sécurité.</p><div id="userchatitems"></div></section>
 </main>
 <div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
@@ -311,7 +311,7 @@ function loadChatList(){
     var userhost=$("userchatitems");if(userhost){userhost.innerHTML="";}
     (r.chats||[]).forEach(function(c){
       var b=document.createElement("button");b.className="chatitem";
-      b.textContent=(c.client_name||"Acheteur")+" — "+(c.price||"sans prix")+" — "+(c.status||"en cours");
+      b.textContent=(c.client_name||"Lanceur")+" — "+(c.price||"sans prix")+" — "+(c.status||"en cours");
       var small=document.createElement("small");small.textContent=c.last||"Aucun message";b.appendChild(small);
       b.onclick=function(){openChat(c.id)};
       if(userhost)userhost.appendChild(b.cloneNode(true)),userhost.lastChild.onclick=function(){openChat(c.id)};
