@@ -12,7 +12,9 @@ on:
   pull_request:
     paths:
       - "bot.py"
+      - "index.html"
       - "requirements.txt"
+      - "tests/**"
       - ".github/workflows/backend-check.yml"
 
 permissions:
