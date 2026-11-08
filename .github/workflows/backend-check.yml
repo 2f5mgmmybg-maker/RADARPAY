@@ -6,6 +6,7 @@ on:
     paths:
       - "bot.py"
       - "requirements.txt"
+      - "tests/**"
       - ".github/workflows/backend-check.yml"
   pull_request:
     paths:
