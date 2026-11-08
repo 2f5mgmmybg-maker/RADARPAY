@@ -1,4 +1,5 @@
 import os, time, json, base64, hashlib, hmac, threading, requests
+from cryptography.fernet import Fernet
 from urllib.parse import parse_qsl
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -20,6 +21,8 @@ FAILS = {}
 WANTED = {}
 
 API = f"https://api.telegram.org/bot{TOKEN}"
+FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256((TOKEN + "|RADARPAY_PRIVATE_V1").encode()).digest()))
+PROOF_CACHE = {}
 GH = f"https://api.github.com/repos/{REPO}/contents"
 H = {"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"}
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
@@ -91,14 +94,51 @@ def save(data, sha):
 
 
 CHAT_TTL = 600
-CHAT_DATA = {"chats": []}
+PRIVATE_CACHE = None
+
+
+def private_load():
+    global PRIVATE_CACHE
+    if PRIVATE_CACHE is not None:
+        return PRIVATE_CACHE
+    try:
+        f = gh_get("radar_private.enc")
+        PRIVATE_CACHE = json.loads(FERNET.decrypt(base64.b64decode(f.get("content", ""))).decode())
+    except Exception:
+        PRIVATE_CACHE = {"roles": {}, "chats": []}
+        try:
+            old = gh_get("user_roles.json")
+            PRIVATE_CACHE["roles"] = json.loads(base64.b64decode(old.get("content", "")).decode() or "{}")
+        except Exception:
+            pass
+        try:
+            private_save()
+            gh_del("user_roles.json", "Migration vers les données privées chiffrées")
+        except Exception as e:
+            print("migration données privées:", repr(e))
+    PRIVATE_CACHE.setdefault("roles", {})
+    PRIVATE_CACHE.setdefault("chats", [])
+    return PRIVATE_CACHE
+
+
+def private_save():
+    encrypted = FERNET.encrypt(json.dumps(private_load(), ensure_ascii=False, separators=(",", ":")).encode())
+    try:
+        sha = gh_get("radar_private.enc").get("sha")
+    except Exception:
+        sha = None
+    gh_put("radar_private.enc", encrypted, "Sauvegarde chiffrée RADAR PAYMENT", sha)
 
 
 def chats_load():
+    data = private_load()
     now = int(time.time())
-    CHAT_DATA["chats"] = [c for c in CHAT_DATA.get("chats", [])
-                          if now - int(c.get("created", now)) < CHAT_TTL]
-    return CHAT_DATA, None
+    before = len(data.get("chats", []))
+    data["chats"] = [c for c in data.get("chats", [])
+                     if now - int(c.get("created", now)) < CHAT_TTL]
+    if len(data["chats"]) != before:
+        private_save()
+    return data, None
 
 
 def cleanup_chats():
@@ -112,7 +152,8 @@ def cleanup_chats():
 
 
 def chats_save(data, sha=None):
-    CHAT_DATA["chats"] = data.get("chats", [])
+    private_load()["chats"] = data.get("chats", [])
+    private_save()
 
 
 def chat_update(rid, **changes):
@@ -252,28 +293,12 @@ def dec(tok, pid):
     return int.from_bytes(base64.urlsafe_b64decode(tok), "big") ^ _ks(pid)
 
 
-USER_ROLES = None
-
 def load_roles():
-    global USER_ROLES
-    if USER_ROLES is not None:
-        return USER_ROLES
-    try:
-        f = gh_get("user_roles.json")
-        USER_ROLES = json.loads(base64.b64decode(f.get("content", "")).decode() or "{}")
-    except Exception:
-        USER_ROLES = {}
-    return USER_ROLES
+    return private_load()["roles"]
+
 
 def save_roles():
-    roles = load_roles()
-    try:
-        f = gh_get("user_roles.json")
-        sha = f.get("sha")
-    except Exception:
-        sha = None
-    gh_put("user_roles.json", json.dumps(roles, ensure_ascii=False, indent=2).encode(),
-           "Enregistrement des rôles RADAR PAYMENT", sha)
+    private_save()
 
 def role(user, code=None):
     if user["id"] == OWNER:
@@ -288,43 +313,72 @@ def owner_of(p):
         return OWNER
 
 
-PENDING = {}
-
-
-def remind(rid, prix):
-    p = PENDING.get(rid)
-    if p and not p["done"]:
-        say(p["vendor"], f"⏱️ Plus que 20 secondes pour ton produit ({prix}) !")
-
-
-def expire(rid):
-    p = PENDING.pop(rid, None)
-    if p and not p["done"]:
-        chat_update(rid, status="expired")
-        say(p["client"], "⏱️ Le spitta n'a pas encore répondu. Tu peux continuer à lui écrire dans la discussion.")
-        say(p["vendor"], "⌛ L'offre a expiré.")
+def process_pending_requests():
+    actions = []
+    with LOCK:
+        data, _ = chats_load()
+        changed = False
+        now = int(time.time())
+        for c in data.get("chats", []):
+            if c.get("status") != "pending" or not c.get("request_deadline"):
+                continue
+            if now >= int(c["request_deadline"]):
+                c["status"] = "expired"
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⏱️ Délai de réponse de 50 secondes dépassé. La discussion reste ouverte.", "time": now})
+                actions.append(("expired", c.get("client"), c.get("vendor"), c.get("price")))
+                changed = True
+            elif now >= int(c.get("remind_at", 0)) and not c.get("reminded"):
+                c["reminded"] = True
+                actions.append(("remind", c.get("vendor"), None, c.get("price")))
+                changed = True
+        if changed:
+            chats_save(data, None)
+    for kind, first, second, price in actions:
+        try:
+            if kind == "remind":
+                say(first, f"⏱️ Plus que 20 secondes pour répondre à la demande ({price or 'sans prix'}) !")
+            else:
+                say(first, "⏱️ Le délai de 50 secondes est dépassé. Tu peux poursuivre la discussion dans RADAR PAYMENT.")
+                say(second, "⌛ La demande a expiré. Le Lanceur peut encore t'écrire dans la discussion.")
+        except Exception as e:
+            print("notification délai:", repr(e))
 
 
 def handle_cb(cb):
     kind, _, rid = (cb.get("data") or "").partition(":")
-    p = PENDING.get(rid)
-    if not p or p["done"] or cb["from"]["id"] != p["vendor"]:
-        tg("answerCallbackQuery", callback_query_id=cb["id"], text="Trop tard ou déjà traité.")
-        return
-    if kind not in ("y", "n"):
-        tg("answerCallbackQuery", callback_query_id=cb["id"], text="Action inconnue.")
-        return
-    p["done"] = True
-    chat_update(rid, status=("accepted" if kind == "y" else "declined"))
-    tg("answerCallbackQuery", callback_query_id=cb["id"], text=("Commande confirmée : engagement enregistré." if kind == "y" else "Indisponibilité envoyée."))
+    with LOCK:
+        data, _ = chats_load()
+        c = next((x for x in data.get("chats", []) if x.get("id") == rid), None)
+        if (not c or c.get("status") != "pending" or
+                cb.get("from", {}).get("id") != c.get("vendor") or
+                time.time() > int(c.get("request_deadline", 0))):
+            if c and c.get("status") == "pending" and time.time() > int(c.get("request_deadline", 0)):
+                c["status"] = "expired"
+                chats_save(data, None)
+            tg("answerCallbackQuery", callback_query_id=cb["id"], text="Délai dépassé ou demande déjà traitée.")
+            return
+        if kind not in ("y", "n"):
+            tg("answerCallbackQuery", callback_query_id=cb["id"], text="Action inconnue.")
+            return
+        c["status"] = "vendor_confirmed" if kind == "y" else "declined"
+        c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+            "text": "✅ Le Spitta confirme la disponibilité." if kind == "y" else "❌ Le Spitta indique que le produit n'est plus disponible.",
+            "time": int(time.time())})
+        chats_save(data, None)
+    tg("answerCallbackQuery", callback_query_id=cb["id"],
+       text="Disponibilité confirmée." if kind == "y" else "Indisponibilité envoyée.")
     m = cb.get("message") or {}
-    tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
-       reply_markup={"inline_keyboard": [[{"text": "💬 Parler au client", "url": p["url"]}]]})
-    if kind == "y":
-        chat_update(rid, status="vendor_confirmed")
-        say(p["client"], "✅ Le spitta a confirmé la disponibilité. Ouvre la discussion RADAR PAYMENT et appuie sur « Accepter la vente » pour lancer le délai de 2 minutes demandé au spitta.")
+    if kind == "y" and SITE:
+        target = {"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}
+        tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
+           reply_markup={"inline_keyboard": [[target]]})
+        say(c["client"], "✅ Le Spitta a confirmé la disponibilité. Ouvre RADAR PAYMENT et appuie sur « Accepter la vente » pour lancer les 2 minutes.")
     else:
-        say(p["client"], "❌ Le spitta indique que ce produit n'est plus disponible.")
+        tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
+           reply_markup={"inline_keyboard": []})
+        if kind == "n":
+            say(c["client"], "❌ Le Spitta indique que ce produit n'est plus disponible. Tu peux refaire une demande si tu le souhaites.")
 
 
 def api(path, b):
@@ -339,18 +393,19 @@ def api(path, b):
         if chosen not in ("lanceur", "spitta"):
             return {"error": "Choisis Lanceur ou Spitta."}
         with LOCK:
-            load_roles()[str(uid)] = chosen
+            roles = load_roles()
+            existing = roles.get(str(uid))
+            if existing and existing != chosen:
+                return {"error": "Ton profil est déjà fixé. Contacte l’administrateur pour le modifier."}
+            roles[str(uid)] = chosen
             save_roles()
         return {"ok": True, "role": chosen}
     if path == "/api/want":
         if role(user) != "lanceur":
             return {"error": "Seuls les comptes Lanceur peuvent contacter un spitta. Choisis le rôle Lanceur."}
-        k = (uid, b.get("id"))
-        previous = WANTED.get(k)
-        if previous and time.time() - previous[0] < 300:
-            return {"ok": True, "chat": previous[1], "notification": True}
+        product_id = str(b.get("id", ""))
         data, _ = load()
-        p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
+        p = next((x for x in data["photos"] if x.get("id") == product_id), None)
         if not p:
             return {"error": "Produit introuvable."}
         vendor = owner_of(p)
@@ -359,28 +414,40 @@ def api(path, b):
             who, url = "@" + user["username"], "https://t.me/" + user["username"]
         else:
             who, url = user.get("first_name", "Un client"), f"tg://user?id={uid}"
-        rid = f"{uid}-{int(time.time() * 1000)}"
-        WANTED[k] = (time.time(), rid)
-        chat = {"id": rid, "client": uid, "vendor": vendor, "product": p.get("id"),
-                "price": prix, "client_name": who, "created": int(time.time()),
-                "status": "pending", "messages": []}
+        now = int(time.time())
         with LOCK:
-            data_ch, sha_ch = chats_load()
-            data_ch.setdefault("chats", []).append(chat)
-            chats_save(data_ch, sha_ch)
-        PENDING[rid] = {"client": uid, "vendor": vendor, "url": url, "done": False}
+            data_ch, _ = chats_load()
+            previous = next((c for c in reversed(data_ch.get("chats", []))
+                if c.get("client") == uid and c.get("product") == product_id and
+                c.get("status") in ("pending", "vendor_confirmed", "proof_pending", "proof_received") and
+                now - int(c.get("created", now)) < CHAT_TTL), None)
+            if previous and previous.get("status") != "notification_failed":
+                return {"ok": True, "chat": previous["id"], "notification": True, "existing": True}
+            if previous:
+                chat = previous
+                rid = chat["id"]
+                chat.update({"status": "pending", "request_deadline": now + 50,
+                             "remind_at": now + 30, "reminded": False})
+            else:
+                rid = f"{uid}-{int(time.time() * 1000)}"
+                chat = {"id": rid, "client": uid, "vendor": vendor, "product": product_id,
+                        "price": prix, "client_name": who, "client_url": url, "created": now,
+                        "status": "pending", "request_deadline": now + 50, "remind_at": now + 30,
+                        "reminded": False, "messages": []}
+                data_ch.setdefault("chats", []).append(chat)
+            chats_save(data_ch, None)
         try:
+            markup = {"inline_keyboard": [
+                [{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
+                [{"text": "✅ Je confirme", "callback_data": "y:" + rid},
+                 {"text": "❌ Pas disponible", "callback_data": "n:" + rid}]]}
             say(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\n"
-                        f"Réponse attendue sous 50 secondes.\nClient : {who}",
-                reply_markup={"inline_keyboard": [[{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
-                                               [{"text": "✅ Je confirme", "callback_data": "y:" + rid},
-                                                {"text": "❌ Pas disponible", "callback_data": "n:" + rid}]]})
+                        f"Réponse attendue sous 50 secondes.\nClient : {who}", reply_markup=markup)
         except Exception as e:
             print("notification spitta impossible:", repr(e))
+            chat_update(rid, status="notification_failed")
             return {"ok": True, "chat": rid, "notification": False,
-                    "error": "Discussion créée, mais Telegram n'a pas pu prévenir le spitta. Il doit ouvrir le bot et envoyer /start."}
-        threading.Timer(30, remind, [rid, prix]).start()
-        threading.Timer(50, expire, [rid]).start()
+                    "error": "Demande enregistrée, mais Telegram n'a pas prévenu le Spitta. Demande réessayable."}
         return {"ok": True, "chat": rid, "notification": True}
     r = role(user)
     if path == "/api/me":
@@ -409,8 +476,20 @@ def api(path, b):
         if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
             c["status"] = "proof_expired"
             c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
-        return {"ok": True, "chat": {k: c.get(k) for k in
-                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "messages")}}
+            chats_save(chats_data, None)
+        public_chat = {k: c.get(k) for k in
+                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "messages")}
+        for msg in public_chat.get("messages") or []:
+            proof_file = msg.get("proof_file")
+            if proof_file:
+                try:
+                    if proof_file not in PROOF_CACHE:
+                        encrypted = base64.b64decode(gh_get(proof_file).get("content", ""))
+                        PROOF_CACHE[proof_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+                    msg["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
+                except Exception as e:
+                    print("lecture capture chiffrée:", repr(e))
+        return {"ok": True, "chat": public_chat}
     if path == "/api/chat/accept":
         rid = str(b.get("id", ""))
         with LOCK:
@@ -442,9 +521,19 @@ def api(path, b):
                     c["status"] = "proof_expired"
                 chats_save(chats_data, None)
                 return {"error": "Le délai de 2 minutes est terminé. La vente est bloquée."}
+            try:
+                raw_image = base64.b64decode(image.split(",", 1)[1])
+                if len(raw_image) > 650_000:
+                    return {"error": "Capture trop lourde après compression. Réessaie avec une image plus légère."}
+                proof_file = "private_proofs/" + rid + ".enc"
+                gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une capture")
+                PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
+            except Exception as e:
+                print("sauvegarde capture chiffrée:", repr(e))
+                return {"error": "Impossible de sauvegarder la capture. Réessaie."}
             c["status"] = "proof_received"
             c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
-                "text": "📸 Capture d’écran envoyée — preuve reçue.", "image": image, "time": int(time.time())})
+                "text": "📸 Capture d’écran envoyée — preuve reçue.", "proof_file": proof_file, "time": int(time.time())})
             chats_save(chats_data, None)
         try:
             say(c["client"], "📸 Le spitta a envoyé sa capture. La discussion est maintenant ouverte.")
@@ -460,8 +549,8 @@ def api(path, b):
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid not in (c.get("client"), c.get("vendor")):
                 return {"error": "Discussion introuvable ou accès refusé."}
-            if c.get("status") != "proof_received":
-                return {"error": "La discussion est verrouillée jusqu’à la réception de la capture du spitta."}
+            if c.get("status") not in ("proof_received", "expired"):
+                return {"error": "La discussion est verrouillée jusqu’à la capture du spitta ou à l’expiration du délai de réponse."}
             c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
                                                   "text": msg, "time": int(time.time())})
             chats_save(chats_data, sha_ch)
@@ -568,6 +657,14 @@ def startup():
 if __name__ == "__main__":
     threading.Thread(target=serve, daemon=True).start()
     threading.Thread(target=cleanup_chats, daemon=True).start()
+    def request_scheduler():
+        while True:
+            try:
+                process_pending_requests()
+            except Exception as e:
+                print("scheduler demandes:", repr(e))
+            time.sleep(2)
+    threading.Thread(target=request_scheduler, daemon=True).start()
     startup()
     offset = 0
     while True:
