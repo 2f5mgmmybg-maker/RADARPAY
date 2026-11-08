@@ -6,17 +6,27 @@
 <title>RADAR PAYMENT</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{color-scheme:dark;--bg:#000000;--bg2:#090909;--line:#33230f;--ink:#f5f5f5;--mute:#b8aa98;--sweep:#ff9500;--blip:#ff9500;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *,*::before,*::after{box-sizing:inherit;-webkit-tap-highlight-color:transparent}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;min-height:100vh;background:#000;color:var(--ink);font-family:Sora,system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
+body{margin:0;min-height:100vh;background:#000;color:var(--ink);font-family:Kalam,system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
 .rings{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.3;background:repeating-radial-gradient(circle at 50% 18%,transparent 0 46px,rgba(255,149,0,.13) 47px 48px);mask-image:linear-gradient(#000,transparent 92%)}
 .rings::after{content:"";position:absolute;width:min(150vw,900px);aspect-ratio:1;left:50%;top:42%;transform:translate(-50%,-50%);border-radius:50%;background:conic-gradient(from 0deg,transparent 0 78%,rgba(255,149,0,.24) 95%,rgba(255,149,0,.02) 100%);animation:spin 8s linear infinite}
 .rings::before{content:"";position:absolute;z-index:1;left:50%;top:42%;width:7px;height:7px;border-radius:50%;background:#ff9500;box-shadow:0 0 14px 4px rgba(255,149,0,.75),0 0 0 0 rgba(255,149,0,.3);animation:orbit 5s linear infinite}
 @keyframes orbit{from{transform:rotate(0deg) translateX(min(38vw,220px))}to{transform:rotate(360deg) translateX(min(38vw,220px))}}
+
+/* Typographie manuscrite numérique */
+body{font-family:Kalam,system-ui,sans-serif;font-size:17px;letter-spacing:.015em}
+h1,h2,h3,.tabs button,.price,.physical-countdown{font-family:Caveat,Kalam,system-ui,sans-serif}
+#welcome h1{font-size:2.8rem;letter-spacing:.02em}
+header h2{font-size:1.65rem}
+h3{font-size:1.55rem}
+.lead{font-size:1.08rem}
+.btn,.refresh,.tabs button{font-family:Kalam,system-ui,sans-serif;font-size:.95rem}
+input,select,textarea{font-family:Kalam,system-ui,sans-serif;font-size:1.05rem}
 
 /* accueil */
 #welcome{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:24px;text-align:center;transition:opacity .6s ease,visibility .6s}
@@ -34,7 +44,7 @@ box-shadow:0 0 60px rgba(255,149,0,.12),inset 0 0 40px rgba(255,149,0,.08);overf
 @keyframes blip{0%{opacity:0;transform:scale(.4)}8%{opacity:1;transform:scale(1.3)}40%{opacity:.7;transform:scale(1)}100%{opacity:0}}
 #welcome h1{margin:0;font-size:2.1rem;font-weight:700;letter-spacing:.01em}
 #welcome p{margin:0;color:var(--mute);font-weight:300;line-height:1.6;max-width:30ch}
-.btn{border:1px solid var(--sweep);background:rgba(255,149,0,.1);color:var(--sweep);font:600 1rem Sora,system-ui,sans-serif;padding:14px 38px;border-radius:999px;cursor:pointer;transition:transform .2s,background .2s,box-shadow .2s}
+.btn{border:1px solid var(--sweep);background:rgba(255,149,0,.1);color:var(--sweep);font:600 1rem Kalam,system-ui,sans-serif;padding:14px 38px;border-radius:999px;cursor:pointer;transition:transform .2s,background .2s,box-shadow .2s}
 .btn:active{transform:scale(.96)}
 .btn:hover{background:rgba(255,149,0,.2);box-shadow:0 0 24px rgba(255,149,0,.3)}
 
