@@ -202,12 +202,28 @@ var SERVICES=[
 var ST=JSON.parse(document.getElementById("state").textContent);var PHOTOS=ST.photos;var ADMIN=false;var COUNTRY="Tous";var USER_ROLE=null;
 
 var list=document.getElementById("list");
-function renderServices(){\n  list.innerHTML="";\n  SERVICES.filter(function(s){return !(USER_ROLE==="spitta"&&s.gift)}).forEach(function(s){
-  var a=document.createElement("a");a.className="row";a.href=s.u;
-  if(s.u!=="#"){a.target="_blank";a.rel="noopener"}
-  a.innerHTML='<div class="blip"></div><div><b>'+s.n+'</b><small>'+s.d+'</small></div><span class="go">›</span>';
-  list.appendChild(a);
-});
+function renderServices(){
+  list.innerHTML="";
+  SERVICES.filter(function(s){return !(USER_ROLE==="spitta"&&s.gift)}).forEach(function(s){
+    var a=document.createElement("a");a.className="row";a.href=s.u;
+    if(s.u!=="#"){a.target="_blank";a.rel="noopener"}
+    a.innerHTML='<div class="blip"></div><div><b>'+s.n+'</b><small>'+s.d+'</small></div><span class="go">›</span>';
+    a.addEventListener("click",function(e){
+      if(USER_ROLE!=="lanceur")return;
+      e.preventDefault();
+      var win=window.open("about:blank","_blank");
+      call("/api/catalog/click",{site:s.n,url:s.u}).then(function(r){
+        if(!r.ok)throw new Error(r.error||"Enregistrement impossible.");
+        if(win)win.location=s.u;else location.href=s.u;
+      }).catch(function(){
+        if(win)win.close();
+        alert("Le site n’a pas pu être enregistré. Réessaie.");
+      });
+    });
+    list.appendChild(a);
+  });
+}
+renderServices();
 
 var grid=document.getElementById("grid");
 function render(){
