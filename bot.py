@@ -382,6 +382,35 @@ def decode_image_data_uri(value, max_bytes=650000):
     return raw
 
 
+
+def decode_audio_data_uri(value, expected_mime, max_bytes=650000):
+    if not isinstance(value, str) or len(value) > 900000:
+        raise ValueError("Vocal invalide ou trop lourd.")
+    match = re.fullmatch(
+        r"data:(audio/(?:webm|ogg|mp4|mpeg|aac|3gpp))(?:;[A-Za-z0-9._=+-]+)*;base64,([A-Za-z0-9+/=]+)",
+        value, re.I
+    )
+    if not match or match.group(1).lower() != expected_mime:
+        raise ValueError("Type audio incohérent.")
+    raw = base64.b64decode(match.group(2), validate=True)
+    if not raw or len(raw) > max_bytes:
+        raise ValueError("Vocal vide ou trop lourd.")
+    starts_mp4 = len(raw) >= 12 and raw[4:8] == b"ftyp"
+    starts_mpeg = raw.startswith(b"ID3") or (
+        len(raw) >= 2 and raw[0] == 0xFF and (raw[1] & 0xE0) == 0xE0
+    )
+    valid = {
+        "audio/webm": raw.startswith(b"\\x1a\\x45\\xdf\\xa3"),
+        "audio/ogg": raw.startswith(b"OggS"),
+        "audio/mp4": starts_mp4,
+        "audio/mpeg": starts_mpeg,
+        "audio/aac": len(raw) >= 2 and raw[0] == 0xFF and (raw[1] & 0xF6) == 0xF0,
+        "audio/3gpp": starts_mp4 or raw.startswith(b"#!AMR"),
+    }.get(expected_mime, False)
+    if not valid:
+        raise ValueError("Le fichier reçu ne correspond pas à un format audio reconnu.")
+    return raw
+
 def _ks(pid):
     return int.from_bytes(hashlib.sha256((TOKEN + pid).encode()).digest()[:8], "big")
 
@@ -787,9 +816,7 @@ def api(path, b):
             if c.get("status") not in ("proof_received", "expired"):
                 return {"error": "La discussion est verrouillée jusqu’à la capture du spitta ou à l’expiration du délai de réponse."}
             try:
-                raw_audio = base64.b64decode(audio.split(",", 1)[1], validate=True)
-                if not raw_audio or len(raw_audio) > 650_000:
-                    return {"error": "Vocal trop lourd. Enregistre un message plus court."}
+                raw_audio = decode_audio_data_uri(audio, mime)
                 voice_file = "private_voice/" + rid + "/" + str(int(time.time() * 1000)) + ".enc"
                 gh_put(voice_file, FERNET.encrypt(raw_audio), "Sauvegarde chiffrée d'un message vocal")
                 VOICE_CACHE[voice_file] = base64.b64encode(raw_audio).decode()
