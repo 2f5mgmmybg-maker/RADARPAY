@@ -343,6 +343,8 @@ def api(path, b):
             save_roles()
         return {"ok": True, "role": chosen}
     if path == "/api/want":
+        if role(user) != "lanceur":
+            return {"error": "Seuls les comptes Lanceur peuvent contacter un spitta. Choisis le rôle Lanceur."}
         k = (uid, b.get("id"))
         previous = WANTED.get(k)
         if previous and time.time() - previous[0] < 300:
