@@ -937,10 +937,22 @@ class Ping(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            n = int(self.headers.get("Content-Length", 0))
-            if n > 6_000_000:
-                return self._s({"error": "Trop gros."})
-            self._s(api(self.path, json.loads(self.rfile.read(n) or b"{}")))
+            length = self.headers.get("Content-Length")
+            if length is None:
+                return self._s({"error": "Longueur de requête manquante."})
+            n = int(length)
+            if n <= 0 or n > 6_000_000:
+                return self._s({"error": "Corps de requête vide ou trop gros."})
+            content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            if content_type != "application/json":
+                return self._s({"error": "Format de requête invalide."})
+            raw = self.rfile.read(n)
+            if len(raw) != n:
+                return self._s({"error": "Requête incomplète."})
+            payload = json.loads(raw)
+            if not isinstance(payload, dict):
+                return self._s({"error": "Objet JSON attendu."})
+            self._s(api(self.path, payload))
         except Exception as e:
             print("api:", e)
             self._s({"error": "Erreur, réessaie."})
