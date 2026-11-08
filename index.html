@@ -254,14 +254,14 @@ function setup(){
   }).catch(function(){});
 }
 var tgw=window.Telegram&&Telegram.WebApp;if(tgw){tgw.ready();tgw.expand()}
-var INIT=tgw?tgw.initData:"",API="",CUR=null,CODE="",ACTIVE_CHAT=null,LAST_CHAT_RENDER="";
+var INIT=tgw?tgw.initData:"",API="https://radarpay-90js.onrender.com",CUR=null,CODE="",ACTIVE_CHAT=null,LAST_CHAT_RENDER="";
 function call(path,body){
   if(!API || !/^https?:\/\//i.test(API)){
     return Promise.reject(new Error("Adresse API absente de photos.json. Vérifie GITHUB_REPO et le démarrage Render."));
   }
   body=body||{};body.initData=INIT;body.code=CODE;
   var controller=(typeof AbortController!=="undefined")?new AbortController():null;
-  var timer=controller?setTimeout(function(){controller.abort()},35000):null;
+  var timer=controller?setTimeout(function(){controller.abort()},90000):null;
   return fetch(API.replace(/\/$/,"")+path,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -277,7 +277,7 @@ function call(path,body){
     if(!data || typeof data!=="object") throw new Error("Réponse API invalide.");
     return data;
   }).catch(function(e){
-    if(e && e.name==="AbortError") throw new Error("Délai API dépassé (20 secondes).");
+    if(e && e.name==="AbortError") throw new Error("Délai API dépassé (90 secondes).");
     throw e;
   }).finally(function(){if(timer)clearTimeout(timer)});
 }
