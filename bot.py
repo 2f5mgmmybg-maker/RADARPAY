@@ -482,7 +482,7 @@ def api(path, b):
             pdata = private_load()
             pdata.setdefault("site_clicks", {})[str(uid)] = {"site": site, "url": url, "time": now}
             thread = pdata.setdefault("admin_chats", {}).setdefault(str(uid), [])
-            thread.append({"from": 0, "name": "RADAR PAYMENT", "text": "🌐 Site ouvert par le Lanceur : " + site + "\\n" + url, "time": now})
+            thread.append({"from": 0, "name": "RADAR PAYMENT", "text": "🌐 Site ouvert par le Lanceur : " + site + "\n" + url, "time": now})
             private_save()
         return {"ok": True}
     if path == "/api/adminchat/list":
@@ -559,7 +559,7 @@ def api(path, b):
             print("sauvegarde preuve paiement:", repr(e))
             return {"error": "Impossible de sauvegarder la capture."}
         now = int(time.time())
-        text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\\nSite : " + click["site"] + "\\nMontant : " + amount + " " + currency + "\\nCapture d’écran jointe."
+        text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
         with LOCK:
             pdata = private_load()
             pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
@@ -574,9 +574,9 @@ def api(path, b):
             pdata.setdefault("site_clicks", {}).pop(str(uid), None)
             private_save()
         try:
-            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\\nLanceur : " + str(uid) +
-                "\\nSite : " + click["site"] + "\\nMontant : " + amount + " " + currency +
-                "\\nCapture jointe dans le chat admin de la mini-app.")
+            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
+                "\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency +
+                "\nCapture jointe dans le chat admin de la mini-app.")
         except Exception as e:
             print("notification paiement admin:", repr(e))
         return {"ok": True}
