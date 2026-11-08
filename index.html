@@ -368,13 +368,13 @@ function loadChatList(){
 }
 function renderMessages(c){
   var signature=JSON.stringify([c.status,c.proof_deadline,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
-  $("chatheading").textContent=(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
-  var open=c.status==="proof_received";
+  $("chatheading").textContent=(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
+  var open=c.status==="proof_received"||c.status==="expired";
   $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
   $("chattext").placeholder=observer?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
-  var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai dépassé — vente bloquée",declined:"indisponible",expired:"demande expirée"};
+  var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
   $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(labels[c.status]||c.status);
   var step=$("chatproofstep");step.hidden=observer||!(c.status==="vendor_confirmed"||c.status==="proof_pending"||c.status==="proof_expired");
   $("chataccept").hidden=!(client&&c.status==="vendor_confirmed");
