@@ -37,7 +37,12 @@ AIDE = (
 
 
 def tg(method, **p):
-    return requests.post(f"{API}/{method}", json=p, timeout=40).json()
+    r = requests.post(f"{API}/{method}", json=p, timeout=40)
+    r.raise_for_status()
+    data = r.json()
+    if not data.get("ok"):
+        raise RuntimeError(data.get("description", "Telegram a refusé l'envoi."))
+    return data
 
 
 def say(chat, text, **k):
@@ -83,6 +88,31 @@ def save(data, sha):
     data["maj"] = today()
     gh_put("photos.json", json.dumps(data, ensure_ascii=False, indent=2).encode(),
            "Mise à jour des photos", sha)
+
+
+def chats_load():
+    try:
+        f = gh_get("chats.json")
+        return json.loads(base64.b64decode(f["content"]).decode() or '{"chats":[]}'), f["sha"]
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 404:
+            return {"chats": []}, None
+        raise
+
+
+def chats_save(data, sha):
+    raw = json.dumps(data, ensure_ascii=False, indent=2).encode()
+    gh_put("chats.json", raw, "Mise à jour des discussions", sha)
+
+
+def chat_update(rid, **changes):
+    with LOCK:
+        data, sha = chats_load()
+        chat = next((x for x in data.get("chats", []) if x.get("id") == rid), None)
+        if chat:
+            chat.update(changes)
+            chats_save(data, sha)
+        return chat
 
 
 def send_menu(chat, private=False):
@@ -214,13 +244,11 @@ def dec(tok, pid):
 
 def role(user, code):
     uid = user["id"]
-    if uid == OWNER:
-        return "owner"
     if time.time() < FAILS.get(uid, (0, 0))[1]:
         return None
     if ACCESS_CODE and code and hmac.compare_digest(str(code), ACCESS_CODE):
         FAILS.pop(uid, None)
-        return "vendor"
+        return "owner" if uid == OWNER else "vendor"
     if code:
         n = FAILS.get(uid, (0, 0))[0] + 1
         FAILS[uid] = (0, time.time() + 600) if n >= 5 else (n, 0)
@@ -246,7 +274,8 @@ def remind(rid, prix):
 def expire(rid):
     p = PENDING.pop(rid, None)
     if p and not p["done"]:
-        say(p["client"], "⏱️ Le spitta n'a pas encore répondu. Réessaie dans un instant ou écris dans le groupe.")
+        chat_update(rid, status="expired")
+        say(p["client"], "⏱️ Le spitta n'a pas encore répondu. Tu peux continuer à lui écrire dans la discussion.")
         say(p["vendor"], "⌛ L'offre a expiré.")
 
 
@@ -256,15 +285,19 @@ def handle_cb(cb):
     if not p or p["done"] or cb["from"]["id"] != p["vendor"]:
         tg("answerCallbackQuery", callback_query_id=cb["id"], text="Trop tard ou déjà traité.")
         return
+    if kind not in ("y", "n"):
+        tg("answerCallbackQuery", callback_query_id=cb["id"], text="Action inconnue.")
+        return
     p["done"] = True
-    tg("answerCallbackQuery", callback_query_id=cb["id"], text="Réponse envoyée au client.")
+    chat_update(rid, status=("accepted" if kind == "y" else "declined"))
+    tg("answerCallbackQuery", callback_query_id=cb["id"], text=("Commande confirmée : engagement enregistré." if kind == "y" else "Indisponibilité envoyée."))
     m = cb.get("message") or {}
     tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
        reply_markup={"inline_keyboard": [[{"text": "💬 Parler au client", "url": p["url"]}]]})
     if kind == "y":
-        say(p["client"], "✅ Le spitta est fast ⚡ Il te gère ça maintenant")
+        say(p["client"], "✅ Le vendeur a confirmé. Il s'est engagé à prendre cette commande. Vous pouvez échanger dans la discussion.")
     else:
-        say(p["client"], "❌ Ce produit n'est plus disponible.")
+        say(p["client"], "❌ Le vendeur indique que ce produit n'est plus disponible.")
 
 
 def api(path, b):
@@ -288,18 +321,68 @@ def api(path, b):
         else:
             who, url = user.get("first_name", "Un client"), f"tg://user?id={uid}"
         rid = f"{uid}{int(time.time())}"
+        chat = {"id": rid, "client": uid, "vendor": vendor, "product": p.get("id"),
+                "price": prix, "client_name": who, "created": int(time.time()),
+                "status": "pending", "messages": []}
+        with LOCK:
+            data_ch, sha_ch = chats_load()
+            data_ch.setdefault("chats", []).append(chat)
+            chats_save(data_ch, sha_ch)
         PENDING[rid] = {"client": uid, "vendor": vendor, "url": url, "done": False}
-        say(vendor, f"🚨🚨 URGENT 🚨🚨\nTon travail t'attend, produit : {prix}.\n"
-                    f"L'offre ne sera plus là dans 50 secondes.\nClient : {who}",
-            reply_markup={"inline_keyboard": [[{"text": "💬 Parler au client", "url": url}],
-                                           [{"text": "✅ Je prends", "callback_data": "y:" + rid},
-                                            {"text": "❌ Pas dispo", "callback_data": "n:" + rid}]]})
+        try:
+            say(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\n"
+                        f"Réponse attendue sous 50 secondes.\nClient : {who}",
+                reply_markup={"inline_keyboard": [[{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
+                                               [{"text": "✅ Je confirme", "callback_data": "y:" + rid},
+                                                {"text": "❌ Pas disponible", "callback_data": "n:" + rid}]]})
+        except Exception as e:
+            print("notification vendeur impossible:", repr(e))
+            return {"ok": True, "chat": rid, "notification": False,
+                    "error": "Discussion créée, mais Telegram n'a pas pu prévenir le vendeur. Il doit ouvrir le bot et envoyer /start."}
         threading.Timer(30, remind, [rid, prix]).start()
         threading.Timer(50, expire, [rid]).start()
-        return {"ok": True}
+        return {"ok": True, "chat": rid, "notification": True}
     r = role(user, b.get("code"))
     if not r:
         return {"role": None, "error": "Code incorrect ou accès bloqué 10 minutes."}
+    if path == "/api/chat/list":
+        chats_data, _ = chats_load()
+        if r == "owner":
+            visible = chats_data.get("chats", [])
+        elif r == "vendor":
+            visible = [c for c in chats_data.get("chats", []) if c.get("vendor") == uid]
+        else:
+            visible = [c for c in chats_data.get("chats", []) if c.get("client") == uid]
+        return {"ok": True, "chats": [{k: c.get(k) for k in
+                ("id", "client", "vendor", "product", "price", "client_name", "created", "status")}
+                | {"last": (c.get("messages") or [{}])[-1].get("text", "")}
+                for c in sorted(visible, key=lambda x: x.get("created", 0), reverse=True)]}
+    if path == "/api/chat/messages":
+        rid = str(b.get("id", ""))
+        chats_data, _ = chats_load()
+        c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+        if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
+            return {"error": "Discussion introuvable ou accès refusé."}
+        return {"ok": True, "chat": {k: c.get(k) for k in
+                ("id", "client", "vendor", "price", "client_name", "status", "messages")}}
+    if path == "/api/chat/send":
+        rid, msg = str(b.get("id", "")), str(b.get("text", "")).strip()[:1500]
+        if not msg:
+            return {"error": "Écris un message."}
+        with LOCK:
+            chats_data, sha_ch = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
+                return {"error": "Discussion introuvable ou accès refusé."}
+            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
+                                                  "text": msg, "time": int(time.time())})
+            chats_save(chats_data, sha_ch)
+        other = c.get("vendor") if uid == c.get("client") else c.get("client")
+        try:
+            say(other, "💬 Nouveau message dans RADAR PAYMENT. Ouvre la mini-app pour répondre.")
+        except Exception as e:
+            print("alerte nouveau message non envoyée:", repr(e))
+        return {"ok": True}
     if path == "/api/me":
         data, _ = load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and (r == "owner" or owner_of(p) == uid)]
