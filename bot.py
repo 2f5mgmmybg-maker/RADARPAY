@@ -1,4 +1,4 @@
-import os, time, json, base64, hashlib, hmac, threading, requests
+import os, time, json, base64, hashlib, hmac, threading, requests, re
 from cryptography.fernet import Fernet, InvalidToken
 from urllib.parse import parse_qsl
 from datetime import datetime
@@ -123,6 +123,9 @@ def private_load():
             raise RuntimeError("Le fichier privé chiffré est illisible; aucune donnée n'a été écrasée.") from e
     PRIVATE_CACHE.setdefault("roles", {})
     PRIVATE_CACHE.setdefault("chats", [])
+    PRIVATE_CACHE.setdefault("admin_chats", {})
+    PRIVATE_CACHE.setdefault("site_clicks", {})
+    PRIVATE_CACHE.setdefault("payment_reports", [])
     return PRIVATE_CACHE
 
 
@@ -467,6 +470,116 @@ def api(path, b):
                     "error": "Demande enregistrée, mais Telegram n'a pas prévenu le Spitta. Demande réessayable."}
         return {"ok": True, "chat": rid, "notification": True}
     r = role(user)
+    if path == "/api/catalog/click":
+        if r != "lanceur":
+            return {"error": "Réservé aux comptes Lanceur."}
+        site = str(b.get("site", "")).strip()[:100]
+        url = str(b.get("url", "")).strip()[:500]
+        if not site or not url.startswith(("https://", "http://")):
+            return {"error": "Site invalide."}
+        now = int(time.time())
+        with LOCK:
+            pdata = private_load()
+            pdata.setdefault("site_clicks", {})[str(uid)] = {"site": site, "url": url, "time": now}
+            thread = pdata.setdefault("admin_chats", {}).setdefault(str(uid), [])
+            thread.append({"from": 0, "name": "RADAR PAYMENT", "text": "🌐 Site ouvert par le Lanceur : " + site + "\\n" + url, "time": now})
+            private_save()
+        return {"ok": True}
+    if path == "/api/adminchat/list":
+        if r != "owner":
+            return {"error": "Accès réservé à l’administrateur."}
+        roles = load_roles()
+        pdata = private_load()
+        items = []
+        for launcher, launcher_role in roles.items():
+            if launcher_role == "lanceur":
+                msgs = pdata.setdefault("admin_chats", {}).get(str(launcher), [])
+                last = msgs[-1].get("text", "") if msgs else "Aucun message"
+                items.append({"id": str(launcher), "last": last, "time": msgs[-1].get("time", 0) if msgs else 0})
+        return {"ok": True, "launchers": sorted(items, key=lambda x: x["time"], reverse=True)}
+    if path == "/api/adminchat/messages":
+        target = str(b.get("id", uid))
+        if r != "owner" and (r != "lanceur" or target != str(uid)):
+            return {"error": "Accès refusé."}
+        pdata = private_load()
+        msgs = [dict(m) for m in pdata.setdefault("admin_chats", {}).get(target, [])]
+        for msg in msgs:
+            proof_file = msg.get("proof_file")
+            if proof_file:
+                try:
+                    if proof_file not in PROOF_CACHE:
+                        encrypted = base64.b64decode(gh_get(proof_file).get("content", ""))
+                        PROOF_CACHE[proof_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+                    msg["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
+                except Exception as e:
+                    print("lecture preuve paiement:", repr(e))
+        return {"ok": True, "chat": {"id": target, "client": int(target), "vendor": OWNER, "status": "proof_received", "messages": msgs}}
+    if path == "/api/adminchat/send":
+        target = str(b.get("id", uid))
+        msg = str(b.get("text", "")).strip()[:1500]
+        if r != "owner" and (r != "lanceur" or target != str(uid)):
+            return {"error": "Accès refusé."}
+        if not msg:
+            return {"error": "Écris un message."}
+        with LOCK:
+            pdata = private_load()
+            thread = pdata.setdefault("admin_chats", {}).setdefault(target, [])
+            thread.append({"from": uid, "name": user.get("first_name", "Utilisateur"), "text": msg, "time": int(time.time())})
+            private_save()
+        other = int(target) if r == "owner" else OWNER
+        try:
+            say(other, "💬 Nouveau message dans ton chat RADAR PAYMENT avec l’administrateur. Ouvre la mini-app.")
+        except Exception as e:
+            print("notification chat admin:", repr(e))
+        return {"ok": True}
+    if path == "/api/payment/report":
+        if r != "lanceur":
+            return {"error": "Seuls les Lanceurs peuvent déclarer un paiement."}
+        amount = str(b.get("amount", "")).strip().replace(",", ".")
+        currency = str(b.get("currency", "")).upper().strip()
+        image = str(b.get("image", ""))
+        if not re.fullmatch(r"\\d{1,9}(?:\\.\\d{1,2})?", amount) or float(amount) <= 0:
+            return {"error": "Indique un montant valide."}
+        if currency not in ("EUR", "USD", "GBP", "CHF"):
+            return {"error": "Choisis une devise valide."}
+        if not image.startswith("data:image/") or len(image) > 4_200_000:
+            return {"error": "La capture d’écran de paiement est obligatoire."}
+        pdata = private_load()
+        click = pdata.setdefault("site_clicks", {}).get(str(uid))
+        if not click:
+            return {"error": "Aucun site n’a été enregistré. Retourne cliquer sur le site concerné."}
+        try:
+            raw_image = base64.b64decode(image.split(",", 1)[1], validate=True)
+            if not raw_image or len(raw_image) > 650_000:
+                return {"error": "Capture trop lourde. Réessaie avec une image plus légère."}
+            proof_file = "private_payment_proofs/" + str(uid) + "/" + str(int(time.time() * 1000)) + ".enc"
+            gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
+            PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
+        except Exception as e:
+            print("sauvegarde preuve paiement:", repr(e))
+            return {"error": "Impossible de sauvegarder la capture."}
+        now = int(time.time())
+        text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\\nSite : " + click["site"] + "\\nMontant : " + amount + " " + currency + "\\nCapture d’écran jointe."
+        with LOCK:
+            pdata = private_load()
+            pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
+                "from": uid, "name": user.get("first_name", "Lanceur"), "text": text_report,
+                "proof_file": proof_file, "time": now
+            })
+            pdata.setdefault("payment_reports", []).append({
+                "launcher": uid, "site": click["site"], "url": click["url"],
+                "amount": amount, "currency": currency, "proof_file": proof_file,
+                "time": now, "status": "declared_unverified"
+            })
+            pdata.setdefault("site_clicks", {}).pop(str(uid), None)
+            private_save()
+        try:
+            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\\nLanceur : " + str(uid) +
+                "\\nSite : " + click["site"] + "\\nMontant : " + amount + " " + currency +
+                "\\nCapture jointe dans le chat admin de la mini-app.")
+        except Exception as e:
+            print("notification paiement admin:", repr(e))
+        return {"ok": True}
     if path == "/api/me":
         data, _ = load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and
