@@ -369,7 +369,7 @@ function loadChatList(){
 }
 function renderMessages(c){
   var signature=JSON.stringify([c.status,c.proof_deadline,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
-  $("chatheading").textContent="Discussion — "+(c.price||"commande");
+  $("chatheading").textContent=(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
   var open=c.status==="proof_received";
@@ -468,10 +468,15 @@ $("countryfilters").addEventListener("click",function(e){var b=e.target.closest(
 tabs.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
-  tabs.querySelector(".pill").style.transform="translateX("+["a","b","d","e","f","c"].indexOf(b.dataset.t)*100+"%)";if(b.dataset.t==="c")adminOpen();if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
+  var visibleTabs=Array.prototype.slice.call(tabs.querySelectorAll("button")).filter(function(x){return !x.hidden});tabs.querySelector(".pill").style.transform="translateX("+visibleTabs.indexOf(b)*100+"%)";if(b.dataset.t==="c")adminOpen();if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
   document.querySelectorAll("section").forEach(function(s){s.classList.toggle("on",s.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
 });
+function arrangeTabs(){
+  var buttons=Array.prototype.slice.call(tabs.querySelectorAll("button")).filter(function(x){return !x.hidden});
+  tabs.style.gridTemplateColumns="repeat("+buttons.length+",minmax(0,1fr))";
+  tabs.querySelector(".pill").style.width="calc("+100/buttons.length+"% - 3.2px)";
+}
 function chooseRole(role){
   $("role-message").textContent="Enregistrement de ton profil…";
   call("/api/role",{role:role}).then(function(r){
@@ -482,13 +487,13 @@ function chooseRole(role){
     $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
     if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="e"]').hidden=false;loadSpittaItems()}
     if(USER_ROLE==="lanceur"){$("tabs").querySelector('[data-t="d"]').hidden=false}
-    loadChatList();
+    arrangeTabs();loadChatList();
   }).catch(function(e){$("role-message").textContent=e.message||"Connexion impossible. Ouvre l’app depuis Telegram."});
 }
 $("choose-lanceur").onclick=function(){chooseRole("lanceur")};
 $("choose-spitta").onclick=function(){chooseRole("spitta")};
 if(INIT){call("/api/me",{}).then(function(r){
-  if(r.role){USER_ROLE=r.role;$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="spitta")loadSpittaItems()}
+  if(r.role){USER_ROLE=r.role;$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";arrangeTabs();if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="spitta")loadSpittaItems()}
 }).catch(function(){})}
 </script>
 </body>
