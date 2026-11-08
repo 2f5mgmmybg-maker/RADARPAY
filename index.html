@@ -318,7 +318,11 @@ function loadChatList(){
 function renderMessages(c){
   var signature=JSON.stringify([c.status,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   $("chatheading").textContent="Discussion — "+(c.price||"commande");
-  $("chatstatus").textContent="État : "+(c.status==="accepted"?"confirmée — vendeur engagé":c.status==="declined"?"indisponible":c.status==="expired"?"délai dépassé":"en attente");
+  var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
+  var observer=me!==c.client&&me!==c.vendor;
+  $("chattext").disabled=observer;$("chatsend").disabled=observer;
+  $("chattext").placeholder=observer?"Supervision admin — lecture seule":"Ton message…";
+  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(c.status==="accepted"?"confirmée — vendeur engagé":c.status==="declined"?"indisponible":c.status==="expired"?"délai dépassé":"en attente");
   var host=$("chatmessages");host.innerHTML="";
   (c.messages||[]).forEach(function(m){
     var d=document.createElement("div");d.className="chatmsg"+(m.from===Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0)?" mine":"");
