@@ -151,11 +151,11 @@ section.on{display:block;animation:in .4s ease both}
   <section id="b">
     <div class="stamp" id="stamp"></div>
     <p class="lead">Disponibilités physiques classées par pays.</p>
-    <div class="countryfilters" id="countryfilters"><button class="on" data-country="Tous">Tous</button><button data-country="Belgique">Belgique</button><button data-country="Suisse">Suisse</button><button data-country="Luxembourg">Luxembourg</button><button data-country="France">France</button></div>
+    <div class="countryfilters" id="countryfilters"><button class="on" data-country="Tous">Tous</button><button data-country="Belgique">Belgique</button><button data-country="Suisse">Suisse</button><button data-country="Luxembourg">Luxembourg</button><button data-country="France">France</button><button data-country="À classer">À classer</button></div>
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
   </section>
-  <section id="d"><p class="lead">Retrouve ici tes discussions en cours avec les acheteurs ou vendeurs. Les conversations sont supprimées automatiquement après 10 minutes.</p><div id="userchatitems"></div></section>
+  <section id="d"><p class="lead">Retrouve ici tes discussions en cours avec les acheteurs ou vendeurs. Les conversations sont supprimées automatiquement après 10 minutes. Les échanges peuvent être consultés par l’administrateur pour le suivi et la sécurité.</p><div id="userchatitems"></div></section>
 </main>
 <div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
@@ -182,10 +182,10 @@ SERVICES.forEach(function(s){
 var grid=document.getElementById("grid");
 function render(){
   grid.innerHTML="";
-  var visible=PHOTOS.filter(function(p){return COUNTRY==="Tous"||(p.pays||"")===COUNTRY});
+  var visible=PHOTOS.filter(function(p){return COUNTRY==="Tous"?(true):(COUNTRY==="À classer"?!p.pays:(p.pays||"")===COUNTRY)});
   if(!visible.length){var e=document.createElement("div");e.className="slot empty";e.style.gridColumn="1/-1";e.style.aspectRatio="auto";e.style.padding="28px 12px";e.textContent=PHOTOS.length?"Aucune disponibilité enregistrée pour "+COUNTRY+".":(ADMIN?"Ajoute ta première photo.":"Pas encore de photo aujourd’hui.");grid.appendChild(e)}
   PHOTOS.forEach(function(p,i){
-    if(COUNTRY!=="Tous" && (p.pays||"")!==COUNTRY)return;
+    if(COUNTRY!=="Tous" && (COUNTRY==="À classer"?!!p.pays:(p.pays||"")!==COUNTRY))return;
     var d=document.createElement("div");d.className="slot";
     var im=document.createElement("img");im.src=p.src;im.alt="";d.appendChild(im);
     if(ADMIN){
@@ -246,7 +246,7 @@ function setup(){
   }).catch(function(){});
 }
 var tgw=window.Telegram&&Telegram.WebApp;if(tgw){tgw.ready();tgw.expand()}
-var INIT=tgw?tgw.initData:"",API="",CUR=null,CODE="",ACTIVE_CHAT=null;
+var INIT=tgw?tgw.initData:"",API="",CUR=null,CODE="",ACTIVE_CHAT=null,LAST_CHAT_RENDER="";
 function call(path,body){
   if(!API || !/^https?:\/\//i.test(API)){
     return Promise.reject(new Error("Adresse API absente de photos.json. Vérifie GITHUB_REPO et le démarrage Render."));
@@ -306,6 +306,7 @@ function loadChatList(){
   }).catch(function(e){$("pm").textContent=(e&&e.message)||"Impossible de charger les discussions."});
 }
 function renderMessages(c){
+  var signature=JSON.stringify([c.status,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   $("chatheading").textContent="Discussion — "+(c.price||"commande");
   $("chatstatus").textContent="État : "+(c.status==="accepted"?"confirmée — vendeur engagé":c.status==="declined"?"indisponible":c.status==="expired"?"délai dépassé":"en attente");
   var host=$("chatmessages");host.innerHTML="";
@@ -317,11 +318,11 @@ function renderMessages(c){
   host.scrollTop=host.scrollHeight;
 }
 function openChat(id){
-  ACTIVE_CHAT=id;$("chatui").hidden=false;$("chaterror").textContent="Chargement…";
+  ACTIVE_CHAT=id;LAST_CHAT_RENDER="";$("chatui").hidden=false;$("chaterror").textContent="Chargement…";
   call("/api/chat/messages",{id:id}).then(function(r){if(!r.ok)throw new Error(r.error||"Discussion indisponible.");renderMessages(r.chat);$("chaterror").textContent=""})
   .catch(function(e){$("chaterror").textContent=(e&&e.message)||"Impossible d’ouvrir la discussion."});
 }
-$("chatclose").onclick=function(){$("chatui").hidden=true;ACTIVE_CHAT=null;loadChatList()};
+$("chatclose").onclick=function(){$("chatui").hidden=true;ACTIVE_CHAT=null;LAST_CHAT_RENDER="";loadChatList()};
 $("chatsend").onclick=function(){
   var txt=$("chattext").value.trim();if(!ACTIVE_CHAT||!txt)return;$("chatsend").disabled=true;
   call("/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
