@@ -22,6 +22,7 @@ FAILS = {}
 API = f"https://api.telegram.org/bot{TOKEN}"
 FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256((TOKEN + "|RADARPAY_PRIVATE_V1").encode()).digest()))
 PROOF_CACHE = {}
+VOICE_CACHE = {}
 GH = f"https://api.github.com/repos/{REPO}/contents"
 H = {"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"}
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
@@ -147,10 +148,11 @@ def chats_load():
         for expired in old_chats:
             if expired not in data["chats"]:
                 for msg in expired.get("messages", []):
-                    proof_file = msg.get("proof_file")
-                    if proof_file:
-                        gh_del(proof_file, "Suppression d'une capture arrivée à expiration")
-                        PROOF_CACHE.pop(proof_file, None)
+                    for file_key, cache in (("proof_file", PROOF_CACHE), ("voice_file", VOICE_CACHE)):
+                        private_file = msg.get(file_key)
+                        if private_file:
+                            gh_del(private_file, "Suppression d'un média arrivé à expiration")
+                            cache.pop(private_file, None)
     return data, None
 
 
@@ -470,7 +472,7 @@ def api(path, b):
         mine = [p["id"] for p in data["photos"] if p.get("id") and
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
         return {"role": r, "mine": mine}
-    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/accept", "/api/chat/proof"):
+    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof"):
         return {"role": None, "error": "Choisis d’abord ton rôle sur l’écran de bienvenue."}
     if path == "/api/chat/list":
         chats_data, _ = chats_load()
@@ -497,6 +499,7 @@ def api(path, b):
         public_chat["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
         for msg in public_chat.get("messages") or []:
             proof_file = msg.get("proof_file")
+            voice_file = msg.get("voice_file")
             if proof_file:
                 try:
                     if proof_file not in PROOF_CACHE:
@@ -505,6 +508,14 @@ def api(path, b):
                     msg["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
                 except Exception as e:
                     print("lecture capture chiffrée:", repr(e))
+            if voice_file:
+                try:
+                    if voice_file not in VOICE_CACHE:
+                        encrypted = base64.b64decode(gh_get(voice_file).get("content", ""))
+                        VOICE_CACHE[voice_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+                    msg["audio"] = "data:" + msg.get("mime", "audio/webm") + ";base64," + VOICE_CACHE[voice_file]
+                except Exception as e:
+                    print("lecture vocal chiffré:", repr(e))
         return {"ok": True, "chat": public_chat}
     if path == "/api/chat/accept":
         rid = str(b.get("id", ""))
@@ -555,6 +566,40 @@ def api(path, b):
             say(c["client"], "📸 Le spitta a envoyé sa capture. La discussion est maintenant ouverte.")
         except Exception as e:
             print("notification capture impossible:", repr(e))
+        return {"ok": True}
+    if path == "/api/chat/voice":
+        rid, audio = str(b.get("id", "")), str(b.get("audio", ""))
+        mime = str(b.get("mime", "audio/webm")).split(";", 1)[0].lower()
+        allowed_mimes = ("audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/3gpp")
+        if mime not in allowed_mimes or not audio.startswith("data:audio/") or len(audio) > 900_000:
+            return {"error": "Vocal invalide ou trop lourd. Réessaie avec un message plus court."}
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid not in (c.get("client"), c.get("vendor")):
+                return {"error": "Discussion introuvable ou accès refusé."}
+            if c.get("status") not in ("proof_received", "expired"):
+                return {"error": "La discussion est verrouillée jusqu’à la capture du spitta ou à l’expiration du délai de réponse."}
+            try:
+                raw_audio = base64.b64decode(audio.split(",", 1)[1], validate=True)
+                if not raw_audio or len(raw_audio) > 650_000:
+                    return {"error": "Vocal trop lourd. Enregistre un message plus court."}
+                voice_file = "private_voice/" + rid + "/" + str(int(time.time() * 1000)) + ".enc"
+                gh_put(voice_file, FERNET.encrypt(raw_audio), "Sauvegarde chiffrée d'un message vocal")
+                VOICE_CACHE[voice_file] = base64.b64encode(raw_audio).decode()
+            except Exception as e:
+                print("sauvegarde vocal chiffré:", repr(e))
+                return {"error": "Impossible de sauvegarder le vocal. Réessaie."}
+            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
+                "text": "🎤 Message vocal", "voice_file": voice_file, "mime": mime, "time": int(time.time())})
+            chats_save(chats_data, None)
+        other = c.get("vendor") if uid == c.get("client") else c.get("client")
+        def notify_voice():
+            try:
+                say(other, "🎤 Nouveau message vocal dans RADAR PAYMENT. Ouvre la mini-app pour l'écouter.")
+            except Exception as e:
+                print("alerte vocal non envoyée:", repr(e))
+        threading.Thread(target=notify_voice, daemon=True).start()
         return {"ok": True}
     if path == "/api/chat/send":
         rid, msg = str(b.get("id", "")), str(b.get("text", "")).strip()[:1500]
