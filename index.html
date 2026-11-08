@@ -86,6 +86,17 @@ section.on{display:block;animation:in .4s ease both}
 .stamp::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--blip);box-shadow:0 0 10px var(--blip)}
 .inp{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:14px;padding:12px;margin:0 0 10px;font:600 1rem Sora,system-ui,sans-serif}
 #lb small{color:var(--mute);text-align:center}
+#chatlist{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.chatitem{display:block;width:100%;text-align:left;padding:12px;margin:8px 0;background:var(--bg2);border:1px solid var(--line);border-radius:12px;color:var(--ink);font:inherit;cursor:pointer}
+.chatitem small{display:block;color:var(--mute);margin-top:5px}
+#chatui{position:fixed;inset:0;z-index:50;background:rgba(3,13,18,.98);padding:18px;display:flex;flex-direction:column;gap:12px}
+#chatui[hidden]{display:none}
+#chatmessages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:9px}
+.chatmsg{max-width:88%;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg2);white-space:pre-wrap;overflow-wrap:anywhere}
+.chatmsg.mine{align-self:flex-end;border-color:var(--sweep)}
+.chatmsg small{display:block;color:var(--mute);font-size:.7rem;margin-top:5px}
+.chatbar{display:flex;gap:8px}
+.chatbar input{flex:1;min-width:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -120,7 +131,7 @@ section.on{display:block;animation:in .4s ease both}
     <div id="panel" hidden><p class="lead">Ajoute une photo avec son prix.</p>
       <input class="inp" id="pp" placeholder="Prix (ex : 120 €)">
       <button class="btn s" id="addp">Choisir une photo</button><input type="file" id="pf" accept="image/*" hidden>
-      <p class="lead" id="pm"></p><div class="grid" id="mine"></div></div>
+      <p class="lead" id="pm"></p><div class="grid" id="mine"></div><div id="chatlist"><h3>Discussions privées</h3><p class="lead">Toutes les conversations et commandes.</p><div id="chatitems"></div></div></div>
   </section>
 
   <section id="b">
@@ -130,7 +141,7 @@ section.on{display:block;animation:in .4s ease both}
     <div class="grid" id="grid"></div>
   </section>
 </main>
-
+<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
@@ -181,7 +192,7 @@ function openLb(p){
     w.onclick=function(){
       if(w.dataset.s!=="1"){w.dataset.s="1";w.textContent="Confirmer";m.textContent="Ton information (ton nom Telegram) sera transmise au spitta. Dans 50 secondes, tu auras une réponse.";return}
       w.disabled=true;m.textContent="Envoi…";
-      ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?"Le vendeur est prévenu. Il va te contacter.":(r.error||"Réessaie.");w.textContent="Envoyé"})
+      ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Discussion créée, notification non confirmée."):"Le vendeur est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");w.textContent="Envoyé";if(r.chat)openChat(r.chat)})
       .catch(function(){m.textContent="Le serveur se réveille. Réessaie dans 30 secondes.";w.disabled=false;w.dataset.s="";w.textContent="Je le veux"})};}
   var im=l.querySelector("img");im.classList.remove("z");im.src=p.src;
   l.querySelector("#lbp").textContent=p.prix||"";CUR=p;var w0=l.querySelector("#lbw");w0.disabled=false;w0.dataset.s="";w0.textContent="Je le veux";l.querySelector("#lbm").textContent="";l.classList.add("on");
@@ -217,8 +228,7 @@ function setup(){
   }).catch(function(){});
 }
 var tgw=window.Telegram&&Telegram.WebApp;if(tgw){tgw.ready();tgw.expand()}
-var INIT=tgw?tgw.initData:"",API="",CUR=null,CODE="";
-try{CODE=localStorage.getItem("rc")||""}catch(e){}
+var INIT=tgw?tgw.initData:"",API="",CUR=null,CODE="",ACTIVE_CHAT=null;
 function call(path,body){
   if(!API || !/^https?:\/\//i.test(API)){
     return Promise.reject(new Error("Adresse API absente de photos.json. Vérifie GITHUB_REPO et le démarrage Render."));
@@ -250,8 +260,8 @@ function ask(){return new Promise(function(res){var t=setTimeout(res,8000);try{i
 function showMe(r,fromCode){
   var ok=!!r.role;$("gate").hidden=ok;$("panel").hidden=!ok;
   if(!ok){$("msg").textContent=r.error||(fromCode?"Code incorrect.":"Accès administrateur indisponible.");return}
-  try{localStorage.setItem("rc",CODE)}catch(e){}
   var m=$("mine");m.innerHTML="";
+  loadChatList();
   PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1}).forEach(function(p){
     var d=document.createElement("div");d.className="slot";
     var im=document.createElement("img");im.src=p.src;d.appendChild(im);
@@ -260,6 +270,41 @@ function showMe(r,fromCode){
     x.onclick=function(){x.disabled=true;call("/api/delete",{id:p.id}).then(function(){PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});render();adminOpen()})};
     d.appendChild(x);m.appendChild(d)});
 }
+function loadChatList(){
+  call("/api/chat/list",{}).then(function(r){
+    var host=$("chatitems");if(!host)return;host.innerHTML="";
+    (r.chats||[]).forEach(function(c){
+      var b=document.createElement("button");b.className="chatitem";
+      b.textContent=(c.client_name||"Acheteur")+" — "+(c.price||"sans prix")+" — "+(c.status||"en cours");
+      var small=document.createElement("small");small.textContent=c.last||"Aucun message";b.appendChild(small);
+      b.onclick=function(){openChat(c.id)};host.appendChild(b);
+    });
+    if(!host.children.length)host.textContent="Aucune discussion pour le moment.";
+  }).catch(function(e){$("pm").textContent=(e&&e.message)||"Impossible de charger les discussions."});
+}
+function renderMessages(c){
+  $("chatheading").textContent="Discussion — "+(c.price||"commande");
+  $("chatstatus").textContent="État : "+(c.status==="accepted"?"confirmée — vendeur engagé":c.status==="declined"?"indisponible":c.status==="expired"?"délai dépassé":"en attente");
+  var host=$("chatmessages");host.innerHTML="";
+  (c.messages||[]).forEach(function(m){
+    var d=document.createElement("div");d.className="chatmsg"+(m.from===Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0)?" mine":"");
+    d.textContent=(m.name||"Utilisateur")+": "+m.text;
+    var small=document.createElement("small");small.textContent=new Date((m.time||0)*1000).toLocaleString("fr-FR");d.appendChild(small);host.appendChild(d);
+  });
+  host.scrollTop=host.scrollHeight;
+}
+function openChat(id){
+  ACTIVE_CHAT=id;$("chatui").hidden=false;$("chaterror").textContent="Chargement…";
+  call("/api/chat/messages",{id:id}).then(function(r){if(!r.ok)throw new Error(r.error||"Discussion indisponible.");renderMessages(r.chat);$("chaterror").textContent=""})
+  .catch(function(e){$("chaterror").textContent=(e&&e.message)||"Impossible d’ouvrir la discussion."});
+}
+$("chatclose").onclick=function(){$("chatui").hidden=true;ACTIVE_CHAT=null};
+$("chatsend").onclick=function(){
+  var txt=$("chattext").value.trim();if(!ACTIVE_CHAT||!txt)return;$("chatsend").disabled=true;
+  call("/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
+  .then(function(r){renderMessages(r.chat);$("chaterror").textContent=""}).catch(function(e){$("chaterror").textContent=(e&&e.message)||"Envoi impossible."}).finally(function(){$("chatsend").disabled=false});
+};
+$("chattext").addEventListener("keydown",function(e){if(e.key==="Enter")$("chatsend").click()});
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 $("go").onclick=function(){CODE=$("code").value.trim();$("msg").textContent="Vérification…";
@@ -275,6 +320,8 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   ST.maj=d.maj||"";
   API=(d.api||"").trim().replace(/\/$/,"");
   render();
+}).then(function(){
+  var cid=new URLSearchParams(location.search).get("chat");if(cid)openChat(cid);
 }).catch(function(e){
   console.error("RADAR PAYMENT: impossible de charger photos.json",e);
   render();
