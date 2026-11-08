@@ -409,7 +409,7 @@ def decode_audio_data_uri(value, expected_mime, max_bytes=650000):
         len(raw) >= 2 and raw[0] == 0xFF and (raw[1] & 0xE0) == 0xE0
     )
     valid = {
-        "audio/webm": raw.startswith(b"\\x1a\\x45\\xdf\\xa3"),
+        "audio/webm": raw.startswith(b"\x1a\x45\xdf\xa3"),
         "audio/ogg": raw.startswith(b"OggS"),
         "audio/mp4": starts_mp4,
         "audio/mpeg": starts_mpeg,
