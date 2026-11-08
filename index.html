@@ -71,9 +71,15 @@ section.on{display:block;animation:in .4s ease both}
 
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .slot{aspect-ratio:3/4;border:1px dashed var(--line);border-radius:22px;display:grid;place-items:center;text-align:center;color:var(--mute);font-size:.8rem;padding:12px;background:var(--bg2);overflow:hidden}
-.slot{position:relative;padding:0;border-style:solid;cursor:pointer;transition:transform .25s}
+.slot{position:relative;padding:0;border-style:solid;cursor:pointer;transition:transform .25s;isolation:isolate}
+.slot:not(.empty){animation:cardFloat 4.8s ease-in-out infinite;box-shadow:0 0 18px rgba(255,40,40,.10)}
+.slot:not(.empty):nth-child(2n){animation-delay:-2.2s}
 .slot:active{transform:scale(.97)}
-.slot img{width:100%;height:100%;object-fit:cover;display:block}
+.slot img{width:100%;height:100%;object-fit:cover;display:block;animation:photoMotion 8s ease-in-out infinite alternate;will-change:transform}
+.slot:not(.empty)::after{content:"● ACTIF";position:absolute;z-index:2;top:9px;left:9px;padding:6px 9px;border:1px solid rgba(255,70,70,.55);border-radius:999px;background:rgba(12,0,0,.78);color:#ff6868;font-size:.62rem;font-weight:700;letter-spacing:.08em;box-shadow:0 0 14px rgba(255,30,30,.22);animation:activePulse 2s ease-in-out infinite;pointer-events:none}
+@keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes photoMotion{from{transform:scale(1.02) translateX(-.6%)}to{transform:scale(1.09) translateX(.6%)}}
+@keyframes activePulse{0%,100%{opacity:.78;box-shadow:0 0 8px rgba(255,30,30,.16)}50%{opacity:1;box-shadow:0 0 18px rgba(255,30,30,.48)}}
 .slot.empty{border-style:dashed;cursor:default}
 .price{position:absolute;left:0;right:0;bottom:0;padding:28px 12px 10px;background:linear-gradient(transparent,rgba(3,13,18,.93));font-weight:700;font-size:1rem;text-align:left}
 .price:empty{display:none}
@@ -152,7 +158,7 @@ section.on{display:block;animation:in .4s ease both}
 
   <section id="b">
     <div class="stamp" id="stamp"></div>
-    <p class="lead">Disponibilités physiques classées par pays.</p>
+    <p class="lead">Disponibilités physiques classées par pays. Les disponibilités sont actualisées automatiquement toutes les 25 minutes.</p>
     <div class="countryfilters" id="countryfilters"><button class="on" data-country="Tous">Tous</button><button data-country="Belgique">Belgique</button><button data-country="Suisse">Suisse</button><button data-country="Luxembourg">Luxembourg</button><button data-country="France">France</button><button data-country="À classer">À classer</button></div>
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
@@ -371,6 +377,14 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   console.error("RADAR PAYMENT: impossible de charger photos.json",e);
   render();
 });
+
+// Actualisation automatique des disponibilités physiques toutes les 25 minutes.
+setInterval(function(){
+  fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Actualisation indisponible");return r.json()}).then(function(d){
+    PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||""}});
+    ST.maj=d.maj||"";render();
+  }).catch(function(e){console.warn("RADAR PAYMENT: actualisation automatique échouée",e)});
+},25*60*1000);
 
 var tabs=document.getElementById("tabs");
 $("refresh").onclick=function(){
