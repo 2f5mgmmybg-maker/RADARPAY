@@ -130,6 +130,20 @@ section.on{display:block;animation:in .4s ease both}
 #chatrecord.recording{background:#a65300;color:#fff;animation:activePulse 1s infinite}
 #chatvoicehint{flex-basis:100%;margin:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Cartes Spitta : photo et commandes bien séparées */
+#spittamine{display:grid;grid-template-columns:1fr;gap:22px;margin-top:18px}
+.spitta-product-card{display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden;border:1px solid #754000;border-radius:20px;background:linear-gradient(145deg,rgba(255,149,0,.09),transparent 45%),#090909;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.spitta-product-photo{display:block;width:100%;height:auto;max-height:340px;aspect-ratio:16/10;object-fit:contain;background:#050505}
+.spitta-product-info{display:flex;flex-direction:column;gap:12px;padding:16px}
+.spitta-product-price{font-family:Caveat,Kalam,system-ui,sans-serif;font-size:1.45rem;color:#ffb347;overflow-wrap:anywhere}
+.spitta-product-actions{display:flex;flex-direction:column;gap:10px}
+.spitta-product-actions .btn{width:100%;min-height:48px;padding:12px 16px;font-size:1rem;font-weight:700;white-space:normal}
+.spitta-delete{border-color:#a33b24!important;background:rgba(163,59,36,.14)!important;color:#ff9b83!important}
+.spitta-delete:hover{background:rgba(163,59,36,.28)!important;box-shadow:0 0 18px rgba(220,70,40,.18)!important}
+.spitta-product-hint{margin:0;color:var(--mute);font-size:.88rem;line-height:1.5}
+@media(min-width:430px){#spittamine{grid-template-columns:repeat(2,minmax(0,1fr))}.spitta-product-photo{aspect-ratio:4/3}.spitta-product-info{padding:14px}}
+
 </style>
 </head>
 <body>
@@ -377,12 +391,15 @@ function loadSpittaItems(){
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
     if(!own.length){host.textContent="Tu n’as pas encore publié d’annonce.";return}
     own.forEach(function(p){
-      var d=document.createElement("div");d.className="slot";
-      var im=document.createElement("img");im.src=p.src;im.alt="Annonce";d.appendChild(im);
-      var pr=document.createElement("div");pr.className="price";pr.textContent=p.prix||"Sans prix";d.appendChild(pr);
-      var del=document.createElement("button");del.className="btn s";del.textContent="Supprimer";del.style.cssText="position:absolute;top:8px;right:8px";
-      del.onclick=function(){if(!confirm("Supprimer cette annonce ?"))return;del.disabled=true;call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false})};
-      d.appendChild(del);host.appendChild(d);
+      var d=document.createElement("article");d.className="spitta-product-card";
+      var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo de ton annonce";d.appendChild(im);
+      var info=document.createElement("div");info.className="spitta-product-info";
+      var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
+      var actions=document.createElement("div");actions.className="spitta-product-actions";
+      var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent="Cette annonce est publiée sur ton espace.";actions.appendChild(hint);
+      var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer cette annonce";
+      del.onclick=function(){if(!confirm("Supprimer définitivement cette annonce ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer cette annonce"})};
+      actions.appendChild(del);info.appendChild(actions);d.appendChild(info);host.appendChild(d);
     });
   }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
 }
