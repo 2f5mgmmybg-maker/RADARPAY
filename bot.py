@@ -687,7 +687,7 @@ def api(path, b):
             print("validation preuve paiement:", repr(e))
             return {"error": "Capture de paiement invalide ou trop lourde."}
         now = int(time.time())
-        proof_file = "private_payment_proofs/" + str(uid) + "/" + str(now * 1000) + ".enc"
+        proof_file = "private_payment_proofs/" + str(uid) + "/" + str(int(time.time() * 1000)) + ".enc"
         with LOCK:
             pdata = private_load()
             click = pdata.setdefault("site_clicks", {}).get(str(uid))
