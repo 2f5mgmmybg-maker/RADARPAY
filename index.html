@@ -171,7 +171,16 @@ section.on{display:block;animation:in .4s ease both}
     <div class="grid" id="grid"></div>
   </section>
   <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les conversations sont supprimées automatiquement après 10 minutes.</p><div id="userchatitems"></div></section>
-  <section id="e"><p class="lead">Tes discussions en tant que spitta : demandes reçues des lanceurs. Tu vois le profil du lanceur et le suivi des captures. Les conversations sont supprimées automatiquement après 10 minutes.</p><div id="spittachatitems"></div></section>
+  <section id="e">
+    <p class="lead">Espace Spitta : publie tes annonces et reçois les demandes des lanceurs. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
+    <h3>Publier une annonce</h3>
+    <input class="inp" id="spittaprice" placeholder="Prix / conditions">
+    <label class="lead" for="spittacountry">Pays</label>
+    <select class="inp" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
+    <button class="btn s" id="spittaadd">Ajouter ma photo</button><input type="file" id="spittafile" accept="image/*" hidden>
+    <p class="lead" id="spittamsg"></p><div class="grid" id="spittamine"></div>
+    <h3>Demandes reçues</h3><div id="spittachatitems"></div>
+  </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les conversations sont supprimées après 10 minutes.</p><div id="livechatitems"></div></section>
 </main>
 <div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><p class="lead" id="chaterror"></p></div>
@@ -316,6 +325,23 @@ function showMe(r,fromCode){
     x.onclick=function(){x.disabled=true;call("/api/delete",{id:p.id}).then(function(){PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});render();adminOpen()})};
     d.appendChild(x);m.appendChild(d)});
 }
+function loadSpittaItems(){
+  if(USER_ROLE!=="spitta")return;
+  call("/api/me",{}).then(function(r){
+    var host=$("spittamine");if(!host)return;host.innerHTML="";
+    var mine=(r.mine||[]);
+    var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
+    if(!own.length){host.textContent="Tu n’as pas encore publié d’annonce.";return}
+    own.forEach(function(p){
+      var d=document.createElement("div");d.className="slot";
+      var im=document.createElement("img");im.src=p.src;im.alt="Annonce";d.appendChild(im);
+      var pr=document.createElement("div");pr.className="price";pr.textContent=p.prix||"Sans prix";d.appendChild(pr);
+      var del=document.createElement("button");del.className="btn s";del.textContent="Supprimer";del.style.cssText="position:absolute;top:8px;right:8px";
+      del.onclick=function(){if(!confirm("Supprimer cette annonce ?"))return;del.disabled=true;call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false})};
+      d.appendChild(del);host.appendChild(d);
+    });
+  }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
+}
 function loadChatList(){
   call("/api/chat/list",{}).then(function(r){
     var host=$("adminchatitems");if(host){host.innerHTML="";}
@@ -335,6 +361,7 @@ function loadChatList(){
     });
     if(host&&ADMIN&&!host.children.length)host.textContent="Aucune discussion à superviser.";
     if(livehost&&!livehost.children.length)livehost.textContent="Aucune discussion en direct pour le moment.";
+    loadSpittaItems();
     if(userhost&&!userhost.children.length)userhost.textContent="Aucune discussion de lanceur en cours.";
     if(spittahost&&!spittahost.children.length)spittahost.textContent="Aucune demande reçue en tant que spitta.";
     
@@ -395,6 +422,14 @@ function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegr
 $("go").onclick=function(){CODE=$("code").value.trim();$("msg").textContent="Vérification…";
   call("/api/me",{}).then(function(r){showMe(r,true) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})};
 $("addp").onclick=function(){$("pf").click()};
+$("spittaadd").onclick=function(){$("spittafile").click()};
+$("spittafile").onchange=function(){
+  var f=this.files[0];this.value="";if(!f)return;$("spittamsg").textContent="Préparation de l’annonce…";
+  shrink(f,function(src){$("spittamsg").textContent="Publication…";call("/api/add",{image:src,prix:$("spittaprice").value,pays:$("spittacountry").value}).then(function(r){
+    if(!r.ok)throw new Error(r.error||"Publication impossible.");
+    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||""});$("spittaprice").value="";$("spittamsg").textContent="Annonce publiée.";render();loadSpittaItems();
+  }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."})});
+};
 $("pf").onchange=function(){var f=this.files[0];this.value="";if(!f)return;$("pm").textContent="Préparation de la photo…";
   shrink(f,function(src){$("pm").textContent="Envoi et publication…";call("/api/add",{image:src,prix:$("pp").value,pays:$("photoCountry").value}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Erreur de publication.");
@@ -445,7 +480,7 @@ function chooseRole(role){
     $("role-message").textContent="";
     $("spitta-tab").hidden=USER_ROLE!=="spitta";
     $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
-    if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="e"]').hidden=false}
+    if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="e"]').hidden=false;loadSpittaItems()}
     if(USER_ROLE==="lanceur"){$("tabs").querySelector('[data-t="d"]').hidden=false}
     loadChatList();
   }).catch(function(e){$("role-message").textContent=e.message||"Connexion impossible. Ouvre l’app depuis Telegram."});
@@ -453,7 +488,7 @@ function chooseRole(role){
 $("choose-lanceur").onclick=function(){chooseRole("lanceur")};
 $("choose-spitta").onclick=function(){chooseRole("spitta")};
 if(INIT){call("/api/me",{}).then(function(r){
-  if(r.role){USER_ROLE=r.role;$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";if(USER_ROLE==="owner")showMe(r,false);loadChatList()}
+  if(r.role){USER_ROLE=r.role;$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="spitta")loadSpittaItems()}
 }).catch(function(){})}
 </script>
 </body>
