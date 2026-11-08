@@ -179,9 +179,7 @@ section.on{display:block;animation:in .4s ease both}
   </section>
 
   <section id="c">
-    <div id="gate"><p class="lead">Espace administrateur. Entre ton code d’accès.</p>
-      <input class="inp" id="code" inputmode="numeric" placeholder="Code d’accès" autocomplete="off">
-      <button class="btn s" id="go">Entrer</button><p class="lead" id="msg"></p></div>
+    <div id="gate"><p class="lead">Accès réservé au compte administrateur autorisé dans la configuration du serveur.</p><p class="lead" id="msg"></p></div>
     <div id="panel" hidden><p class="lead">Ajoute une photo avec son prix.</p>
       <input class="inp" id="pp" placeholder="Prix (ex : 120 €)">
       <label for="photoCountry" class="lead">Pays de disponibilité physique</label>
@@ -362,8 +360,7 @@ function ask(){return new Promise(function(res){var t=setTimeout(res,8000);try{i
 function showMe(r,fromCode){
   var ok=r.role==="owner";ADMIN=ok;$("gate").hidden=ok;$("panel").hidden=!ok;
   $("admin-tab").hidden=!ok;
-  if(!ok){$("panel").hidden=true;return;}
-  if(!ok){$("msg").textContent=r.error||(fromCode?"Code incorrect.":"Accès administrateur indisponible.");return}
+  if(!ok){$("msg").textContent=r.error||"Accès administrateur réservé au propriétaire.";return}
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
   loadChatList();
@@ -548,8 +545,6 @@ setInterval(function(){
  setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
-$("go").onclick=function(){CODE=$("code").value.trim();$("msg").textContent="Vérification…";
-  call("/api/me",{}).then(function(r){showMe(r,true) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})};
 $("addp").onclick=function(){$("pf").click()};
 $("spittaadd").onclick=function(){$("spittafile").click()};
 $("spittafile").onchange=function(){
