@@ -236,14 +236,13 @@ function openLb(p){
     w.onclick=function(){
       if(w.dataset.s!=="1"){w.dataset.s="1";w.textContent="Confirmer";m.textContent="Ton choix sera transmis au spitta. Dans 50 secondes, tu auras une réponse.";return}
       w.disabled=true;m.textContent="Envoi…";
-      ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Discussion créée, notification non confirmée."):"Le spitta est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");w.textContent="Envoyé";if(r.chat)openChat(r.chat)})
-      .catch(function(){m.textContent="Le serveur se réveille. Réessaie dans 30 secondes.";w.disabled=false;w.dataset.s="";w.textContent="Je le veux"})};}
+      ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Notification non confirmée. Réessaie."):"Le spitta est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");if(r.notification===false||!r.ok){w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"}else{w.textContent="Envoyé"}if(r.chat)openChat(r.chat)}).catch(function(){m.textContent="Le serveur ne répond pas. Réessaie.";w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"})};}
   var im=l.querySelector("img");im.classList.remove("z");im.src=p.src;
   l.querySelector("#lbp").textContent=p.prix||"";CUR=p;var w0=l.querySelector("#lbw");w0.disabled=false;w0.dataset.s="";w0.textContent="Je le veux";l.querySelector("#lbm").textContent="";l.classList.add("on");
 }
 function shrink(file,cb){
   var img=new Image();
-  img.onload=function(){var s=Math.min(1,900/Math.max(img.width,img.height));var c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.78));URL.revokeObjectURL(img.src)};
+  img.onload=function(){var s=Math.min(1,720/Math.max(img.width,img.height));var c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.62));URL.revokeObjectURL(img.src)};
   img.src=URL.createObjectURL(file);
 }
 function save(art){
@@ -417,6 +416,7 @@ setInterval(function(){
   if(!ACTIVE_CHAT||$("chatui").hidden)return;
   call("/api/chat/messages",{id:ACTIVE_CHAT}).then(function(r){if(r.ok){LAST_CHAT_RENDER="";renderMessages(r.chat)}}).catch(function(){});
 },2500);
+ setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE)loadChatList()},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 $("go").onclick=function(){CODE=$("code").value.trim();$("msg").textContent="Vérification…";
