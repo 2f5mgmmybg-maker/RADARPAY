@@ -305,9 +305,9 @@ def handle_cb(cb):
     tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
        reply_markup={"inline_keyboard": [[{"text": "💬 Parler au client", "url": p["url"]}]]})
     if kind == "y":
-        say(p["client"], "✅ Le vendeur a confirmé. Il s'est engagé à prendre cette commande. Vous pouvez échanger dans la discussion.")
+        say(p["client"], "✅ Le spitta a confirmé. Il s'est engagé à prendre cette commande. Vous pouvez échanger dans la discussion.")
     else:
-        say(p["client"], "❌ Le vendeur indique que ce produit n'est plus disponible.")
+        say(p["client"], "❌ Le spitta indique que ce produit n'est plus disponible.")
 
 
 def api(path, b):
@@ -347,9 +347,9 @@ def api(path, b):
                                                [{"text": "✅ Je confirme", "callback_data": "y:" + rid},
                                                 {"text": "❌ Pas disponible", "callback_data": "n:" + rid}]]})
         except Exception as e:
-            print("notification vendeur impossible:", repr(e))
+            print("notification spitta impossible:", repr(e))
             return {"ok": True, "chat": rid, "notification": False,
-                    "error": "Discussion créée, mais Telegram n'a pas pu prévenir le vendeur. Il doit ouvrir le bot et envoyer /start."}
+                    "error": "Discussion créée, mais Telegram n'a pas pu prévenir le spitta. Il doit ouvrir le bot et envoyer /start."}
         threading.Timer(30, remind, [rid, prix]).start()
         threading.Timer(50, expire, [rid]).start()
         return {"ok": True, "chat": rid, "notification": True}
