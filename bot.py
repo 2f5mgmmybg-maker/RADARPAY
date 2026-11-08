@@ -624,21 +624,23 @@ def api(path, b):
     if path == "/api/adminchat/list":
         if r != "owner":
             return {"error": "Accès réservé à l’administrateur."}
-        roles = load_roles()
-        pdata = private_load()
-        items = []
-        for launcher, launcher_role in roles.items():
-            if launcher_role == "lanceur":
-                msgs = pdata.setdefault("admin_chats", {}).get(str(launcher), [])
-                last = msgs[-1].get("text", "") if msgs else "Aucun message"
-                items.append({"id": str(launcher), "last": last, "time": msgs[-1].get("time", 0) if msgs else 0})
+        with LOCK:
+            roles = dict(load_roles())
+            pdata = private_load()
+            items = []
+            for launcher, launcher_role in roles.items():
+                if launcher_role == "lanceur":
+                    msgs = list(pdata.setdefault("admin_chats", {}).get(str(launcher), []))
+                    last = msgs[-1].get("text", "") if msgs else "Aucun message"
+                    items.append({"id": str(launcher), "last": last, "time": msgs[-1].get("time", 0) if msgs else 0})
         return {"ok": True, "launchers": sorted(items, key=lambda x: x["time"], reverse=True)}
     if path == "/api/adminchat/messages":
         target = str(b.get("id", uid))
         if r != "owner" and (r != "lanceur" or target != str(uid)):
             return {"error": "Accès refusé."}
-        pdata = private_load()
-        msgs = [dict(m) for m in pdata.setdefault("admin_chats", {}).get(target, [])]
+        with LOCK:
+            pdata = private_load()
+            msgs = [dict(m) for m in pdata.setdefault("admin_chats", {}).get(target, [])]
         for msg in msgs:
             proof_file = msg.get("proof_file")
             if proof_file:
@@ -722,28 +724,33 @@ def api(path, b):
     if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof"):
         return {"role": None, "error": "Choisis d’abord ton rôle sur l’écran de bienvenue."}
     if path == "/api/chat/list":
-        chats_data, _ = chats_load()
-        if r == "owner":
-            visible = chats_data.get("chats", [])
-        else:
-            visible = [c for c in chats_data.get("chats", []) if uid in (c.get("client"), c.get("vendor"))]
-        return {"ok": True, "chats": [{k: c.get(k) for k in
-                ("id", "client", "vendor", "product", "price", "client_name", "created", "status")}
-                | {"last": (c.get("messages") or [{}])[-1].get("text", "")}
-                for c in sorted(visible, key=lambda x: x.get("created", 0), reverse=True)]}
+        with LOCK:
+            chats_data, _ = chats_load()
+            if r == "owner":
+                visible = chats_data.get("chats", [])
+            else:
+                visible = [c for c in chats_data.get("chats", []) if uid in (c.get("client"), c.get("vendor"))]
+            result = [{k: c.get(k) for k in
+                       ("id", "client", "vendor", "product", "price", "client_name", "created", "status")}
+                      | {"last": (c.get("messages") or [{}])[-1].get("text", "")}
+                      for c in sorted(visible, key=lambda x: x.get("created", 0), reverse=True)]
+        return {"ok": True, "chats": result}
     if path == "/api/chat/messages":
         rid = str(b.get("id", ""))
-        chats_data, _ = chats_load()
-        c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
-        if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
-            return {"error": "Discussion introuvable ou accès refusé."}
-        if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
-            c["status"] = "proof_expired"
-            c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
-            chats_save(chats_data, None)
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
+                return {"error": "Discussion introuvable ou accès refusé."}
+            if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
+                c["status"] = "proof_expired"
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
+                chats_save(chats_data, None)
+            c = dict(c)
+            c["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
         public_chat = {k: c.get(k) for k in
                 ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline")}
-        public_chat["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
+        public_chat["messages"] = c["messages"]
         for msg in public_chat.get("messages") or []:
             proof_file = msg.get("proof_file")
             voice_file = msg.get("voice_file")
