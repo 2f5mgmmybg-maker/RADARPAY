@@ -252,17 +252,33 @@ def dec(tok, pid):
     return int.from_bytes(base64.urlsafe_b64decode(tok), "big") ^ _ks(pid)
 
 
-def role(user, code):
-    uid = user["id"]
-    if time.time() < FAILS.get(uid, (0, 0))[1]:
-        return None
-    if ACCESS_CODE and code and hmac.compare_digest(str(code), ACCESS_CODE):
-        FAILS.pop(uid, None)
-        return "owner" if uid == OWNER else "vendor"
-    if code:
-        n = FAILS.get(uid, (0, 0))[0] + 1
-        FAILS[uid] = (0, time.time() + 600) if n >= 5 else (n, 0)
-    return None
+USER_ROLES = None
+
+def load_roles():
+    global USER_ROLES
+    if USER_ROLES is not None:
+        return USER_ROLES
+    try:
+        f = gh_get("user_roles.json")
+        USER_ROLES = json.loads(base64.b64decode(f.get("content", "")).decode() or "{}")
+    except Exception:
+        USER_ROLES = {}
+    return USER_ROLES
+
+def save_roles():
+    roles = load_roles()
+    try:
+        f = gh_get("user_roles.json")
+        sha = f.get("sha")
+    except Exception:
+        sha = None
+    gh_put("user_roles.json", json.dumps(roles, ensure_ascii=False, indent=2).encode(),
+           "Enregistrement des rôles RADAR PAYMENT", sha)
+
+def role(user, code=None):
+    if user["id"] == OWNER:
+        return "owner"
+    return load_roles().get(str(user["id"]))
 
 
 def owner_of(p):
@@ -316,6 +332,16 @@ def api(path, b):
     if not user:
         return {"error": "Ouvre l'app depuis Telegram."}
     uid = user["id"]
+    if path == "/api/role":
+        if uid == OWNER:
+            return {"ok": True, "role": "owner"}
+        chosen = str(b.get("role", ""))
+        if chosen not in ("lanceur", "spitta"):
+            return {"error": "Choisis Lanceur ou Spitta."}
+        with LOCK:
+            load_roles()[str(uid)] = chosen
+            save_roles()
+        return {"ok": True, "role": chosen}
     if path == "/api/want":
         k = (uid, b.get("id"))
         previous = WANTED.get(k)
@@ -354,9 +380,14 @@ def api(path, b):
         threading.Timer(30, remind, [rid, prix]).start()
         threading.Timer(50, expire, [rid]).start()
         return {"ok": True, "chat": rid, "notification": True}
-    r = role(user, b.get("code"))
+    r = role(user)
+    if path == "/api/me":
+        data, _ = load()
+        mine = [p["id"] for p in data["photos"] if p.get("id") and
+                (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
+        return {"role": r, "mine": mine}
     if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/accept", "/api/chat/proof"):
-        return {"role": None, "error": "Code incorrect ou accès bloqué 10 minutes."}
+        return {"role": None, "error": "Choisis d’abord ton rôle sur l’écran de bienvenue."}
     if path == "/api/chat/list":
         chats_data, _ = chats_load()
         if r == "owner":
@@ -440,10 +471,8 @@ def api(path, b):
                 print("alerte nouveau message non envoyée:", repr(e))
         threading.Thread(target=notify, daemon=True).start()
         return {"ok": True}
-    if path == "/api/me":
-        data, _ = load()
-        mine = [p["id"] for p in data["photos"] if p.get("id") and (r == "owner" or owner_of(p) == uid)]
-        return {"role": r, "mine": mine}
+    if path in ("/api/add", "/api/update", "/api/delete") and r != "owner":
+        return {"error": "Accès réservé."}
     if path == "/api/add":
         raw = base64.b64decode(b["image"].split(",", 1)[1])
         if len(raw) > 3_000_000:
@@ -459,7 +488,7 @@ def api(path, b):
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
-            if not p or not (r == "owner" or owner_of(p) == uid):
+            if not p or r != "owner":
                 return {"error": "Impossible."}
             p["pays"] = str(b.get("pays", ""))[:30]
             p["prix"] = str(b.get("prix", p.get("prix", "")))[:40]
@@ -469,7 +498,7 @@ def api(path, b):
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
-            if not p or not (r == "owner" or owner_of(p) == uid):
+            if not p or r != "owner":
                 return {"error": "Impossible."}
             data["photos"].remove(p)
             save(data, sha)
