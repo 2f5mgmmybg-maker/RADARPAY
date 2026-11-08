@@ -115,6 +115,10 @@ section.on{display:block;animation:in .4s ease both}
 .countryfilters button{border:1px solid #632020;background:#100707;color:#ff7777;border-radius:999px;padding:9px 13px;font:600 .76rem Sora,system-ui,sans-serif}
 .countryfilters button.on{background:#7c1111;color:#fff}
 #chatmessages{scroll-behavior:smooth}
+.chatmsg audio{display:block;width:min(260px,70vw);max-width:100%;margin-top:8px}
+.voicebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#chatrecord.recording{background:#8b1111;color:#fff;animation:activePulse 1s infinite}
+#chatvoicehint{flex-basis:100%;margin:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -183,7 +187,7 @@ section.on{display:block;animation:in .4s ease both}
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les conversations sont supprimées après 10 minutes.</p><div id="livechatitems"></div></section>
 </main>
-<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><p class="lead" id="chaterror"></p></div>
+<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><div class="voicebar"><button class="btn s" id="chatrecord" type="button">🎙️ Enregistrer un vocal</button><span id="chatvoicehint" class="lead">Vocal de 45 secondes maximum.</span></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
@@ -373,6 +377,9 @@ function renderMessages(c){
   $("chatheading").textContent=(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
   var open=c.status==="proof_received"||c.status==="expired";
   $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
+  $("chatrecord").disabled=observer||!open||(!window.MediaRecorder);
+  $("chatrecord").textContent="🎙️ Enregistrer un vocal";$("chatrecord").classList.remove("recording");
+  $("chatvoicehint").textContent=window.MediaRecorder?"Vocal de 45 secondes maximum.":"Les messages vocaux ne sont pas pris en charge par ce navigateur.";
   $("chattext").placeholder=observer?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
   var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
   $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(labels[c.status]||c.status);
@@ -385,6 +392,7 @@ function renderMessages(c){
     var d=document.createElement("div");d.className="chatmsg"+(m.from===me?" mine":"");
     d.appendChild(document.createTextNode((m.name||"Utilisateur")+": "+m.text));
     if(m.image){var im=document.createElement("img");im.src=m.image;im.alt="Capture envoyée";im.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";d.appendChild(im)}
+    if(m.audio){var au=document.createElement("audio");au.controls=true;au.preload="none";au.src=m.audio;d.appendChild(au)}
     var small=document.createElement("small");small.textContent=new Date((m.time||0)*1000).toLocaleString("fr-FR");d.appendChild(small);host.appendChild(d);
   });
   host.scrollTop=host.scrollHeight;
@@ -410,6 +418,41 @@ $("chatsend").onclick=function(){
   var txt=$("chattext").value.trim();if(!ACTIVE_CHAT||!txt)return;$("chatsend").disabled=true;
   call("/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
   .then(function(r){renderMessages(r.chat);$("chaterror").textContent=""}).catch(function(e){$("chaterror").textContent=(e&&e.message)||"Envoi impossible."}).finally(function(){$("chatsend").disabled=false});
+};
+var voiceRecorder=null,voiceChunks=[],voiceTimer=null;
+$("chatrecord").onclick=function(){
+  if(voiceRecorder&&voiceRecorder.state==="recording"){voiceRecorder.stop();return}
+  if(!ACTIVE_CHAT||$("chatui").hidden)return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){
+    $("chaterror").textContent="Enregistrement vocal indisponible. Autorise le micro dans Telegram ou utilise un navigateur compatible.";return;
+  }
+  $("chaterror").textContent="Demande d'accès au micro…";
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    var types=["audio/webm;codecs=opus","audio/ogg;codecs=opus","audio/mp4","audio/webm"];
+    var mime=types.find(function(t){return MediaRecorder.isTypeSupported(t)})||"";
+    voiceChunks=[];
+    try{voiceRecorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream)}
+    catch(e){stream.getTracks().forEach(function(t){t.stop()});throw e}
+    voiceRecorder.ondataavailable=function(e){if(e.data&&e.data.size)voiceChunks.push(e.data)};
+    voiceRecorder.onerror=function(){ $("chaterror").textContent="Erreur pendant l'enregistrement vocal."; };
+    voiceRecorder.onstop=function(){
+      clearTimeout(voiceTimer);stream.getTracks().forEach(function(t){t.stop()});
+      $("chatrecord").disabled=false;$("chatrecord").classList.remove("recording");$("chatrecord").textContent="🎙️ Enregistrer un vocal";
+      var blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||"audio/webm"});voiceRecorder=null;voiceChunks=[];
+      if(!blob.size){$("chaterror").textContent="Aucun son enregistré.";return}
+      if(blob.size>650000){$("chaterror").textContent="Vocal trop lourd. Enregistre un message plus court.";return}
+      $("chaterror").textContent="Envoi du vocal…";
+      var reader=new FileReader();reader.onload=function(){
+        call("/api/chat/voice",{id:ACTIVE_CHAT,audio:reader.result,mime:blob.type||"audio/webm"}).then(function(r){
+          if(!r.ok)throw new Error(r.error||"Envoi impossible.");
+          LAST_CHAT_RENDER="";return call("/api/chat/messages",{id:ACTIVE_CHAT});
+        }).then(function(r){renderMessages(r.chat);$("chaterror").textContent=""})
+        .catch(function(e){$("chaterror").textContent=e.message||"Envoi vocal impossible."});
+      };reader.onerror=function(){$("chaterror").textContent="Lecture du fichier vocal impossible."};reader.readAsDataURL(blob);
+    };
+    voiceRecorder.start();$("chaterror").textContent="";$("chatrecord").textContent="⏹️ Arrêter le vocal";$("chatrecord").classList.add("recording");
+    voiceTimer=setTimeout(function(){if(voiceRecorder&&voiceRecorder.state==="recording")voiceRecorder.stop()},45000);
+  }).catch(function(e){$("chaterror").textContent="Micro refusé ou indisponible : "+(e.message||"vérifie les autorisations.")});
 };
 $("chattext").addEventListener("keydown",function(e){if(e.key==="Enter")$("chatsend").click()});
 setInterval(function(){
