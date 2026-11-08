@@ -491,7 +491,8 @@ def api(path, b):
             c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
             chats_save(chats_data, None)
         public_chat = {k: c.get(k) for k in
-                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "messages")}
+                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline")}
+        public_chat["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
         for msg in public_chat.get("messages") or []:
             proof_file = msg.get("proof_file")
             if proof_file:
