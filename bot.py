@@ -419,6 +419,16 @@ def api(path, b):
             data["photos"].insert(0, {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30], "o": enc(uid, pid)})
             save(data, sha)
         return {"ok": True, "photo": {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30]}}
+    if path == "/api/update":
+        with LOCK:
+            data, sha = load()
+            p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
+            if not p or not (r == "owner" or owner_of(p) == uid):
+                return {"error": "Impossible."}
+            p["pays"] = str(b.get("pays", ""))[:30]
+            p["prix"] = str(b.get("prix", p.get("prix", "")))[:40]
+            save(data, sha)
+        return {"ok": True}
     if path == "/api/delete":
         with LOCK:
             data, sha = load()
