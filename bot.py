@@ -90,10 +90,20 @@ def gh_put(path, data, msg, sha=None):
 def gh_del(path, msg):
     try:
         sha = gh_get(path)["sha"]
-        requests.delete(f"{GH}/{path}", headers=H, timeout=30,
-                        json={"message": msg, "sha": sha, "branch": BRANCH})
-    except Exception:
-        pass
+        response = requests.delete(f"{GH}/{path}", headers=H, timeout=30,
+                                   json={"message": msg, "sha": sha, "branch": BRANCH})
+        if response.status_code == 404:
+            return True
+        response.raise_for_status()
+        return True
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 404:
+            return True
+        print("suppression GitHub échouée:", path, repr(e))
+        return False
+    except Exception as e:
+        print("suppression GitHub échouée:", path, repr(e))
+        return False
 
 
 def load():
