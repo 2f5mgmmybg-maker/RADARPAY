@@ -91,25 +91,14 @@ def save(data, sha):
 
 
 CHAT_TTL = 600
+CHAT_DATA = {"chats": []}
 
 
 def chats_load():
-    try:
-        f = gh_get("chats.json")
-        data = json.loads(base64.b64decode(f["content"]).decode() or '{"chats":[]}')
-        data.setdefault("chats", [])
-        now = int(time.time())
-        active = [c for c in data["chats"] if now - int(c.get("created", now)) < CHAT_TTL]
-        if len(active) != len(data["chats"]):
-            data["chats"] = active
-            chats_save(data, f["sha"])
-            fresh = gh_get("chats.json")
-            return data, fresh["sha"]
-        return data, f["sha"]
-    except requests.HTTPError as e:
-        if e.response is not None and e.response.status_code == 404:
-            return {"chats": []}, None
-        raise
+    now = int(time.time())
+    CHAT_DATA["chats"] = [c for c in CHAT_DATA.get("chats", [])
+                          if now - int(c.get("created", now)) < CHAT_TTL]
+    return CHAT_DATA, None
 
 
 def cleanup_chats():
@@ -119,12 +108,11 @@ def cleanup_chats():
                 chats_load()
         except Exception as e:
             print("nettoyage discussions:", repr(e))
-        time.sleep(60)
+        time.sleep(15)
 
 
-def chats_save(data, sha):
-    raw = json.dumps(data, ensure_ascii=False, indent=2).encode()
-    gh_put("chats.json", raw, "Mise à jour des discussions", sha)
+def chats_save(data, sha=None):
+    CHAT_DATA["chats"] = data.get("chats", [])
 
 
 def chat_update(rid, **changes):
