@@ -229,6 +229,17 @@ function renderServices(){
 renderServices();
 
 var grid=document.getElementById("grid");
+var PHYSICAL_REFRESH_MS=25*60*1000;
+var nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;
+function physicalCountdownText(){
+  var left=Math.max(0,nextPhysicalRefresh-Date.now());
+  var mins=Math.floor(left/60000),secs=Math.floor((left%60000)/1000);
+  return "Actualisation dans "+String(mins).padStart(2,"0")+":"+String(secs).padStart(2,"0");
+}
+function updatePhysicalCountdowns(){
+  document.querySelectorAll(".physical-countdown").forEach(function(el){el.textContent=physicalCountdownText()});
+}
+setInterval(updatePhysicalCountdowns,1000);
 function render(){
   grid.innerHTML="";
   var visible=PHOTOS.filter(function(p){return COUNTRY==="Tous"?(true):(COUNTRY==="À classer"?!p.pays:(p.pays||"")===COUNTRY)});
@@ -246,6 +257,7 @@ function render(){
       var pr=document.createElement("div");pr.className="price";pr.textContent=p.prix||"";d.appendChild(pr);
       d.onclick=function(){openLb(p)};
     }
+    var countdown=document.createElement("small");countdown.className="physical-countdown";countdown.style.cssText="display:block;text-align:center;color:var(--sweep);font-size:.7rem;margin-top:7px";countdown.textContent=physicalCountdownText();d.appendChild(countdown);
     grid.appendChild(d);
   });
   document.getElementById("stamp").textContent=ST.maj?"Mis à jour le "+ST.maj:"";
@@ -544,9 +556,9 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
 setInterval(function(){
   fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Actualisation indisponible");return r.json()}).then(function(d){
     PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||""}});
-    ST.maj=d.maj||"";render();if(USER_ROLE==="spitta")loadSpittaItems();
+    ST.maj=d.maj||"";nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;render();if(USER_ROLE==="spitta")loadSpittaItems();
   }).catch(function(e){console.warn("RADAR PAYMENT: actualisation automatique échouée",e)});
-},25*60*1000);
+},PHYSICAL_REFRESH_MS);
 
 var tabs=document.getElementById("tabs");
 $("refresh").onclick=function(){
