@@ -343,13 +343,13 @@ function call(path,body){
     signal:controller?controller.signal:undefined,
     cache:"no-store"
   }).then(function(r){
-    if(!r.ok) throw new Error("Erreur HTTP "+r.status);
-    return r.text();
-  }).then(function(raw){
-    var data;
-    try{data=JSON.parse(raw)}catch(e){throw new Error("Réponse API invalide (JSON).")}
-    if(!data || typeof data!=="object") throw new Error("Réponse API invalide.");
-    return data;
+    return r.text().then(function(raw){
+      var data;
+      try{data=JSON.parse(raw)}catch(e){throw new Error("Réponse API invalide (JSON).")}
+      if(!data || typeof data!=="object") throw new Error("Réponse API invalide.");
+      if(!r.ok) throw new Error(data.error||("Erreur HTTP "+r.status));
+      return data;
+    });
   }).catch(function(e){
     if(e && e.name==="AbortError") throw new Error("Délai API dépassé (90 secondes).");
     throw e;
