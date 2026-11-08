@@ -442,7 +442,7 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||""}});
   ST.maj=d.maj||"";
   API=(d.api||"").trim().replace(/\/$/,"");
-  render();
+  render();if(USER_ROLE==="spitta")loadSpittaItems();
 }).then(function(){
   var cid=new URLSearchParams(location.search).get("chat");if(cid)openChat(cid);
 }).catch(function(e){
@@ -454,7 +454,7 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
 setInterval(function(){
   fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Actualisation indisponible");return r.json()}).then(function(d){
     PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||""}});
-    ST.maj=d.maj||"";render();
+    ST.maj=d.maj||"";render();if(USER_ROLE==="spitta")loadSpittaItems();
   }).catch(function(e){console.warn("RADAR PAYMENT: actualisation automatique échouée",e)});
 },25*60*1000);
 
