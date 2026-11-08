@@ -538,7 +538,7 @@ def api(path, b):
         amount = str(b.get("amount", "")).strip().replace(",", ".")
         currency = str(b.get("currency", "")).upper().strip()
         image = str(b.get("image", ""))
-        if not re.fullmatch(r"\\d{1,9}(?:\\.\\d{1,2})?", amount) or float(amount) <= 0:
+        if not re.fullmatch(r"\d{1,9}(?:\.\d{1,2})?", amount) or float(amount) <= 0:
             return {"error": "Indique un montant valide."}
         if currency not in ("EUR", "USD", "GBP", "CHF"):
             return {"error": "Choisis une devise valide."}
