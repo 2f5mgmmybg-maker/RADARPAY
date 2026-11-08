@@ -164,7 +164,7 @@ section.on{display:block;animation:in .4s ease both}
       <select class="inp" id="photoCountry"><option value="">Non précisé / vente en ligne</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
       <button class="btn s" id="addp">Choisir une photo</button><input type="file" id="pf" accept="image/*" hidden>
       <p class="lead" id="pm"></p><div class="grid" id="mine"></div>
-      <div id="adminchatlist" hidden><h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div></div></div>
+      <div id="adminchatlist" hidden><h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Chats privés avec les Lanceurs</h3><div id="adminlaunchers"></div></div></div>
   </section>
 
   <section id="b">
@@ -174,7 +174,7 @@ section.on{display:block;animation:in .4s ease both}
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
   </section>
-  <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les conversations sont supprimées automatiquement après 10 minutes.</p><div id="userchatitems"></div></section>
+  <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les conversations de transaction expirent après 10 minutes.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique seulement le montant et la devise, puis joins obligatoirement une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
     <p class="lead">Espace Spitta : publie tes annonces et reçois les demandes des lanceurs. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
     <h3>Publier une annonce</h3>
@@ -192,17 +192,17 @@ section.on{display:block;animation:in .4s ease both}
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
 var SERVICES=[
- {n:"Cartes cadeaux ON",d:"Carte cadeau numérique ON",u:"https://www.on.com/en-es/products/digital-gift-card-907644gc"},
+ {n:"Cartes cadeaux ON",d:"Carte cadeau numérique ON",u:"https://www.on.com/en-es/products/digital-gift-card-907644gc",gift:true},
  {n:"Prada",d:"Site officiel",u:"https://www.prada.com"},
  {n:"Farfetch",d:"Mode de luxe",u:"https://www.farfetch.com"},
  {n:"Zeitauktion",d:"Enchères",u:"https://www.zeitauktion.com/fr"},
  {n:"Watchdeluxe.it",d:"Montres de luxe",u:"https://www.watchdeluxe.it"},
- {n:"Paysafe Card",d:"Paiement prépayé",u:"https://www.paysafecard.com"}
+ {n:"Paysafe Card",d:"Paiement prépayé",u:"https://www.paysafecard.com",gift:true}
 ];
 var ST=JSON.parse(document.getElementById("state").textContent);var PHOTOS=ST.photos;var ADMIN=false;var COUNTRY="Tous";var USER_ROLE=null;
 
 var list=document.getElementById("list");
-SERVICES.forEach(function(s){
+function renderServices(){\n  list.innerHTML="";\n  SERVICES.filter(function(s){return !(USER_ROLE==="spitta"&&s.gift)}).forEach(function(s){
   var a=document.createElement("a");a.className="row";a.href=s.u;
   if(s.u!=="#"){a.target="_blank";a.rel="noopener"}
   a.innerHTML='<div class="blip"></div><div><b>'+s.n+'</b><small>'+s.d+'</small></div><span class="go">›</span>';
@@ -370,22 +370,48 @@ function loadChatList(){
     
   }).catch(function(e){$("pm").textContent=(e&&e.message)||"Impossible de charger les discussions."});
 }
+var ADMIN_CHAT_MODE=false;
+function openAdminChat(id){
+  ADMIN_CHAT_MODE=true;ACTIVE_CHAT=String(id||((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||""));
+  LAST_CHAT_RENDER="";$("chatui").hidden=false;$("chaterror").textContent="Chargement…";
+  call("/api/adminchat/messages",{id:ACTIVE_CHAT}).then(function(r){if(!r.ok)throw new Error(r.error||"Chat indisponible.");renderMessages(r.chat);$("chaterror").textContent=""})
+  .catch(function(e){$("chaterror").textContent=e.message||"Impossible d’ouvrir le chat admin."});
+}
+function loadAdminChats(){
+  if(!ADMIN)return;
+  call("/api/adminchat/list",{}).then(function(r){
+    var host=$("adminlaunchers");if(!host)return;host.innerHTML="";
+    (r.launchers||[]).forEach(function(x){var b=document.createElement("button");b.className="chatitem";b.textContent="Lanceur #"+x.id;var sm=document.createElement("small");sm.textContent=x.last||"Aucun message";b.appendChild(sm);b.onclick=function(){openAdminChat(x.id)};host.appendChild(b)});
+    if(!host.children.length)host.textContent="Aucun Lanceur enregistré.";
+  }).catch(function(e){console.warn("Chats admin:",e)});
+}
+$("openadminchat").onclick=function(){openAdminChat()};
+$("paymentreport").onclick=function(){
+  var amount=$("paymentamount").value.trim(),currency=$("paymentcurrency").value,file=$("paymentproof").files[0];
+  if(!amount||!file){$("paymentmsg").textContent="Le montant et la capture d’écran sont obligatoires.";return}
+  $("paymentreport").disabled=true;$("paymentmsg").textContent="Préparation de la capture…";
+  shrink(file,function(src){call("/api/payment/report",{amount:amount,currency:currency,image:src}).then(function(r){
+    if(!r.ok)throw new Error(r.error||"Déclaration impossible.");
+    $("paymentamount").value="";$("paymentproof").value="";$("paymentmsg").textContent="Déclaration et capture envoyées à l’administrateur. Paiement non vérifié automatiquement.";
+    openAdminChat();
+  }).catch(function(e){$("paymentmsg").textContent=e.message||"Envoi impossible."}).finally(function(){$("paymentreport").disabled=false})});
+};
 function renderMessages(c){
   var signature=JSON.stringify([c.status,c.proof_deadline,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
-  $("chatheading").textContent=(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
-  var open=c.status==="proof_received"||c.status==="expired";
+  $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le Lanceur #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
+  var open=ADMIN_CHAT_MODE||c.status==="proof_received"||c.status==="expired";
   $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
-  $("chatrecord").disabled=observer||!open||(!window.MediaRecorder);
+  $("chatrecord").disabled=ADMIN_CHAT_MODE||observer||!open||(!window.MediaRecorder);
   if(!(voiceRecorder&&voiceRecorder.state==="recording")){
     $("chatrecord").textContent="🎙️ Enregistrer un vocal";$("chatrecord").classList.remove("recording");
   }
   $("chatvoicehint").textContent=window.MediaRecorder?"Vocal de 45 secondes maximum.":"Les messages vocaux ne sont pas pris en charge par ce navigateur.";
-  $("chattext").placeholder=observer?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
+  $("chattext").placeholder=observer&&!ADMIN_CHAT_MODE?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
   var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
   $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(labels[c.status]||c.status);
-  var step=$("chatproofstep");step.hidden=observer||!(c.status==="vendor_confirmed"||c.status==="proof_pending"||c.status==="proof_expired");
+  var step=$("chatproofstep");step.hidden=ADMIN_CHAT_MODE||observer||!(c.status==="vendor_confirmed"||c.status==="proof_pending"||c.status==="proof_expired");
   $("chataccept").hidden=!(client&&c.status==="vendor_confirmed");
   $("chatproofbutton").hidden=!(vendor&&c.status==="proof_pending");
   $("chatcountdown").textContent=c.status==="proof_pending"?"Temps restant : "+Math.max(0,Math.ceil((c.proof_deadline-Date.now()/1000)))+" secondes":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
@@ -401,10 +427,10 @@ function renderMessages(c){
 }
 function openChat(id){
   ACTIVE_CHAT=id;LAST_CHAT_RENDER="";$("chatui").hidden=false;$("chaterror").textContent="Chargement…";
-  call("/api/chat/messages",{id:id}).then(function(r){if(!r.ok)throw new Error(r.error||"Discussion indisponible.");renderMessages(r.chat);$("chaterror").textContent=""})
+  ADMIN_CHAT_MODE=false;call("/api/chat/messages",{id:id}).then(function(r){if(!r.ok)throw new Error(r.error||"Discussion indisponible.");renderMessages(r.chat);$("chaterror").textContent=""})
   .catch(function(e){$("chaterror").textContent=(e&&e.message)||"Impossible d’ouvrir la discussion."});
 }
-$("chatclose").onclick=function(){$("chatui").hidden=true;ACTIVE_CHAT=null;LAST_CHAT_RENDER="";loadChatList()};
+$("chatclose").onclick=function(){$("chatui").hidden=true;ACTIVE_CHAT=null;ADMIN_CHAT_MODE=false;LAST_CHAT_RENDER="";loadChatList();loadAdminChats()};
 $("chataccept").onclick=function(){
   if(!ACTIVE_CHAT)return;$("chataccept").disabled=true;
   call("/api/chat/accept",{id:ACTIVE_CHAT}).then(function(r){if(!r.ok)throw new Error(r.error||"Acceptation impossible.");LAST_CHAT_RENDER="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
@@ -418,7 +444,7 @@ $("chatprooffile").onchange=function(){
 };
 $("chatsend").onclick=function(){
   var txt=$("chattext").value.trim();if(!ACTIVE_CHAT||!txt)return;$("chatsend").disabled=true;
-  call("/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
+  call(ADMIN_CHAT_MODE?"/api/adminchat/send":"/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
   .then(function(r){renderMessages(r.chat);$("chaterror").textContent=""}).catch(function(e){$("chaterror").textContent=(e&&e.message)||"Envoi impossible."}).finally(function(){$("chatsend").disabled=false});
 };
 var voiceRecorder=null,voiceChunks=[],voiceTimer=null;
@@ -459,9 +485,9 @@ $("chatrecord").onclick=function(){
 $("chattext").addEventListener("keydown",function(e){if(e.key==="Enter")$("chatsend").click()});
 setInterval(function(){
   if(!ACTIVE_CHAT||$("chatui").hidden)return;
-  call("/api/chat/messages",{id:ACTIVE_CHAT}).then(function(r){if(r.ok){LAST_CHAT_RENDER="";renderMessages(r.chat)}}).catch(function(){});
+  call(ADMIN_CHAT_MODE?"/api/adminchat/messages":"/api/chat/messages",{id:ACTIVE_CHAT}).then(function(r){if(r.ok){LAST_CHAT_RENDER="";renderMessages(r.chat)}}).catch(function(){});
 },2500);
- setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE)loadChatList()},5000);
+ setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 $("go").onclick=function(){CODE=$("code").value.trim();$("msg").textContent="Vérification…";
@@ -526,7 +552,7 @@ function chooseRole(role){
   $("role-message").textContent="Enregistrement de ton profil…";
   call("/api/role",{role:role}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Impossible d’enregistrer le profil.");
-    USER_ROLE=r.role;$("welcome").classList.add("gone");
+    USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");
     $("role-message").textContent="";
     $("spitta-tab").hidden=USER_ROLE!=="spitta";
     $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
@@ -538,7 +564,7 @@ function chooseRole(role){
 $("choose-lanceur").onclick=function(){chooseRole("lanceur")};
 $("choose-spitta").onclick=function(){chooseRole("spitta")};
 if(INIT){call("/api/me",{}).then(function(r){
-  if(r.role){USER_ROLE=r.role;$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";arrangeTabs();if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="spitta")loadSpittaItems()}
+  if(r.role){USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";arrangeTabs();if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="owner")loadAdminChats();if(USER_ROLE==="spitta")loadSpittaItems()}
 }).catch(function(){})}
 </script>
 </body>
