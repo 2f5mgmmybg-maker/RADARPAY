@@ -1,5 +1,5 @@
 import os, time, json, base64, hashlib, hmac, threading, requests
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from urllib.parse import parse_qsl
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -18,7 +18,6 @@ ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 API_URL = (os.environ.get("API_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
 LOCK = threading.Lock()
 FAILS = {}
-WANTED = {}
 
 API = f"https://api.telegram.org/bot{TOKEN}"
 FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256((TOKEN + "|RADARPAY_PRIVATE_V1").encode()).digest()))
@@ -103,19 +102,24 @@ def private_load():
         return PRIVATE_CACHE
     try:
         f = gh_get("radar_private.enc")
-        PRIVATE_CACHE = json.loads(FERNET.decrypt(base64.b64decode(f.get("content", ""))).decode())
-    except Exception:
+    except requests.HTTPError as e:
+        if not e.response or e.response.status_code != 404:
+            raise
         PRIVATE_CACHE = {"roles": {}, "chats": []}
         try:
             old = gh_get("user_roles.json")
             PRIVATE_CACHE["roles"] = json.loads(base64.b64decode(old.get("content", "")).decode() or "{}")
-        except Exception:
-            pass
+        except requests.HTTPError as old_error:
+            if not old_error.response or old_error.response.status_code != 404:
+                PRIVATE_CACHE = None
+                raise
+        private_save()
+        gh_del("user_roles.json", "Migration vers les données privées chiffrées")
+    else:
         try:
-            private_save()
-            gh_del("user_roles.json", "Migration vers les données privées chiffrées")
-        except Exception as e:
-            print("migration données privées:", repr(e))
+            PRIVATE_CACHE = json.loads(FERNET.decrypt(base64.b64decode(f.get("content", ""))).decode())
+        except (InvalidToken, ValueError, json.JSONDecodeError) as e:
+            raise RuntimeError("Le fichier privé chiffré est illisible; aucune donnée n'a été écrasée.") from e
     PRIVATE_CACHE.setdefault("roles", {})
     PRIVATE_CACHE.setdefault("chats", [])
     return PRIVATE_CACHE
@@ -125,7 +129,9 @@ def private_save():
     encrypted = FERNET.encrypt(json.dumps(private_load(), ensure_ascii=False, separators=(",", ":")).encode())
     try:
         sha = gh_get("radar_private.enc").get("sha")
-    except Exception:
+    except requests.HTTPError as e:
+        if not e.response or e.response.status_code != 404:
+            raise
         sha = None
     gh_put("radar_private.enc", encrypted, "Sauvegarde chiffrée RADAR PAYMENT", sha)
 
@@ -133,11 +139,18 @@ def private_save():
 def chats_load():
     data = private_load()
     now = int(time.time())
-    before = len(data.get("chats", []))
-    data["chats"] = [c for c in data.get("chats", [])
+    old_chats = data.get("chats", [])
+    data["chats"] = [c for c in old_chats
                      if now - int(c.get("created", now)) < CHAT_TTL]
-    if len(data["chats"]) != before:
+    if len(data["chats"]) != len(old_chats):
         private_save()
+        for expired in old_chats:
+            if expired not in data["chats"]:
+                for msg in expired.get("messages", []):
+                    proof_file = msg.get("proof_file")
+                    if proof_file:
+                        gh_del(proof_file, "Suppression d'une capture arrivée à expiration")
+                        PROOF_CACHE.pop(proof_file, None)
     return data, None
 
 
