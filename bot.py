@@ -90,14 +90,35 @@ def save(data, sha):
            "Mise à jour des photos", sha)
 
 
+CHAT_TTL = 600
+
+
 def chats_load():
     try:
         f = gh_get("chats.json")
-        return json.loads(base64.b64decode(f["content"]).decode() or '{"chats":[]}'), f["sha"]
+        data = json.loads(base64.b64decode(f["content"]).decode() or '{"chats":[]}')
+        data.setdefault("chats", [])
+        now = int(time.time())
+        active = [c for c in data["chats"] if now - int(c.get("created", now)) < CHAT_TTL]
+        if len(active) != len(data["chats"]):
+            data["chats"] = active
+            chats_save(data, f["sha"])
+            return data, None
+        return data, f["sha"]
     except requests.HTTPError as e:
         if e.response is not None and e.response.status_code == 404:
             return {"chats": []}, None
         raise
+
+
+def cleanup_chats():
+    while True:
+        try:
+            with LOCK:
+                chats_load()
+        except Exception as e:
+            print("nettoyage discussions:", repr(e))
+        time.sleep(60)
 
 
 def chats_save(data, sha):
@@ -350,10 +371,8 @@ def api(path, b):
         chats_data, _ = chats_load()
         if r == "owner":
             visible = chats_data.get("chats", [])
-        elif r == "vendor":
-            visible = [c for c in chats_data.get("chats", []) if c.get("vendor") == uid]
         else:
-            visible = [c for c in chats_data.get("chats", []) if c.get("client") == uid]
+            visible = [c for c in chats_data.get("chats", []) if uid in (c.get("client"), c.get("vendor"))]
         return {"ok": True, "chats": [{k: c.get(k) for k in
                 ("id", "client", "vendor", "product", "price", "client_name", "created", "status")}
                 | {"last": (c.get("messages") or [{}])[-1].get("text", "")}
@@ -396,7 +415,7 @@ def api(path, b):
         with LOCK:
             gh_put(f"photos/{pid}.jpg", raw, "Ajout d'une photo")
             data, sha = load()
-            data["photos"].insert(0, {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "o": enc(uid, pid)})
+            data["photos"].insert(0, {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30], "o": enc(uid, pid)})
             save(data, sha)
         return {"ok": True}
     if path == "/api/delete":
@@ -470,6 +489,7 @@ def startup():
 
 if __name__ == "__main__":
     threading.Thread(target=serve, daemon=True).start()
+    threading.Thread(target=cleanup_chats, daemon=True).start()
     startup()
     offset = 0
     while True:
