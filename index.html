@@ -256,7 +256,7 @@ var nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;
 function physicalCountdownText(){
   var left=Math.max(0,nextPhysicalRefresh-Date.now());
   var mins=Math.floor(left/60000),secs=Math.floor((left%60000)/1000);
-  return "Actualisation dans "+String(mins).padStart(2,"0")+":"+String(secs).padStart(2,"0");
+  return "⏱ "+String(mins).padStart(2,"0")+":"+String(secs).padStart(2,"0")+" — actualisation";
 }
 function updatePhysicalCountdowns(){
   document.querySelectorAll(".physical-countdown").forEach(function(el){el.textContent=physicalCountdownText()});
@@ -279,7 +279,7 @@ function render(){
       var pr=document.createElement("div");pr.className="price";pr.textContent=p.prix||"";d.appendChild(pr);
       d.onclick=function(){openLb(p)};
     }
-    var countdown=document.createElement("small");countdown.className="physical-countdown";countdown.style.cssText="display:block;text-align:center;color:var(--sweep);font-size:.7rem;margin-top:7px";countdown.textContent=physicalCountdownText();d.appendChild(countdown);
+    var countdown=document.createElement("small");countdown.className="physical-countdown";countdown.style.cssText="display:block;text-align:center;color:var(--text);font-size:.78rem;font-weight:700;letter-spacing:.04em;margin:9px auto 2px;padding:7px 10px;width:max-content;max-width:100%;border:1px solid var(--line);border-radius:999px;background:rgba(238,234,226,.07);font-variant-numeric:tabular-nums";countdown.textContent=physicalCountdownText();d.appendChild(countdown);
     grid.appendChild(d);
   });
   document.getElementById("stamp").textContent=ST.maj?"Mis à jour le "+ST.maj:"";
