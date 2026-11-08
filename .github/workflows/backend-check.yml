@@ -44,9 +44,9 @@ jobs:
           import re
           from pathlib import Path
           html = Path("index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script\\b[^>]*>(.*?)</script\\s*>", html, flags=re.I | re.S)
+          scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.I | re.S)
           inline = [script for script in scripts if script.strip()]
-          Path("/tmp/radar-inline.js").write_text("\\n;\\n".join(inline), encoding="utf-8")
+          Path("/tmp/radar-inline.js").write_text("\n;\n".join(inline), encoding="utf-8")
           print(f"Checking {len(inline)} inline script(s)")
           PY
           node --check /tmp/radar-inline.js
