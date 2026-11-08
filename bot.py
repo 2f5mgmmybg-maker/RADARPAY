@@ -343,7 +343,7 @@ def api(path, b):
         threading.Timer(50, expire, [rid]).start()
         return {"ok": True, "chat": rid, "notification": True}
     r = role(user, b.get("code"))
-    if not r:
+    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send"):
         return {"role": None, "error": "Code incorrect ou accès bloqué 10 minutes."}
     if path == "/api/chat/list":
         chats_data, _ = chats_load()
