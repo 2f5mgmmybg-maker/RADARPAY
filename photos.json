@@ -1,12 +1,5 @@
 {
   "api": "https://radarpay-90js.onrender.com",
   "maj": "8 novembre",
-  "photos": [
-    {
-      "id": "1794169082152",
-      "image": "1794169082152.jpg",
-      "prix": "2500/ 50%/ATM",
-      "o": "lY7gZ2Wllho="
-    }
-  ]
+  "photos": []
 }
