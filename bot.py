@@ -419,7 +419,7 @@ def api(path, b):
             data_ch, _ = chats_load()
             previous = next((c for c in reversed(data_ch.get("chats", []))
                 if c.get("client") == uid and c.get("product") == product_id and
-                c.get("status") in ("pending", "vendor_confirmed", "proof_pending", "proof_received") and
+                c.get("status") in ("pending", "notification_failed", "vendor_confirmed", "proof_pending", "proof_received") and
                 now - int(c.get("created", now)) < CHAT_TTL), None)
             if previous and previous.get("status") != "notification_failed":
                 return {"ok": True, "chat": previous["id"], "notification": True, "existing": True}
