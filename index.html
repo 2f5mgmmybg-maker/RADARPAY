@@ -305,6 +305,10 @@ $("chatsend").onclick=function(){
   .then(function(r){renderMessages(r.chat);$("chaterror").textContent=""}).catch(function(e){$("chaterror").textContent=(e&&e.message)||"Envoi impossible."}).finally(function(){$("chatsend").disabled=false});
 };
 $("chattext").addEventListener("keydown",function(e){if(e.key==="Enter")$("chatsend").click()});
+setInterval(function(){
+  if(!ACTIVE_CHAT||$("chatui").hidden)return;
+  call("/api/chat/messages",{id:ACTIVE_CHAT}).then(function(r){if(r.ok)renderMessages(r.chat)}).catch(function(){});
+},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 $("go").onclick=function(){CODE=$("code").value.trim();$("msg").textContent="Vérification…";
