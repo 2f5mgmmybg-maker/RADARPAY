@@ -381,7 +381,7 @@ def api(path, b):
         with LOCK:
             chats_data, sha_ch = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
-            if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner") or (uid == c.get("vendor") and r not in ("vendor", "owner")):
+            if not c or uid not in (c.get("client"), c.get("vendor")):
                 return {"error": "Discussion introuvable ou accès refusé."}
             c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
                                                   "text": msg, "time": int(time.time())})
