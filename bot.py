@@ -418,7 +418,7 @@ def api(path, b):
             data, sha = load()
             data["photos"].insert(0, {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30], "o": enc(uid, pid)})
             save(data, sha)
-        return {"ok": True}
+        return {"ok": True, "photo": {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30]}}
     if path == "/api/delete":
         with LOCK:
             data, sha = load()
