@@ -382,16 +382,18 @@ def handle_cb(cb):
     tg("answerCallbackQuery", callback_query_id=cb["id"],
        text="Disponibilité confirmée." if kind == "y" else "Indisponibilité envoyée.")
     m = cb.get("message") or {}
-    if kind == "y" and SITE:
-        target = {"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}
+    if kind == "y":
+        if SITE:
+            target = {"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}
+        else:
+            target = {"text": "💬 Contacter le Lanceur", "url": c.get("client_url") or "https://t.me/"}
         tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
            reply_markup={"inline_keyboard": [[target]]})
         say(c["client"], "✅ Le Spitta a confirmé la disponibilité. Ouvre RADAR PAYMENT et appuie sur « Accepter la vente » pour lancer les 2 minutes.")
     else:
         tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
            reply_markup={"inline_keyboard": []})
-        if kind == "n":
-            say(c["client"], "❌ Le Spitta indique que ce produit n'est plus disponible. Tu peux refaire une demande si tu le souhaites.")
+        say(c["client"], "❌ Le Spitta indique que le produit n'est plus disponible. Tu peux refaire une demande si tu le souhaites.")
 
 
 def api(path, b):
