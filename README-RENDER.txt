@@ -13,6 +13,11 @@ RADAR PAYMENT — consignes de déploiement
    ACCESS_CODE     = 134679
    API_BASE_URL    = facultatif; URL HTTPS publique de ce Web Service Render, sans slash final.
                      Si vide, le code utilise RENDER_EXTERNAL_URL fourni par Render.
+   DATA_ENCRYPTION_KEY = recommandé; secret aléatoire stable utilisé pour chiffrer les données privées.
+                         À générer une fois (ex. : python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"),
+                         à conserver dans un gestionnaire de secrets et à ne jamais changer sans sauvegarde.
+                         Au premier démarrage avec cette variable, l’ancien fichier radar_private.enc
+                         est migré automatiquement depuis la clé dérivée de BOT_TOKEN.
 
 3) Ne pas mettre GITHUB_REPO=radar-bot : ce dépôt contient le code du bot, pas les données de la mini-app.
 
