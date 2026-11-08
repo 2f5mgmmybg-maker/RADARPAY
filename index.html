@@ -165,7 +165,7 @@ section.on{display:block;animation:in .4s ease both}
   </section>
   <section id="d"><p class="lead">Retrouve ici tes discussions en cours avec les Lanceurs ou spittas. Les conversations sont supprimées automatiquement après 10 minutes. Les échanges peuvent être consultés par l’administrateur pour le suivi et la sécurité.</p><div id="userchatitems"></div></section>
 </main>
-<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><p class="lead" id="chaterror"></p></div>
+<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
@@ -322,17 +322,24 @@ function loadChatList(){
   }).catch(function(e){$("pm").textContent=(e&&e.message)||"Impossible de charger les discussions."});
 }
 function renderMessages(c){
-  var signature=JSON.stringify([c.status,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
+  var signature=JSON.stringify([c.status,c.proof_deadline,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   $("chatheading").textContent="Discussion — "+(c.price||"commande");
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
-  var observer=me!==c.client&&me!==c.vendor;
-  $("chattext").disabled=observer;$("chatsend").disabled=observer;
-  $("chattext").placeholder=observer?"Supervision admin — lecture seule":"Ton message…";
-  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(c.status==="accepted"?"confirmée — spitta engagé":c.status==="declined"?"indisponible":c.status==="expired"?"délai dépassé":"en attente");
+  var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
+  var open=c.status==="proof_received";
+  $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
+  $("chattext").placeholder=observer?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
+  var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai dépassé — vente bloquée",declined:"indisponible",expired:"demande expirée"};
+  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(labels[c.status]||c.status);
+  var step=$("chatproofstep");step.hidden=observer||!(c.status==="vendor_confirmed"||c.status==="proof_pending"||c.status==="proof_expired");
+  $("chataccept").hidden=!(client&&c.status==="vendor_confirmed");
+  $("chatproofbutton").hidden=!(vendor&&c.status==="proof_pending");
+  $("chatcountdown").textContent=c.status==="proof_pending"?"Temps restant : "+Math.max(0,Math.ceil((c.proof_deadline-Date.now()/1000)))+" secondes":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
   var host=$("chatmessages");host.innerHTML="";
   (c.messages||[]).forEach(function(m){
-    var d=document.createElement("div");d.className="chatmsg"+(m.from===Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0)?" mine":"");
-    d.textContent=(m.name||"Utilisateur")+": "+m.text;
+    var d=document.createElement("div");d.className="chatmsg"+(m.from===me?" mine":"");
+    d.appendChild(document.createTextNode((m.name||"Utilisateur")+": "+m.text));
+    if(m.image){var im=document.createElement("img");im.src=m.image;im.alt="Capture envoyée";im.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";d.appendChild(im)}
     var small=document.createElement("small");small.textContent=new Date((m.time||0)*1000).toLocaleString("fr-FR");d.appendChild(small);host.appendChild(d);
   });
   host.scrollTop=host.scrollHeight;
@@ -343,6 +350,17 @@ function openChat(id){
   .catch(function(e){$("chaterror").textContent=(e&&e.message)||"Impossible d’ouvrir la discussion."});
 }
 $("chatclose").onclick=function(){$("chatui").hidden=true;ACTIVE_CHAT=null;LAST_CHAT_RENDER="";loadChatList()};
+$("chataccept").onclick=function(){
+  if(!ACTIVE_CHAT)return;$("chataccept").disabled=true;
+  call("/api/chat/accept",{id:ACTIVE_CHAT}).then(function(r){if(!r.ok)throw new Error(r.error||"Acceptation impossible.");LAST_CHAT_RENDER="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
+  .then(function(r){renderMessages(r.chat);$("chaterror").textContent=""}).catch(function(e){$("chaterror").textContent=e.message||"Erreur."}).finally(function(){$("chataccept").disabled=false});
+};
+$("chatproofbutton").onclick=function(){$("chatprooffile").click()};
+$("chatprooffile").onchange=function(){
+  var f=this.files[0];this.value="";if(!f)return;$("chaterror").textContent="Préparation de la capture…";
+  shrink(f,function(src){call("/api/chat/proof",{id:ACTIVE_CHAT,image:src}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");LAST_CHAT_RENDER="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
+  .then(function(r){renderMessages(r.chat);$("chaterror").textContent=""}).catch(function(e){$("chaterror").textContent=e.message||"Envoi impossible."})});
+};
 $("chatsend").onclick=function(){
   var txt=$("chattext").value.trim();if(!ACTIVE_CHAT||!txt)return;$("chatsend").disabled=true;
   call("/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
@@ -351,7 +369,7 @@ $("chatsend").onclick=function(){
 $("chattext").addEventListener("keydown",function(e){if(e.key==="Enter")$("chatsend").click()});
 setInterval(function(){
   if(!ACTIVE_CHAT||$("chatui").hidden)return;
-  call("/api/chat/messages",{id:ACTIVE_CHAT}).then(function(r){if(r.ok)renderMessages(r.chat)}).catch(function(){});
+  call("/api/chat/messages",{id:ACTIVE_CHAT}).then(function(r){if(r.ok){LAST_CHAT_RENDER="";renderMessages(r.chat)}}).catch(function(){});
 },2500);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
