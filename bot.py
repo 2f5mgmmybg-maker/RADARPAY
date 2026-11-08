@@ -18,6 +18,11 @@ ACCESS_CODE = os.environ.get("ACCESS_CODE", "")
 API_URL = (os.environ.get("API_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
 LOCK = threading.Lock()
 FAILS = {}
+RATE_LOCK = threading.Lock()
+RATE_LIMITS = {}
+RATE_WINDOW = 60
+RATE_MAX = 60
+
 
 API = f"https://api.telegram.org/bot{TOKEN}"
 FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256((TOKEN + "|RADARPAY_PRIVATE_V1").encode()).digest()))
@@ -286,17 +291,68 @@ def handle(msg):
 
 def verify(init):
     try:
-        d = dict(parse_qsl(init, keep_blank_values=True))
-        h = d.pop("hash")
+        if not isinstance(init, str) or not init or len(init) > 12000:
+            return None
+        pairs = parse_qsl(init, keep_blank_values=True, strict_parsing=True)
+        if len({k for k, _ in pairs}) != len(pairs):
+            return None
+        d = dict(pairs)
+        h = d.pop("hash", "")
+        if not re.fullmatch(r"[0-9a-f]{64}", h):
+            return None
         chk = "\n".join(f"{k}={v}" for k, v in sorted(d.items()))
         key = hmac.new(b"WebAppData", TOKEN.encode(), hashlib.sha256).digest()
-        if not hmac.compare_digest(hmac.new(key, chk.encode(), hashlib.sha256).hexdigest(), h):
+        expected = hmac.new(key, chk.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, h):
             return None
-        if time.time() - int(d.get("auth_date", "0")) > 86400:
+        auth_date = int(d.get("auth_date", "0"))
+        now = int(time.time())
+        if auth_date <= 0 or auth_date > now + 30 or now - auth_date > 3600:
             return None
-        return json.loads(d["user"])
+        user = json.loads(d["user"])
+        if not isinstance(user, dict) or not isinstance(user.get("id"), int) or user["id"] <= 0:
+            return None
+        return user
     except Exception:
         return None
+
+
+def rate_allowed(uid, path):
+    now = time.time()
+    key = (int(uid), str(path))
+    limits = {"/api/chat/messages": 35, "/api/chat/list": 20,
+              "/api/adminchat/messages": 35, "/api/adminchat/list": 20}
+    maximum = limits.get(path, RATE_MAX)
+    with RATE_LOCK:
+        hits = [t for t in RATE_LIMITS.get(key, []) if now - t < RATE_WINDOW]
+        if len(hits) >= maximum:
+            RATE_LIMITS[key] = hits
+            return False
+        hits.append(now)
+        RATE_LIMITS[key] = hits
+        if len(RATE_LIMITS) > 5000:
+            for old_key in list(RATE_LIMITS)[:1000]:
+                if not RATE_LIMITS[old_key] or now - RATE_LIMITS[old_key][-1] >= RATE_WINDOW:
+                    RATE_LIMITS.pop(old_key, None)
+        return True
+
+
+def decode_image_data_uri(value, max_bytes=650000):
+    if not isinstance(value, str) or len(value) > 4200000:
+        raise ValueError("Capture invalide ou trop lourde.")
+    match = re.fullmatch(r"data:image/(jpeg|jpg|png|gif|webp);base64,([A-Za-z0-9+/=]+)", value, re.I)
+    if not match:
+        raise ValueError("Format d’image invalide.")
+    raw = base64.b64decode(match.group(2), validate=True)
+    if not raw or len(raw) > max_bytes:
+        raise ValueError("Image vide ou trop lourde.")
+    valid = (raw.startswith(b"\xff\xd8\xff") or
+             raw.startswith(b"\x89PNG\r\n\x1a\n") or
+             raw.startswith((b"GIF87a", b"GIF89a")) or
+             (len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"))
+    if not valid:
+        raise ValueError("Le fichier reçu n’est pas une image valide.")
+    return raw
 
 
 def _ks(pid):
@@ -326,9 +382,12 @@ def role(user, code=None):
 
 def owner_of(p):
     try:
-        return dec(p["o"], p["id"])
+        if not p.get("o") or not p.get("id"):
+            return None
+        owner = dec(p["o"], p["id"])
+        return owner if owner > 0 else None
     except Exception:
-        return OWNER
+        return None
 
 
 def process_pending_requests():
@@ -406,6 +465,8 @@ def api(path, b):
     if not user:
         return {"error": "Ouvre l'app depuis Telegram."}
     uid = user["id"]
+    if not rate_allowed(uid, path):
+        return {"error": "Trop de requêtes. Attends quelques secondes puis réessaie."}
     if path == "/api/role":
         if uid == OWNER:
             return {"ok": True, "role": "owner"}
@@ -429,6 +490,8 @@ def api(path, b):
         if not p:
             return {"error": "Produit introuvable."}
         vendor = owner_of(p)
+        if not vendor:
+            return {"error": "Ce produit n’a pas de propriétaire valide. Contacte l’administrateur."}
         prix = p.get("prix") or "sans prix"
         if user.get("username"):
             who, url = "@" + user["username"], "https://t.me/" + user["username"]
@@ -556,9 +619,7 @@ def api(path, b):
         if not click:
             return {"error": "Aucun site n’a été enregistré. Retourne cliquer sur le site concerné."}
         try:
-            raw_image = base64.b64decode(image.split(",", 1)[1], validate=True)
-            if not raw_image or len(raw_image) > 650_000:
-                return {"error": "Capture trop lourde. Réessaie avec une image plus légère."}
+            raw_image = decode_image_data_uri(image)
             proof_file = "private_payment_proofs/" + str(uid) + "/" + str(int(time.time() * 1000)) + ".enc"
             gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
             PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
@@ -669,9 +730,7 @@ def api(path, b):
                 chats_save(chats_data, None)
                 return {"error": "Le délai de 2 minutes est terminé. La vente est bloquée."}
             try:
-                raw_image = base64.b64decode(image.split(",", 1)[1])
-                if len(raw_image) > 650_000:
-                    return {"error": "Capture trop lourde après compression. Réessaie avec une image plus légère."}
+                raw_image = decode_image_data_uri(image)
                 proof_file = "private_proofs/" + rid + ".enc"
                 gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une capture")
                 PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
@@ -746,9 +805,10 @@ def api(path, b):
     if path in ("/api/add", "/api/update", "/api/delete") and r not in ("owner", "spitta"):
         return {"error": "Accès réservé."}
     if path == "/api/add":
-        raw = base64.b64decode(b["image"].split(",", 1)[1])
-        if len(raw) > 3_000_000:
-            return {"error": "Photo trop lourde."}
+        try:
+            raw = decode_image_data_uri(b.get("image", ""), max_bytes=3_000_000)
+        except (ValueError, KeyError):
+            return {"error": "Photo invalide ou trop lourde. Utilise une image JPEG, PNG, GIF ou WebP."}
         pid = str(int(time.time() * 1000))
         with LOCK:
             gh_put(f"photos/{pid}.jpg", raw, "Ajout d'une photo")
@@ -782,7 +842,9 @@ def api(path, b):
 class Ping(BaseHTTPRequestHandler):
     def _s(self, obj):
         body = json.dumps(obj).encode()
-        self.send_response(200)
+        status = 200 if obj.get("ok") or "role" in obj else (401 if "Ouvre l'app depuis Telegram." in obj.get("error", "") else 400)
+        self.send_response(status)
+        self.send_header("Cache-Control", "no-store")
         for k, v in (("Content-Type", "application/json"), ("Access-Control-Allow-Origin", "*"),
                      ("Access-Control-Allow-Headers", "Content-Type"), ("Access-Control-Allow-Methods", "POST, GET, OPTIONS")):
             self.send_header(k, v)
