@@ -399,10 +399,12 @@ def api(path, b):
                                                   "text": msg, "time": int(time.time())})
             chats_save(chats_data, sha_ch)
         other = c.get("vendor") if uid == c.get("client") else c.get("client")
-        try:
-            say(other, "💬 Nouveau message dans RADAR PAYMENT. Ouvre la mini-app pour répondre.")
-        except Exception as e:
-            print("alerte nouveau message non envoyée:", repr(e))
+        def notify():
+            try:
+                say(other, "💬 Nouveau message dans RADAR PAYMENT. Ouvre la mini-app pour répondre.")
+            except Exception as e:
+                print("alerte nouveau message non envoyée:", repr(e))
+        threading.Thread(target=notify, daemon=True).start()
         return {"ok": True}
     if path == "/api/me":
         data, _ = load()
