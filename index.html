@@ -575,15 +575,26 @@ function chooseRole(role){
     $("role-message").textContent="";
     $("spitta-tab").hidden=USER_ROLE!=="spitta";
     $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
-    if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="e"]').hidden=false;loadSpittaItems()}
+    if(USER_ROLE==="spitta"){
+      $("tabs").querySelector('[data-t="a"]').hidden=true;
+      $("tabs").querySelector('[data-t="d"]').hidden=true;
+      $("tabs").querySelector('[data-t="e"]').hidden=false;
+      $("spitta-tab").textContent="Mes produits";
+      loadSpittaItems();
+    }
     if(USER_ROLE==="lanceur"){$("tabs").querySelector('[data-t="d"]').hidden=false}
     arrangeTabs();loadChatList();
+    if(USER_ROLE==="spitta"){
+      $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b")});
+      $("tabs").querySelector(".pill").style.transform="translateX(0)";
+      document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b")});
+    }
   }).catch(function(e){$("role-message").textContent=e.message||"Connexion impossible. Ouvre l’app depuis Telegram."});
 }
 $("choose-lanceur").onclick=function(){chooseRole("lanceur")};
 $("choose-spitta").onclick=function(){chooseRole("spitta")};
 if(INIT){call("/api/me",{}).then(function(r){
-  if(r.role){USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";arrangeTabs();if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="owner")loadAdminChats();if(USER_ROLE==="spitta")loadSpittaItems()}
+  if(r.role){USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="a"]').hidden=true;$("tabs").querySelector('[data-t="d"]').hidden=true;$("spitta-tab").textContent="Mes produits"}arrangeTabs();if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="owner")loadAdminChats();if(USER_ROLE==="spitta")loadSpittaItems()}
 }).catch(function(){})}
 </script>
 </body>
