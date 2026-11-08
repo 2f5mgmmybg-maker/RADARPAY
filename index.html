@@ -328,12 +328,12 @@ function setup(){
   }).catch(function(){});
 }
 var tgw=window.Telegram&&Telegram.WebApp;if(tgw){tgw.ready();tgw.expand()}
-var INIT=tgw?tgw.initData:"",API="https://radarpay-90js.onrender.com",CUR=null,CODE="",ACTIVE_CHAT=null,LAST_CHAT_RENDER="";
+var INIT=tgw?tgw.initData:"",API="https://radarpay-90js.onrender.com",CUR=null,ACTIVE_CHAT=null,LAST_CHAT_RENDER="";
 function call(path,body){
   if(!API || !/^https?:\/\//i.test(API)){
     return Promise.reject(new Error("Adresse API absente de photos.json. Vérifie GITHUB_REPO et le démarrage Render."));
   }
-  body=body||{};body.initData=INIT;body.code=CODE;
+  body=body||{};body.initData=INIT;
   var controller=(typeof AbortController!=="undefined")?new AbortController():null;
   var timer=controller?setTimeout(function(){controller.abort()},90000):null;
   return fetch(API.replace(/\/$/,"")+path,{
