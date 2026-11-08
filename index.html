@@ -378,7 +378,9 @@ function renderMessages(c){
   var open=c.status==="proof_received"||c.status==="expired";
   $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
   $("chatrecord").disabled=observer||!open||(!window.MediaRecorder);
-  $("chatrecord").textContent="🎙️ Enregistrer un vocal";$("chatrecord").classList.remove("recording");
+  if(!(voiceRecorder&&voiceRecorder.state==="recording")){
+    $("chatrecord").textContent="🎙️ Enregistrer un vocal";$("chatrecord").classList.remove("recording");
+  }
   $("chatvoicehint").textContent=window.MediaRecorder?"Vocal de 45 secondes maximum.":"Les messages vocaux ne sont pas pris en charge par ce navigateur.";
   $("chattext").placeholder=observer?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
   var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
