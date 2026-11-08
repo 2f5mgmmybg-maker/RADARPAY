@@ -307,20 +307,21 @@ def api(path, b):
     uid = user["id"]
     if path == "/api/want":
         k = (uid, b.get("id"))
-        if time.time() - WANTED.get(k, 0) < 300:
-            return {"ok": True}
+        previous = WANTED.get(k)
+        if previous and time.time() - previous[0] < 300:
+            return {"ok": True, "chat": previous[1], "notification": True}
         data, _ = load()
         p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
         if not p:
             return {"error": "Produit introuvable."}
-        WANTED[k] = time.time()
         vendor = owner_of(p)
         prix = p.get("prix") or "sans prix"
         if user.get("username"):
             who, url = "@" + user["username"], "https://t.me/" + user["username"]
         else:
             who, url = user.get("first_name", "Un client"), f"tg://user?id={uid}"
-        rid = f"{uid}{int(time.time())}"
+        rid = f"{uid}-{int(time.time() * 1000)}"
+        WANTED[k] = (time.time(), rid)
         chat = {"id": rid, "client": uid, "vendor": vendor, "product": p.get("id"),
                 "price": prix, "client_name": who, "created": int(time.time()),
                 "status": "pending", "messages": []}
