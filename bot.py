@@ -681,33 +681,39 @@ def api(path, b):
             return {"error": "Choisis une devise valide."}
         if not image.startswith("data:image/") or len(image) > 4_200_000:
             return {"error": "La capture d’écran de paiement est obligatoire."}
-        pdata = private_load()
-        click = pdata.setdefault("site_clicks", {}).get(str(uid))
-        if not click:
-            return {"error": "Aucun site n’a été enregistré. Retourne cliquer sur le site concerné."}
         try:
             raw_image = decode_image_data_uri(image)
-            proof_file = "private_payment_proofs/" + str(uid) + "/" + str(int(time.time() * 1000)) + ".enc"
-            gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
-            PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
         except Exception as e:
-            print("sauvegarde preuve paiement:", repr(e))
-            return {"error": "Impossible de sauvegarder la capture."}
+            print("validation preuve paiement:", repr(e))
+            return {"error": "Capture de paiement invalide ou trop lourde."}
         now = int(time.time())
-        text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
+        proof_file = "private_payment_proofs/" + str(uid) + "/" + str(now * 1000) + ".enc"
         with LOCK:
             pdata = private_load()
-            pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
-                "from": uid, "name": user.get("first_name", "Lanceur"), "text": text_report,
-                "proof_file": proof_file, "time": now
-            })
-            pdata.setdefault("payment_reports", []).append({
-                "launcher": uid, "site": click["site"], "url": click["url"],
-                "amount": amount, "currency": currency, "proof_file": proof_file,
-                "time": now, "status": "declared_unverified"
-            })
-            pdata.setdefault("site_clicks", {}).pop(str(uid), None)
-            private_save()
+            click = pdata.setdefault("site_clicks", {}).get(str(uid))
+            if not click:
+                return {"error": "Aucun site n’a été enregistré. Retourne cliquer sur le site concerné."}
+            click = dict(click)
+            try:
+                gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
+                PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
+                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
+                pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
+                    "from": uid, "name": user.get("first_name", "Lanceur"), "text": text_report,
+                    "proof_file": proof_file, "time": now
+                })
+                pdata.setdefault("payment_reports", []).append({
+                    "launcher": uid, "site": click["site"], "url": click["url"],
+                    "amount": amount, "currency": currency, "proof_file": proof_file,
+                    "time": now, "status": "declared_unverified"
+                })
+                pdata.setdefault("site_clicks", {}).pop(str(uid), None)
+                private_save()
+            except Exception as e:
+                print("sauvegarde preuve paiement:", repr(e))
+                gh_del(proof_file, "Nettoyage d'une preuve de paiement non enregistrée")
+                PROOF_CACHE.pop(proof_file, None)
+                return {"error": "Impossible de sauvegarder la capture."}
         try:
             say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
                 "\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency +
