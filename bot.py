@@ -25,7 +25,10 @@ RATE_MAX = 60
 
 
 API = f"https://api.telegram.org/bot{TOKEN}"
-FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256((TOKEN + "|RADARPAY_PRIVATE_V1").encode()).digest()))
+DATA_ENCRYPTION_KEY = os.environ.get("DATA_ENCRYPTION_KEY", "").strip()
+LEGACY_FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256((TOKEN + "|RADARPAY_PRIVATE_V1").encode()).digest()))
+FERNET = (Fernet(base64.urlsafe_b64encode(hashlib.sha256(DATA_ENCRYPTION_KEY.encode()).digest()))
+          if DATA_ENCRYPTION_KEY else LEGACY_FERNET)
 PROOF_CACHE = {}
 VOICE_CACHE = {}
 GH = f"https://api.github.com/repos/{REPO}/contents"
@@ -122,15 +125,30 @@ def private_load():
         private_save()
         gh_del("user_roles.json", "Migration vers les données privées chiffrées")
     else:
+        migrate_key = False
+        encrypted = base64.b64decode(f.get("content", ""))
         try:
-            PRIVATE_CACHE = json.loads(FERNET.decrypt(base64.b64decode(f.get("content", ""))).decode())
-        except (InvalidToken, ValueError, json.JSONDecodeError) as e:
-            raise RuntimeError("Le fichier privé chiffré est illisible; aucune donnée n'a été écrasée.") from e
+            decrypted = FERNET.decrypt(encrypted)
+        except InvalidToken as primary_error:
+            if not DATA_ENCRYPTION_KEY:
+                raise RuntimeError("Le fichier privé chiffré est illisible; aucune donnée n'a été écrasée.") from primary_error
+            try:
+                # Migration transparente de l’ancienne clé dérivée du token Telegram.
+                decrypted = LEGACY_FERNET.decrypt(encrypted)
+                migrate_key = True
+            except InvalidToken as legacy_error:
+                raise RuntimeError("Clé de chiffrement invalide; aucune donnée n'a été écrasée.") from legacy_error
+        try:
+            PRIVATE_CACHE = json.loads(decrypted.decode())
+        except (ValueError, json.JSONDecodeError) as e:
+            raise RuntimeError("Le fichier privé déchiffré est invalide; aucune donnée n'a été écrasée.") from e
     PRIVATE_CACHE.setdefault("roles", {})
     PRIVATE_CACHE.setdefault("chats", [])
     PRIVATE_CACHE.setdefault("admin_chats", {})
     PRIVATE_CACHE.setdefault("site_clicks", {})
     PRIVATE_CACHE.setdefault("payment_reports", [])
+    if locals().get("migrate_key", False):
+        private_save()
     return PRIVATE_CACHE
 
 
