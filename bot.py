@@ -471,7 +471,7 @@ def api(path, b):
                 print("alerte nouveau message non envoyée:", repr(e))
         threading.Thread(target=notify, daemon=True).start()
         return {"ok": True}
-    if path in ("/api/add", "/api/update", "/api/delete") and r != "owner":
+    if path in ("/api/add", "/api/update", "/api/delete") and r not in ("owner", "spitta"):
         return {"error": "Accès réservé."}
     if path == "/api/add":
         raw = base64.b64decode(b["image"].split(",", 1)[1])
@@ -488,7 +488,7 @@ def api(path, b):
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
-            if not p or r != "owner":
+            if not p or not (r == "owner" or (r == "spitta" and owner_of(p) == uid)):
                 return {"error": "Impossible."}
             p["pays"] = str(b.get("pays", ""))[:30]
             p["prix"] = str(b.get("prix", p.get("prix", "")))[:40]
@@ -498,7 +498,7 @@ def api(path, b):
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
-            if not p or r != "owner":
+            if not p or not (r == "owner" or (r == "spitta" and owner_of(p) == uid)):
                 return {"error": "Impossible."}
             data["photos"].remove(p)
             save(data, sha)
