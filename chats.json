@@ -1,3 +1,15 @@
 {
-  "chats": []
+  "chats": [
+    {
+      "id": "8369634119-1794168720490",
+      "client": 8369634119,
+      "vendor": 8369634119,
+      "product": "1794168042585",
+      "price": "2500 / 50% / ATM",
+      "client_name": "@SLEVIEV10",
+      "created": 1794168720,
+      "status": "pending",
+      "messages": []
+    }
+  ]
 }
