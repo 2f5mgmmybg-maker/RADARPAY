@@ -234,7 +234,7 @@ function openLb(p){
     l.querySelector("#lbx").onclick=function(){l.classList.remove("on")};
     var w=l.querySelector("#lbw"),m=l.querySelector("#lbm");
     w.onclick=function(){
-      if(w.dataset.s!=="1"){w.dataset.s="1";w.textContent="Confirmer";m.textContent="Ton information (ton nom Telegram) sera transmise au spitta. Dans 50 secondes, tu auras une réponse.";return}
+      if(w.dataset.s!=="1"){w.dataset.s="1";w.textContent="Confirmer";m.textContent="Ton choix sera transmis au spitta. Dans 50 secondes, tu auras une réponse.";return}
       w.disabled=true;m.textContent="Envoi…";
       ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Discussion créée, notification non confirmée."):"Le spitta est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");w.textContent="Envoyé";if(r.chat)openChat(r.chat)})
       .catch(function(){m.textContent="Le serveur se réveille. Réessaie dans 30 secondes.";w.disabled=false;w.dataset.s="";w.textContent="Je le veux"})};}
