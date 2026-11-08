@@ -103,7 +103,8 @@ def chats_load():
         if len(active) != len(data["chats"]):
             data["chats"] = active
             chats_save(data, f["sha"])
-            return data, None
+            fresh = gh_get("chats.json")
+            return data, fresh["sha"]
         return data, f["sha"]
     except requests.HTTPError as e:
         if e.response is not None and e.response.status_code == 404:
