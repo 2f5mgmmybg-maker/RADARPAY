@@ -215,6 +215,8 @@ function renderServices(){
       call("/api/catalog/click",{site:s.n,url:s.u}).then(function(r){
         if(!r.ok)throw new Error(r.error||"Enregistrement impossible.");
         if(win)win.location=s.u;else location.href=s.u;
+        // Le site s'ouvre dans un nouvel onglet et le chat privé admin reste ouvert dans la mini-app.
+        openAdminChat();
       }).catch(function(){
         if(win)win.close();
         alert("Le site n’a pas pu être enregistré. Réessaie.");
