@@ -362,7 +362,7 @@ def api(path, b):
         rid = str(b.get("id", ""))
         chats_data, _ = chats_load()
         c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
-        if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner") or (uid == c.get("vendor") and r not in ("vendor", "owner")):
+        if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
             return {"error": "Discussion introuvable ou accès refusé."}
         return {"ok": True, "chat": {k: c.get(k) for k in
                 ("id", "client", "vendor", "price", "client_name", "status", "messages")}}
