@@ -97,6 +97,12 @@ class RegistrationAndPinLoginTests(unittest.TestCase):
         self.assertEqual(result["role"], "spitta")
         self.assertFalse(result["pending"])
         self.assertFalse(result["has_pin"])
+        admin_list = self.call_as(self.owner, "/api/admin/registrations")
+        self.assertEqual(admin_list["registrations"][0]["status"], "approved")
+        duplicate = self.call_as(
+            self.owner, "/api/admin/approve-registration", user_id=uid
+        )
+        self.assertIn("déjà approuvée", duplicate["error"])
 
     def test_owner_is_recognized_as_admin_without_registration_or_pin(self):
         me = self.call_as(self.owner, "/api/me")
