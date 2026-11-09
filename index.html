@@ -260,7 +260,7 @@ section.on{display:block;animation:in .4s ease both}
     <h3>Mes publications</h3><div class="grid" id="spittamine"></div>
     <h3>Demandes reçues</h3><div id="spittachatitems"></div>
   </section>
-  <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
+  <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’Target. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
   <section id="g">
     <p class="lead">Liste publique des Spitta placés sur liste noire : leur pseudo et le temps restant de leur blocage sont affichés. En cas de non-validation d’ERAF dans les 10 minutes, le blocage dure 10 jours.</p>
     <button class="btn s" id="blacklistrefresh">↻ Actualiser la liste</button>
@@ -445,16 +445,16 @@ function loadSpittaItems(){
     var host=$("spittamine");if(!host)return;host.innerHTML="";
     var mine=(r.mine||[]);
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
-    if(!own.length){host.textContent="Tu n’as pas encore publié d’annonce.";return}
+    if(!own.length){host.textContent="Tu n’as pas encore publié d’Target.";return}
     own.forEach(function(p){
       var d=document.createElement("article");d.className="spitta-product-card";
-      var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo de ton annonce";d.appendChild(im);
+      var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo de ton Target";d.appendChild(im);
       var info=document.createElement("div");info.className="spitta-product-info";
       var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
       var actions=document.createElement("div");actions.className="spitta-product-actions";
-      var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent="Cette annonce est publiée sur ton espace.";actions.appendChild(hint);
-      var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer cette annonce";
-      del.onclick=function(){if(!confirm("Supprimer définitivement cette annonce ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer cette annonce"})};
+      var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent="Cette Target est publiée sur ton espace.";actions.appendChild(hint);
+      var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer cette Target";
+      del.onclick=function(){if(!confirm("Supprimer définitivement cette Target ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer cette Target"})};
       actions.appendChild(del);info.appendChild(actions);d.appendChild(info);host.appendChild(d);
     });
   }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
@@ -705,10 +705,10 @@ function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegr
 $("addp").onclick=function(){$("pf").click()};
 $("spittaadd").onclick=function(){$("spittafile").click()};
 $("spittafile").onchange=function(){
-  var f=this.files[0];this.value="";if(!f)return;$("spittamsg").textContent="Préparation de l’annonce…";
+  var f=this.files[0];this.value="";if(!f)return;$("spittamsg").textContent="Préparation de l’Target…";
   shrink(f,function(src){$("spittamsg").textContent="Publication…";call("/api/add",{image:src,prix:$("spittaprice").value,pays:$("spittacountry").value}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Publication impossible.");
-    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||""});$("spittaprice").value="";$("spittamsg").textContent="Annonce publiée.";render();loadSpittaItems();
+    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||""});$("spittaprice").value="";$("spittamsg").textContent="Target publiée.";render();loadSpittaItems();
   }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."})});
 };
 $("pf").onchange=function(){var f=this.files[0];this.value="";if(!f)return;$("pm").textContent="Préparation de la photo…";
