@@ -889,14 +889,29 @@ setInterval(function(){
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 
-$("spittaadd").onclick=function(){$("spittafile").click()};
+$("spittaadd").onclick=function(){
+  var percentage=$("spittapercentage").value.trim().replace(",",".");
+  var category=$("spittacategory").value;
+  if(!category){$("spittamsg").textContent="Choisis d’abord une catégorie de Target.";$("spittacategory").focus();return}
+  if(!percentage||!Number.isFinite(Number(percentage))||Number(percentage)<0||Number(percentage)>100){$("spittamsg").textContent="Indique un pourcentage valide entre 0 et 100.";$("spittapercentage").focus();return}
+  $("spittamsg").textContent="";$("spittafile").click();
+};
 $("admin-publish-toggle").onclick=function(){var card=$("spitta-publish-card");var opening=card.hidden;card.hidden=!opening;$("admin-publish-toggle").setAttribute("aria-expanded",String(opening));$("admin-publish-toggle").textContent=opening?"− Fermer le formulaire":"＋ Publier une Target";if(opening)card.scrollIntoView({behavior:"smooth",block:"start"});};
 $("spittafile").onchange=function(){
-  var f=this.files[0];this.value="";if(!f)return;$("spittamsg").textContent="Préparation de Target…";
-  shrink(f,function(src){$("spittamsg").textContent="Publication…";call("/api/add",{image:src,prix:$("spittaprice").value,pourcentage:$("spittapercentage").value,categorie:$("spittacategory").value,pays:$("spittacountry").value}).then(function(r){
-    if(!r.ok)throw new Error(r.error||"Publication impossible.");
-    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});$("spittaprice").value="";$("spittapercentage").value="";$("spittacategory").value="";$("spittamsg").textContent="Publication de Target réussie.";render();loadSpittaItems();
-  }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."})});
+  var f=this.files[0];this.value="";if(!f)return;
+  var uploadButton=$("spittaadd"),uploadLabel=uploadButton.querySelector("span:last-child");
+  uploadButton.disabled=true;uploadLabel.textContent="Préparation et envoi…";$("spittamsg").textContent="Préparation de la photo…";
+  function finishUpload(){uploadButton.disabled=false;uploadLabel.textContent="Choisir une grande photo du Target";}
+  shrink(f,function(src){
+    $("spittamsg").textContent="Envoi de la publication…";
+    call("/api/add",{image:src,prix:$("spittaprice").value,pourcentage:$("spittapercentage").value,categorie:$("spittacategory").value,pays:$("spittacountry").value}).then(function(r){
+      if(!r.ok||!r.photo||!r.photo.id||!r.photo.image)throw new Error(r.error||"Le serveur n’a pas confirmé l’enregistrement de la Target.");
+      var p=r.photo;PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});
+      $("spittaprice").value="";$("spittapercentage").value="";$("spittacategory").value="";
+      $("spittamsg").textContent="Publication enregistrée. Elle apparaît dans tes publications et sera visible dans le catalogue après actualisation.";
+      render();loadSpittaItems();
+    }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."}).finally(finishUpload);
+  },function(e){$("spittamsg").textContent=(e&&e.message)||"La photo n’a pas pu être préparée. Choisis une autre image.";finishUpload()});
 };
 fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   if(!r.ok)throw new Error("photos.json HTTP "+r.status);
