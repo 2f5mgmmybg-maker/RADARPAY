@@ -743,13 +743,13 @@ def api(path, b):
         if is_blacklisted(uid):
             return {"error": "Ton compte est temporairement blacklisté. Contacte l’administration."}
         chosen = str(b.get("role", ""))
-        pseudo = re.sub(r"\\s+", " ", str(b.get("pseudo", "")).strip())
+        pseudo = re.sub(r"\s+", " ", str(b.get("pseudo", "")).strip())
         pin = str(b.get("pin", ""))
         if chosen not in ("lanceur", "spitta"):
             return {"error": "Choisis Lanceur ou Spitta."}
-        if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\\w .@-]+", pseudo, re.UNICODE):
+        if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\w .@-]+", pseudo, re.UNICODE):
             return {"error": "Choisis un pseudo de 3 à 24 caractères (lettres, chiffres, espaces, . _ @ -)." }
-        if not re.fullmatch(r"\\d{4}", pin):
+        if not re.fullmatch(r"\d{4}", pin):
             return {"error": "Le code secret doit contenir exactement 4 chiffres."}
         with LOCK:
             state = private_load()
@@ -778,7 +778,7 @@ def api(path, b):
         if uid == OWNER:
             return {"ok": True, "role": "owner"}
         pin = str(b.get("pin", ""))
-        if not re.fullmatch(r"\\d{4}", pin):
+        if not re.fullmatch(r"\d{4}", pin):
             return {"error": "Entre ton code secret à 4 chiffres."}
         with LOCK:
             state = private_load()
@@ -816,7 +816,7 @@ def api(path, b):
         if existing_role not in ("lanceur", "spitta"):
             return {"error": "Ton compte doit être approuvé avant de créer un code secret."}
         pin = str(b.get("pin", ""))
-        if not re.fullmatch(r"\\d{4}", pin):
+        if not re.fullmatch(r"\d{4}", pin):
             return {"error": "Le code secret doit contenir exactement 4 chiffres."}
         with LOCK:
             state = private_load()
