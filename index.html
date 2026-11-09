@@ -960,7 +960,7 @@ function simplifyWorkspaceTabs(){
     var names={"e":"Mes Targets","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
-    var names={"a":"Services en ligne","b":"Targets physiques","d":"Mes actions","e":"Mes publications","f":"Messages","c":"Administration"};
+    var names={"a":"Services en ligne","b":"Targets physiques","e":"Mes publications","f":"Messages","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
 }
