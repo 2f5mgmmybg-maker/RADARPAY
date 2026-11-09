@@ -518,9 +518,11 @@ def process_pending_requests():
                 c["status"] = "erop_expired"
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée.", "time": now})
+                changed = True
+            if c.get("status") == "erop_expired" and not c.get("erop_notified"):
+                c["erop_notified"] = True
                 actions.append(("erop_expired", c.get("client"), c.get("vendor"), c.get("price")))
                 changed = True
-                continue
             if c.get("status") != "pending" or not c.get("request_deadline"):
                 continue
             if now >= int(c["request_deadline"]):
