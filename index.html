@@ -904,7 +904,7 @@ $("spittafile").onchange=function(){
   function finishUpload(){uploadButton.disabled=false;uploadLabel.textContent="Choisir une grande photo du Target";}
   shrink(f,function(src){
     $("spittamsg").textContent="Envoi de la publication…";
-    call("/api/add",{image:src,prix:$("spittaprice").value,pourcentage:$("spittapercentage").value,categorie:$("spittacategory").value,pays:$("spittacountry").value}).then(function(r){
+    call("/api/add",{image:src,prix:$("spittaprice").value,pourcentage:percentage,categorie:$("spittacategory").value,pays:$("spittacountry").value}).then(function(r){
       if(!r.ok||!r.photo||!r.photo.id||!r.photo.image)throw new Error(r.error||"Le serveur n’a pas confirmé l’enregistrement de la Target.");
       var p=r.photo;PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});
       $("spittaprice").value="";$("spittapercentage").value="";$("spittacategory").value="";
