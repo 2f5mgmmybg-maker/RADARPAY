@@ -1,13 +1,5 @@
 {
   "api": "https://radarpay-90js.onrender.com",
-  "maj": "8 novembre",
-  "photos": [
-    {
-      "id": "1794171370773",
-      "image": "1794171370773.jpg",
-      "prix": "2500/ATM/50%",
-      "pays": "Belgique",
-      "o": "TXVBUg7zPsE="
-    }
-  ]
+  "maj": "9 novembre",
+  "photos": []
 }
