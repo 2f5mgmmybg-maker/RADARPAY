@@ -814,14 +814,7 @@ def api(path, b):
             # Les fichiers joints sont chargés à la demande via /api/chat/file,
             # jamais dans chaque réponse de polling du chat.
             msg.pop("attachment_data", None)
-            if proof_file:
-                try:
-                    if proof_file not in PROOF_CACHE:
-                        encrypted = base64.b64decode(gh_get(proof_file).get("content", ""))
-                        PROOF_CACHE[proof_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
-                    msg["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
-                except Exception as e:
-                    print("lecture capture chiffrée:", repr(e))
+            # Les captures sont elles aussi chargées à la demande pour alléger le polling.
             # Les anciens vocaux sont aussi chargés à la demande, jamais à chaque polling.
         return {"ok": True, "chat": public_chat}
     if path == "/api/chat/file":
@@ -832,14 +825,18 @@ def api(path, b):
             if not c or uid not in (c.get("client"), c.get("vendor")):
                 return {"error": "Discussion introuvable ou accès refusé."}
             msg = next((m for m in (c.get("messages") or [])
-                        if m.get("attachment_file") == file_key or m.get("voice_file") == file_key), None)
+                        if m.get("attachment_file") == file_key or m.get("voice_file") == file_key
+                        or m.get("proof_file") == file_key), None)
             is_voice = bool(msg and msg.get("voice_file") == file_key)
-            allowed_prefix = "private_voice/" + rid + "/" if is_voice else "private_chat_files/" + rid + "/"
+            is_proof = bool(msg and msg.get("proof_file") == file_key)
+            allowed_prefix = ("private_voice/" + rid + "/" if is_voice else
+                              "private_proofs/" + rid if is_proof else "private_chat_files/" + rid + "/")
             if not msg or not file_key.startswith(allowed_prefix):
                 return {"error": "Fichier introuvable ou accès refusé."}
-            mime = msg.get("mime", "audio/webm") if is_voice else msg.get("attachment_mime", "application/octet-stream")
-            name = "Message vocal" if is_voice else msg.get("attachment_name", "fichier")
-            cache = VOICE_CACHE if is_voice else ATTACHMENT_CACHE
+            mime = (msg.get("mime", "audio/webm") if is_voice else
+                    "image/jpeg" if is_proof else msg.get("attachment_mime", "application/octet-stream"))
+            name = "Message vocal" if is_voice else "Capture" if is_proof else msg.get("attachment_name", "fichier")
+            cache = VOICE_CACHE if is_voice else PROOF_CACHE if is_proof else ATTACHMENT_CACHE
         try:
             if file_key not in cache:
                 encrypted = base64.b64decode(gh_get(file_key).get("content", ""))
