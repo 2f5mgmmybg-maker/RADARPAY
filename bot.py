@@ -636,10 +636,10 @@ def api(path, b):
         if is_blacklisted(uid):
             return {"error": "Ton compte est blacklisté pendant 7 jours après le non-respect du délai EROP. Les frais de garantie sont dus. Contacte l’administration."}
         chosen = str(b.get("role", ""))
-        pseudo = re.sub(r"\\s+", " ", str(b.get("pseudo", "")).strip())
+        pseudo = re.sub(r"\s+", " ", str(b.get("pseudo", "")).strip())
         if chosen not in ("lanceur", "spitta"):
             return {"error": "Choisis Lanceur ou Spitta."}
-        if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\\w .@-]+", pseudo, re.UNICODE):
+        if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\w .@-]+", pseudo, re.UNICODE):
             return {"error": "Choisis un pseudo de 3 à 24 caractères (lettres, chiffres, espaces, . _ @ -)."}
         with LOCK:
             state = private_load()
