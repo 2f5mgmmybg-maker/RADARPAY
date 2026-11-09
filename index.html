@@ -621,7 +621,7 @@ $("paymentreport").onclick=function(){
 };
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 function renderMessages(c){
-  var signature=JSON.stringify([c.status,c.proof_deadline,c.erop_deadline,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
+  var signature=JSON.stringify([c.status,c.proof_deadline,c.erop_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
   $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le Lanceur #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
@@ -631,9 +631,12 @@ function renderMessages(c){
   $("chattext").placeholder=observer&&!ADMIN_CHAT_MODE?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
   var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
   $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(labels[c.status]||c.status);
-  var step=$("chatproofstep");step.hidden=ADMIN_CHAT_MODE||observer||!(c.status==="vendor_confirmed"||c.status==="proof_pending"||c.status==="proof_expired"||c.status==="erop_pending");
+  var senderProof=$("erop-sender-proof");
+  senderProof.hidden=ADMIN_CHAT_MODE||observer||!(client&&c.status==="erop_pending"&&!c.erop_sender_proof_submitted);
+  var step=$("chatproofstep");
+  step.hidden=ADMIN_CHAT_MODE||observer||!((client&&c.status==="vendor_confirmed")||(vendor&&(c.status==="proof_pending"||c.status==="proof_expired"||(c.status==="erop_pending"&&c.erop_sender_proof_submitted))));
   $("chataccept").hidden=!(client&&c.status==="vendor_confirmed");
-  $("chatproofbutton").hidden=!(vendor&&(c.status==="proof_pending"||c.status==="erop_pending"));
+  $("chatproofbutton").hidden=!(vendor&&(c.status==="proof_pending"||(c.status==="erop_pending"&&c.erop_sender_proof_submitted)));
   $("chatproofbutton").textContent=c.status==="erop_pending"?"📸 Envoyer la deuxième capture":"📸 Envoyer la capture d’écran";
   $("chaterop").hidden=!(client&&!ADMIN_CHAT_MODE&&!c.erop_photo_sent&&(c.status==="proof_received"||c.status==="expired"));
   var erafDeadline=Number(c.eraf_deadline||0),erafAvailable=vendor&&!ADMIN_CHAT_MODE&&c.erop_photo_sent&&!c.erop_confirmed&&erafDeadline>Date.now()/1000;
@@ -643,7 +646,7 @@ function renderMessages(c){
   var countdown=$("chatcountdown"),deadline=c.status==="proof_pending"?c.proof_deadline:c.status==="erop_pending"?c.erop_deadline:0;
   countdown.dataset.deadline=deadline||"";
   countdown.dataset.kind=c.status==="erop_pending"?"EROP":c.status==="proof_pending"?"Capture":"";
-  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
+  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"En attente de ta preuve d’envoi EROP.":c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
   var host=$("chatmessages"),previousScrollHeight=host.scrollHeight,previousScrollTop=host.scrollTop;var stickToBottom=(previousScrollHeight-previousScrollTop-host.clientHeight)<90;host.innerHTML="";
   (c.messages||[]).forEach(function(m){
     var mine=m.from===me;
@@ -705,6 +708,26 @@ $("chateraf").onclick=function(){
   .then(function(r){renderMessages(r.chat);$("chaterror").textContent="ERAF validé."})
   .catch(function(e){$("chaterror").textContent=e.message||"Validation ERAF impossible."})
   .finally(function(){btn.disabled=false});
+};
+$("erop-sender-photo").onclick=function(){$("erop-sender-file").click()};
+function submitEropSenderProof(mode,image){
+  var photoButton=$("erop-sender-photo"),unavailableButton=$("erop-sender-unavailable");
+  photoButton.disabled=true;unavailableButton.disabled=true;
+  $("chaterror").textContent=mode==="photo"?"Envoi de ta preuve EROP…":"Enregistrement de ta déclaration…";
+  call("/api/chat/erop-sender-proof",{id:ACTIVE_CHAT,mode:mode,image:image||""})
+    .then(function(r){if(!r.ok)throw new Error(r.error||"Envoi de la preuve impossible.");LAST_CHAT_RENDER="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
+    .then(function(r){if(!r.ok)throw new Error(r.error||"Actualisation impossible.");renderMessages(r.chat);$("chaterror").textContent="Élément EROP enregistré. Le délai du Spitta démarre maintenant."})
+    .catch(function(e){$("chaterror").textContent=e.message||"Envoi impossible."})
+    .finally(function(){photoButton.disabled=false;unavailableButton.disabled=false});
+}
+$("erop-sender-unavailable").onclick=function(){
+  if(!ACTIVE_CHAT||!window.confirm("Confirmer que tu ne peux pas envoyer de photo de ta preuve d’envoi ? Cette déclaration sera visible par le Spitta et l’administrateur, mais ne remplacera pas une preuve photographique."))return;
+  submitEropSenderProof("unavailable","");
+};
+$("erop-sender-file").onchange=function(){
+  var file=this.files[0];this.value="";if(!file)return;
+  $("chaterror").textContent="Préparation de ta preuve EROP…";
+  shrink(file,function(data){submitEropSenderProof("photo",data)});
 };
 $("chatproofbutton").onclick=function(){$("chatprooffile").click()};
 $("chatprooffile").onchange=function(){
@@ -803,16 +826,16 @@ $("refresh").onclick=function(){
 };
 $("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
 tabs.addEventListener("click",function(e){
-  var b=e.target.closest("button");if(!b)return;
+  var b=e.target.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
-  var visibleTabs=Array.prototype.slice.call(tabs.querySelectorAll("button")).filter(function(x){return !x.hidden});tabs.querySelector(".pill").style.transform="translateX("+visibleTabs.indexOf(b)*100+"%)";if(b.dataset.t==="c")adminOpen();if(b.dataset.t==="g")loadBlacklist();if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
-  document.querySelectorAll("section").forEach(function(s){s.classList.toggle("on",s.id===b.dataset.t)});
+  if(b.dataset.t==="c")adminOpen();
+  if(b.dataset.t==="g")loadBlacklist();
+  if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
+  document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
 });
 function arrangeTabs(){
-  var buttons=Array.prototype.slice.call(tabs.querySelectorAll("button")).filter(function(x){return !x.hidden});
-  tabs.style.gridTemplateColumns="repeat("+buttons.length+",minmax(0,1fr))";
-  tabs.querySelector(".pill").style.width="calc("+100/buttons.length+"% - 3.2px)";
+  tabs.style.gridTemplateColumns="repeat(auto-fit,minmax(125px,1fr))";
 }
 function setAuthView(view){
   ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
@@ -825,13 +848,15 @@ function enterApp(response){
   renderServices();
   $("welcome").classList.add("gone");
   if(USER_ROLE==="owner"){
-    $("admin-tab").hidden=false;
-    showMe(response,false);
-    $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="c");});
-    var adminTabs=Array.prototype.filter.call($("tabs").querySelectorAll("button"),function(x){return !x.hidden;});
-    $("tabs").querySelector(".pill").style.transform="translateX("+adminTabs.indexOf($("admin-tab"))*100+"%)";
+    $("tabs").querySelectorAll("button").forEach(function(b){
+      b.hidden=b.dataset.t!=="c";
+      b.classList.toggle("on",b.dataset.t==="c");
+    });
+    $("admin-tab").textContent="Administration";
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c");});
-    arrangeTabs();loadAdminChats();return;
+    arrangeTabs();
+    showMe(response,false);
+    loadAdminChats();return;
   }
   $("spitta-tab").hidden=USER_ROLE!=="spitta";
   $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
@@ -847,7 +872,6 @@ function enterApp(response){
   arrangeTabs();loadChatList();
   if(USER_ROLE==="spitta"){
     $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b");});
-    $("tabs").querySelector(".pill").style.transform="translateX(0)";
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b");});
   }
 }
