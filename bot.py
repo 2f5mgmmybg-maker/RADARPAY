@@ -826,7 +826,7 @@ def api(path, b):
         with LOCK:
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
-            if not c or uid not in (c.get("client"), c.get("vendor")):
+            if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
                 return {"error": "Discussion introuvable ou accès refusé."}
             msg = next((m for m in (c.get("messages") or [])
                         if m.get("attachment_file") == file_key or m.get("voice_file") == file_key
