@@ -485,7 +485,7 @@ function showMe(r,fromCode){
     update.onclick=function(){update.disabled=true;call("/api/update",{id:p.id,pays:country.value,prix:price.value}).then(function(r){if(!r.ok)throw new Error(r.error||"Modification impossible.");p.pays=country.value;p.prix=price.value;$("pm").textContent="Pays et prix enregistrés.";render();adminOpen()}).catch(function(e){$("pm").textContent=e.message||"Erreur";update.disabled=false})};
     edit.appendChild(country);edit.appendChild(price);edit.appendChild(update);d.appendChild(edit);
     var x=document.createElement("button");x.className="btn s";x.textContent="Supprimer";x.style.cssText="position:absolute;top:8px;right:8px";
-    x.onclick=function(){x.disabled=true;call("/api/delete",{id:p.id}).then(function(){PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});render();adminOpen()})};
+    x.onclick=function(){x.disabled=true;call("/api/delete",{id:p.id}).then(function(r){if(!r.ok)throw new Error(r.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});render();adminOpen()}).catch(function(e){$("pm").textContent=e.message||"Suppression impossible.";x.disabled=false})};
     d.appendChild(x);m.appendChild(d)});
 }
 function loadSpittaItems(){
