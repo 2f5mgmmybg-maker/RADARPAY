@@ -1287,11 +1287,11 @@ def api(path, b):
             c["erop_sender_proof_unavailable"] = False
             c["erop_deadline"] = 0
             c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                "text": "📸 Demande EROP : le Lanceur doit d’abord joindre sa preuve d’envoi (photo ou déclaration d’impossibilité). Le délai de 3 min 30 du Spitta commencera après cette étape.", "time": int(time.time())})
+                "text": "📸 EROP — étape 1/2 : le Lanceur doit d’abord envoyer une photo lisible de sa preuve d’envoi ou déclarer qu’il ne peut pas fournir de photo. Le délai du Spitta (3 min 30) ne démarre qu’après l’enregistrement de cette étape.", "time": int(time.time())})
             chats_save(chats_data, None)
             vendor_id = c.get("vendor")
         try:
-            say(vendor_id, "📸 Demande EROP reçue. Le Lanceur doit d’abord joindre sa preuve d’envoi dans le chat. Le délai de 3 min 30 commencera ensuite. Aucune capture n’est prise à distance.")
+            say(vendor_id, "📸 EROP — étape 1/2 : le Lanceur doit d’abord envoyer une photo lisible de sa preuve d’envoi ou déclarer qu’il ne peut pas fournir de photo. Le délai du Spitta (3 min 30) ne démarre qu’après l’enregistrement de cette étape. Aucune capture n’est prise à distance.")
         except Exception as e:
             print("notification EROP impossible:", repr(e))
         return {"ok": True}
@@ -1362,7 +1362,7 @@ def api(path, b):
                 PROOF_CACHE.pop(proof_file, None)
             return {"error": "La demande EROP a changé d’état. La preuve n’a pas été enregistrée."}
         try:
-            say(vendor_id, ("⚠️ Le Lanceur a déclaré ne pas pouvoir joindre de photo de preuve EROP. Tu as maintenant 3 min 30 pour envoyer volontairement la deuxième capture dans RADAR PAYMENT." if mode == "unavailable" else "📸 Le Lanceur a joint une photo de sa preuve EROP. Tu as maintenant 3 min 30 pour envoyer volontairement la deuxième capture dans RADAR PAYMENT."))
+            say(vendor_id, ("⚠️ EROP — étape 1 terminée : le Lanceur a déclaré ne pas pouvoir fournir de photo. Ce message est une déclaration, pas une preuve photographique. Ton délai de 3 min 30 commence maintenant : envoie volontairement la deuxième capture dans RADAR PAYMENT." if mode == "unavailable" else "📸 EROP — étape 1 terminée : le Lanceur a envoyé sa photo de preuve. Ton délai de 3 min 30 commence maintenant : vérifie la photo et envoie volontairement la deuxième capture dans RADAR PAYMENT."))
         except Exception as e:
             print("notification preuve EROP au Spitta impossible:", repr(e))
         return {"ok": True, "deadline": deadline}
