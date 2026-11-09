@@ -934,7 +934,15 @@ def api(path, b):
     if path == "/api/admin/registrations":
         if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
-        registrations = private_load().setdefault("registrations", [])
+        state = private_load()
+        roles = state.setdefault("roles", {})
+        registrations = []
+        for item in state.setdefault("registrations", []):
+            profile = dict(item)
+            profile["status"] = profile.get("status") or (
+                "approved" if roles.get(str(profile.get("user_id"))) == profile.get("role") else "pending"
+            )
+            registrations.append(profile)
         return {"ok": True, "registrations": sorted(registrations, key=lambda x: x.get("created", 0), reverse=True)}
     if path == "/api/admin/approve-registration":
         if uid != OWNER:
@@ -962,6 +970,8 @@ def api(path, b):
                         if str(x.get("user_id")) == str(uid) and x.get("status", "pending") == "pending"), None)
         return {"role": r, "mine": mine, "pending": bool(pending)}
     if path == "/api/blacklist":
+        if not role(user):
+            return {"error": "Ton accès à RADARPAY est en attente d’autorisation par l’administrateur."}
         now = int(time.time())
         entries = []
         blacklist = private_load().setdefault("blacklist", {})
