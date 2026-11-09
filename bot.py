@@ -623,7 +623,7 @@ def process_pending_requests():
             _, rid, client_id, vendor_id, price, client_done, vendor_done = action
             for field, recipient, message, already_sent in (
                 ("erop_client_notified", client_id,
-                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
+                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie (50 % du montant de la Target concernée) sont signalés comme dus.",
                  client_done),
                 ("erop_vendor_notified", vendor_id,
                  "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie (50 % du montant de la Target concernée) sont dus : contacte l’administration pour confirmer le montant et le règlement.",
@@ -650,7 +650,7 @@ def process_pending_requests():
             _, rid, client_id, vendor_id, client_done, vendor_done = action
             for field, recipient, message, already_sent in (
                 ("eraf_client_notified", client_id,
-                 "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie sont signalés comme dus.",
+                 "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie (50 % du montant de la Target concernée) sont signalés comme dus.",
                  client_done),
                 ("eraf_vendor_notified", vendor_id,
                  "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie (50 % du montant de la Target concernée) sont dus : contacte l’administration pour confirmer le montant et le règlement.",
