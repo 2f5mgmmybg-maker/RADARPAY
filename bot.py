@@ -789,7 +789,7 @@ def api(path, b):
     if not user:
         return {"error": "Ouvre l'app depuis Telegram."}
     uid = user["id"]
-    if uid != OWNER and path not in ("/api/role", "/api/blacklist") and is_blacklisted(uid):
+    if uid != OWNER and path != "/api/role" and is_blacklisted(uid):
         entry = private_load().get("blacklist", {}).get(str(uid), {})
         remaining = max(0, int(entry.get("until", 0)) - int(time.time()))
         return {"error": "Compte temporairement blacklisté jusqu’au " +
@@ -1155,6 +1155,8 @@ def api(path, b):
         return {"role": r, "mine": mine, "pending": pending,
                 "has_pin": bool(profile and profile.get("pin_hash"))}
     if path == "/api/blacklist":
+        if uid != OWNER:
+            return {"error": "Accès réservé à l’administrateur."}
         if not role(user):
             return {"error": "Ton accès à RADARPAY est en attente d’autorisation par l’administrateur."}
         now = int(time.time())
