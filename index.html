@@ -170,6 +170,18 @@ section.on{display:block;animation:in .4s ease both}
 .spitta-product-hint{margin:0;color:var(--mute);font-size:.88rem;line-height:1.5}
 @media(min-width:430px){#spittamine{grid-template-columns:repeat(2,minmax(0,1fr))}.spitta-product-photo{aspect-ratio:4/3}.spitta-product-info{padding:14px}}
 
+
+/* Espace de publication Spitta : formulaire large et lisible */
+.spitta-publish-card{margin:18px 0 28px;padding:22px 18px;border:1px solid #5a5750;border-radius:20px;background:linear-gradient(145deg,rgba(238,234,226,.09),rgba(238,234,226,.025) 55%),#090909;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.spitta-publish-card h3{margin:0 0 8px;font-size:1.4rem}
+.spitta-publish-help{margin:0 0 18px;color:var(--mute);font-size:.98rem;line-height:1.65}
+.spitta-field-label{display:block;margin:18px 0 8px;color:var(--ink);font-size:1rem;font-weight:600}
+.spitta-publish-card .spitta-field{min-height:58px;margin:0;padding:16px;font-size:1.05rem;border-radius:14px}
+.spitta-upload-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:76px;margin-top:22px;padding:16px;border-radius:16px;font-size:1rem;white-space:normal;line-height:1.4}
+.spitta-upload-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid currentColor;border-radius:50%;font-size:1.6rem;font-weight:400}
+.spitta-publish-card #spittamsg{margin:14px 0 0;font-size:.95rem;overflow-wrap:anywhere}
+#spittamine{grid-template-columns:1fr;gap:20px;margin-top:14px}
+@media(min-width:600px){main:has(#e.on){max-width:760px}.spitta-publish-card{padding:28px}.spitta-upload-btn{min-height:84px}#spittamine{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -232,13 +244,20 @@ section.on{display:block;animation:in .4s ease both}
   </section>
   <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les conversations de transaction expirent après 10 minutes.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique seulement le montant et la devise, puis joins obligatoirement une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
-    <p class="lead">Espace Spitta : publie tes annonces et reçois les demandes des lanceurs. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
-    <h3>Publier une annonce</h3>
-    <input class="inp" id="spittaprice" placeholder="Prix / conditions">
-    <label class="lead" for="spittacountry">Pays</label>
-    <select class="inp" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
-    <button class="btn s" id="spittaadd">Ajouter ma photo</button><input type="file" id="spittafile" accept="image/*" hidden>
-    <p class="lead" id="spittamsg"></p><div class="grid" id="spittamine"></div>
+    <p class="lead">Espace Spitta : publie tes produits avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
+    <div class="spitta-publish-card">
+      <h3>Publier un produit</h3>
+      <p class="spitta-publish-help">Ajoute une photo nette, indique ton prix ou tes conditions, puis sélectionne le pays concerné.</p>
+      <label class="spitta-field-label" for="spittaprice">Prix / conditions</label>
+      <input class="inp spitta-field" id="spittaprice" placeholder="Ex. : 150 € — conditions à préciser">
+      <label class="spitta-field-label" for="spittacountry">Pays</label>
+      <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
+      <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du produit</span></button>
+      <input type="file" id="spittafile" accept="image/*" hidden>
+      <p class="spitta-publish-help">La publication démarre dès que tu sélectionnes ta photo.</p>
+      <p class="lead" id="spittamsg" aria-live="polite"></p>
+    </div>
+    <h3>Mes produits publiés</h3><div class="grid" id="spittamine"></div>
     <h3>Demandes reçues</h3><div id="spittachatitems"></div>
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les conversations sont supprimées après 10 minutes.</p><div id="livechatitems"></div></section>
