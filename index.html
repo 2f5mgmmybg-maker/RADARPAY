@@ -249,7 +249,7 @@ section.on{display:block;animation:in .4s ease both}
     <div id="blacklistitems"></div>
   </section>
 </main>
-<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
+<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
@@ -544,6 +544,7 @@ function renderMessages(c){
   $("chatproofbutton").hidden=!(vendor&&(c.status==="proof_pending"||c.status==="erop_pending"));
   $("chatproofbutton").textContent=c.status==="erop_pending"?"📸 Envoyer la deuxième capture":"📸 Envoyer la capture d’écran";
   $("chaterop").hidden=!(client&&!ADMIN_CHAT_MODE&&(c.status==="proof_received"||c.status==="expired"));
+  $("chateraf").hidden=!(vendor&&!ADMIN_CHAT_MODE&&c.erop_photo_sent&&!c.erop_confirmed);
   var countdown=$("chatcountdown"),deadline=c.status==="proof_pending"?c.proof_deadline:c.status==="erop_pending"?c.erop_deadline:0;
   countdown.dataset.deadline=deadline||"";
   countdown.dataset.kind=c.status==="erop_pending"?"EROP":c.status==="proof_pending"?"Capture":"";
@@ -601,6 +602,14 @@ $("chaterop").onclick=function(){
   .then(function(r){renderMessages(r.chat);$("chaterror").textContent="Demande EROP envoyée."})
   .catch(function(e){$("chaterror").textContent=e.message||"Demande EROP impossible."})
   .finally(function(){$("chaterop").disabled=false});
+};
+$("chateraf").onclick=function(){
+  if(!ACTIVE_CHAT||!window.confirm("Confirmer ERAF : tout est OK après la deuxième capture ?"))return;
+  var btn=$("chateraf");btn.disabled=true;
+  call("/api/chat/eraf",{id:ACTIVE_CHAT}).then(function(r){if(!r.ok)throw new Error(r.error||"Validation ERAF impossible.");LAST_CHAT_RENDER="";return call("/api/chat/messages",{id:ACTIVE_CHAT})})
+  .then(function(r){renderMessages(r.chat);$("chaterror").textContent="ERAF validé."})
+  .catch(function(e){$("chaterror").textContent=e.message||"Validation ERAF impossible."})
+  .finally(function(){btn.disabled=false});
 };
 $("chatproofbutton").onclick=function(){$("chatprooffile").click()};
 $("chatprooffile").onchange=function(){
