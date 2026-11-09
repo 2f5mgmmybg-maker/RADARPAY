@@ -761,6 +761,8 @@ def api(path, b):
                 return {"error": "Ce compte existe déjà. Utilise Se connecter."}
             if profile:
                 if profile.get("status", "pending") == "pending":
+                    if profile.get("role") != chosen:
+                        return {"error": "Ta demande est déjà enregistrée pour un autre profil. Contacte l’administrateur."}
                     return {"ok": True, "pending": True}
                 return {"error": "Ce compte existe déjà. Utilise Se connecter."}
             salt = secrets.token_hex(16)
@@ -839,7 +841,12 @@ def api(path, b):
     if uid != OWNER and path not in ("/api/me", "/api/register", "/api/login", "/api/pin/setup"):
         state = private_load()
         profile = next((x for x in state.setdefault("registrations", []) if str(x.get("user_id")) == str(uid)), None)
-        if role(user) not in ("lanceur", "spitta") or not _has_valid_app_session(profile, b.get("sessionToken", "")):
+        current_role = role(user)
+        if current_role not in ("lanceur", "spitta"):
+            if profile and profile.get("status", "pending") == "pending":
+                return {"error": "Ton inscription est en attente de validation par l’administrateur."}
+            return {"error": "Inscris-toi ou connecte-toi avec ton compte RADARPAY."}
+        if not _has_valid_app_session(profile, b.get("sessionToken", "")):
             return {"error": "Session fermée. Clique sur Se connecter et entre ton code secret à 4 chiffres."}
     if path == "/api/want":
         if role(user) != "lanceur":
