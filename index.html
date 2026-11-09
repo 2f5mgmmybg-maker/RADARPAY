@@ -630,7 +630,8 @@ function renderMessages(c){
   $("chatattach").disabled=ADMIN_CHAT_MODE||observer||!open;
   $("chattext").placeholder=observer&&!ADMIN_CHAT_MODE?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
   var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
-  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+(labels[c.status]||c.status);
+  var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"demande EROP — preuve du Lanceur attendue":labels[c.status]||c.status;
+  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+statusLabel;
   var senderProof=$("erop-sender-proof");
   senderProof.hidden=ADMIN_CHAT_MODE||observer||!(client&&c.status==="erop_pending"&&!c.erop_sender_proof_submitted);
   var step=$("chatproofstep");
@@ -646,7 +647,7 @@ function renderMessages(c){
   var countdown=$("chatcountdown"),deadline=c.status==="proof_pending"?c.proof_deadline:c.status==="erop_pending"?c.erop_deadline:0;
   countdown.dataset.deadline=deadline||"";
   countdown.dataset.kind=c.status==="erop_pending"?"EROP":c.status==="proof_pending"?"Capture":"";
-  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"En attente de ta preuve d’envoi EROP.":c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
+  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_pending"&&!c.erop_sender_proof_submitted?(client?"En attente de ta preuve d’envoi EROP.":"En attente de la preuve d’envoi du Lanceur.") :c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
   var host=$("chatmessages"),previousScrollHeight=host.scrollHeight,previousScrollTop=host.scrollTop;var stickToBottom=(previousScrollHeight-previousScrollTop-host.clientHeight)<90;host.innerHTML="";
   (c.messages||[]).forEach(function(m){
     var mine=m.from===me;
