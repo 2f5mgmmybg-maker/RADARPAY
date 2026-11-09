@@ -822,14 +822,7 @@ def api(path, b):
                     msg["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
                 except Exception as e:
                     print("lecture capture chiffrée:", repr(e))
-            if voice_file:
-                try:
-                    if voice_file not in VOICE_CACHE:
-                        encrypted = base64.b64decode(gh_get(voice_file).get("content", ""))
-                        VOICE_CACHE[voice_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
-                    msg["audio"] = "data:" + msg.get("mime", "audio/webm") + ";base64," + VOICE_CACHE[voice_file]
-                except Exception as e:
-                    print("lecture vocal chiffré:", repr(e))
+            # Les anciens vocaux sont aussi chargés à la demande, jamais à chaque polling.
         return {"ok": True, "chat": public_chat}
     if path == "/api/chat/file":
         rid, file_key = str(b.get("id", "")), str(b.get("file", ""))
@@ -838,16 +831,20 @@ def api(path, b):
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid not in (c.get("client"), c.get("vendor")):
                 return {"error": "Discussion introuvable ou accès refusé."}
-            msg = next((m for m in (c.get("messages") or []) if m.get("attachment_file") == file_key), None)
-            if not msg or not file_key.startswith("private_chat_files/" + rid + "/"):
+            msg = next((m for m in (c.get("messages") or [])
+                        if m.get("attachment_file") == file_key or m.get("voice_file") == file_key), None)
+            is_voice = bool(msg and msg.get("voice_file") == file_key)
+            allowed_prefix = "private_voice/" + rid + "/" if is_voice else "private_chat_files/" + rid + "/"
+            if not msg or not file_key.startswith(allowed_prefix):
                 return {"error": "Fichier introuvable ou accès refusé."}
-            mime = msg.get("attachment_mime", "application/octet-stream")
-            name = msg.get("attachment_name", "fichier")
+            mime = msg.get("mime", "audio/webm") if is_voice else msg.get("attachment_mime", "application/octet-stream")
+            name = "Message vocal" if is_voice else msg.get("attachment_name", "fichier")
+            cache = VOICE_CACHE if is_voice else ATTACHMENT_CACHE
         try:
-            if file_key not in ATTACHMENT_CACHE:
+            if file_key not in cache:
                 encrypted = base64.b64decode(gh_get(file_key).get("content", ""))
-                ATTACHMENT_CACHE[file_key] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
-            return {"ok": True, "data": "data:" + mime + ";base64," + ATTACHMENT_CACHE[file_key],
+                cache[file_key] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+            return {"ok": True, "data": "data:" + mime + ";base64," + cache[file_key],
                     "name": name, "mime": mime}
         except Exception as e:
             print("lecture pièce jointe chiffrée:", repr(e))
