@@ -949,7 +949,7 @@ def api(path, b):
             c = dict(c)
             c["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
         public_chat = {k: c.get(k) for k in
-                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "erop_deadline")}
+                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "erop_deadline", "erop_photo_sent", "erop_confirmed", "eraf_deadline")}
         public_chat["messages"] = c["messages"]
         for msg in public_chat.get("messages") or []:
             proof_file = msg.get("proof_file")
