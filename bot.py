@@ -239,6 +239,10 @@ def private_save():
         sha = None
     gh_put("radar_private.enc", encrypted, "Sauvegarde chiffrée RADAR PAYMENT", sha)
 
+def eraf_validation_pending(chat):
+    return bool(chat.get("erop_photo_sent") and not chat.get("erop_confirmed"))
+
+
 def chat_last_activity(chat):
     messages = chat.get("messages") or []
     last_message = messages[-1] if messages else {}
@@ -1130,6 +1134,8 @@ def api(path, b):
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid != c.get("client"):
                 return {"error": "Seul le lanceur peut demander une capture EROP."}
+            if eraf_validation_pending(c):
+                return {"error": "Le Spitta doit d’abord valider ERAF après la deuxième capture avant une nouvelle demande EROP."}
             if c.get("status") not in ("proof_received", "expired"):
                 return {"error": "La discussion doit être ouverte et ne doit pas déjà être verrouillée."}
             c["erop_previous_status"] = c.get("status")
