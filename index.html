@@ -810,7 +810,7 @@ function arrangeTabs(){
 }
 function setAuthView(view){
   ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
-  $("check-approval").hidden=view!=="auth-choices";
+  $("check-approval").hidden=true;
 }
 function enterApp(response){
   SESSION_TOKEN=response.session_token||"";
