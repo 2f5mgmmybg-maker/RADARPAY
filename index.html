@@ -890,7 +890,7 @@ function setupLegacyPin(){
   .catch(function(e){$("role-message").textContent=e.message||"Enregistrement impossible."})
   .finally(function(){$("legacy-pin-submit").disabled=false;});
 }
-$("show-register").onclick=function(){setAuthView("signup-panel");$("role-message").textContent="Étape 1 : renseigne ton pseudo et crée ton code secret.";};
+$("show-register").onclick=function(){$("signup-step-account").hidden=false;$("signup-step-role").hidden=true;$("choose-lanceur").disabled=false;$("choose-spitta").disabled=false;setAuthView("signup-panel");$("role-message").textContent="Étape 1 : renseigne ton pseudo et crée ton code secret.";};
 $("show-login").onclick=function(){setAuthView("login-panel");$("role-message").textContent="Entre le code secret créé lors de ton inscription.";};
 $("back-auth-register").onclick=function(){setAuthView("auth-choices");$("role-message").textContent="Choisis Inscription ou Se connecter.";};
 $("back-auth-login").onclick=function(){setAuthView("auth-choices");$("role-message").textContent="Choisis Inscription ou Se connecter.";};
