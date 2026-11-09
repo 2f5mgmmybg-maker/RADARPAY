@@ -209,11 +209,13 @@ section.on{display:block;animation:in .4s ease both}
       <button class="btn" id="choose-lanceur" type="button">Je suis Lanceur</button>
       <button class="btn" id="choose-spitta" type="button">Je suis Spitta</button>
     </div>
+    <button class="btn s" id="back-auth-register" type="button" style="width:100%;margin-top:10px">Retour</button>
   </div>
   <div id="login-panel" hidden style="width:min(100%,360px);margin:0 auto">
     <h2 style="margin:0 0 8px">Se connecter</h2>
     <input class="inp" id="login-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Ton code secret à 4 chiffres" autocomplete="current-password">
     <button class="btn" id="login-submit" type="button" style="width:100%">Se connecter</button>
+    <button class="btn s" id="back-auth-login" type="button" style="width:100%;margin-top:10px">Retour</button>
   </div>
   <div id="legacy-pin-panel" hidden style="width:min(100%,360px);margin:0 auto">
     <h2 style="margin:0 0 8px">Sécurise ton compte</h2>
@@ -222,6 +224,7 @@ section.on{display:block;animation:in .4s ease both}
     <input class="inp" id="legacy-pin-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirme ton code secret" autocomplete="new-password">
     <button class="btn" id="legacy-pin-submit" type="button" style="width:100%">Enregistrer le code</button>
   </div>
+  <button class="btn s" id="check-approval" type="button" hidden style="width:min(100%,360px)">Vérifier mon accès</button>
   <p id="role-message" class="lead">L’inscription est obligatoire avant d’accéder à RADAR PAYMENT.</p>
 </div>
 
@@ -430,6 +433,23 @@ function call(path,body){
       var data;
       try{data=JSON.parse(raw)}catch(e){throw new Error("Réponse API invalide (JSON).")}
       if(!data || typeof data!=="object") throw new Error("Réponse API invalide.");
+      if(data.error){
+        if(data.error.indexOf("Session fermée.")===0){
+          SESSION_TOKEN="";
+          if(document.body.classList.contains("authorized")){
+            document.body.classList.remove("authorized");$("welcome").classList.remove("gone");
+            setAuthView("login-panel");
+            $("role-message").textContent="Ta session a expiré. Connecte-toi à nouveau avec ton code secret à 4 chiffres.";
+          }
+        }else if(data.error.indexOf("Ouvre l'app depuis Telegram.")===0){
+          SESSION_TOKEN="";
+          if(document.body.classList.contains("authorized")){
+            document.body.classList.remove("authorized");$("welcome").classList.remove("gone");
+            setAuthView("auth-choices");
+            $("role-message").textContent="Session Telegram expirée. Ferme puis rouvre RADAR PAYMENT depuis Telegram.";
+          }
+        }
+      }
       if(!r.ok){var message=data.error||("Erreur HTTP "+r.status);if(r.status===401&&message.indexOf("Ouvre l'app depuis Telegram")!==-1)message="Session Telegram expirée. Ferme puis rouvre RADAR PAYMENT depuis Telegram.";throw new Error(message);}
       return data;
     });
@@ -790,6 +810,7 @@ function arrangeTabs(){
 }
 function setAuthView(view){
   ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
+  $("check-approval").hidden=view!=="auth-choices";
 }
 function enterApp(response){
   SESSION_TOKEN=response.session_token||"";
@@ -826,8 +847,9 @@ function enterApp(response){
 }
 function showPending(message){
   setAuthView("auth-choices");
-  $("role-message").textContent=message||"Ton inscription attend la validation de l’administrateur. Tu n’as pas besoin de recommencer l’inscription.";
   $("auth-choices").hidden=true;
+  $("check-approval").hidden=false;
+  $("role-message").textContent=message||"Ton inscription attend la validation de l’administrateur. Tu n’as pas besoin de recommencer l’inscription.";
 }
 function registerRole(role){
   var pseudo=$("signup-pseudo").value.trim();
@@ -863,6 +885,18 @@ function setupLegacyPin(){
 }
 $("show-register").onclick=function(){setAuthView("signup-panel");$("role-message").textContent="Étape 1 : renseigne ton pseudo et crée ton code secret.";};
 $("show-login").onclick=function(){setAuthView("login-panel");$("role-message").textContent="Entre le code secret créé lors de ton inscription.";};
+$("back-auth-register").onclick=function(){setAuthView("auth-choices");$("role-message").textContent="Choisis Inscription ou Se connecter.";};
+$("back-auth-login").onclick=function(){setAuthView("auth-choices");$("role-message").textContent="Choisis Inscription ou Se connecter.";};
+$("check-approval").onclick=function(){
+  $("check-approval").disabled=true;$("role-message").textContent="Vérification de ton autorisation…";
+  call("/api/me",{}).then(function(r){
+    if(r.role==="owner"){enterApp(r);return;}
+    if(r.pending){showPending("Ton inscription est toujours en attente. Tu n’as pas besoin de recommencer. Appuie à nouveau sur Vérifier mon accès après validation.");return;}
+    if(r.role){if(r.has_pin){setAuthView("login-panel");$("role-message").textContent="Ton compte est autorisé. Connecte-toi avec ton code secret.";}else{setAuthView("legacy-pin-panel");$("role-message").textContent="Ton compte est autorisé. Crée ton code secret une seule fois.";}return;}
+    setAuthView("auth-choices");$("role-message").textContent="Aucune inscription approuvée n’a été trouvée.";
+  }).catch(function(e){$("role-message").textContent=e.message||"Vérification impossible."})
+  .finally(function(){$("check-approval").disabled=false;});
+};
 $("signup-next").onclick=function(){
   var pseudo=$("signup-pseudo").value.trim(),pin=$("signup-pin").value;
   if(pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return;}
