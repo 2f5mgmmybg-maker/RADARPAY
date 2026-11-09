@@ -735,21 +735,23 @@ def api(path, b):
             existing = roles.get(str(uid))
             if existing and existing != chosen:
                 return {"error": "Ton profil est déjà fixé. Contacte l’administrateur pour le modifier."}
-            if not existing:
-                roles[str(uid)] = chosen
-                registrations.append({
-                    "user_id": str(uid), "pseudo": pseudo, "role": chosen,
-                    "telegram_username": str(user.get("username") or ""),
-                    "first_name": str(user.get("first_name") or ""),
-                    "created": int(time.time())
-                })
-                registrations[:] = registrations[-1000:]
-            else:
-                profile = next((x for x in registrations if x.get("user_id") == str(uid)), None)
-                if profile:
-                    profile["pseudo"] = pseudo
+            if existing:
+                return {"ok": True, "role": existing}
+            pending = next((x for x in registrations if str(x.get("user_id")) == str(uid)
+                            and x.get("status", "pending") == "pending"), None)
+            if pending:
+                if pending.get("role") != chosen:
+                    return {"error": "Ta demande est déjà en attente pour ce rôle. Contacte l’administrateur pour la modifier."}
+                return {"ok": True, "pending": True}
+            registrations.append({
+                "user_id": str(uid), "pseudo": pseudo, "role": chosen,
+                "telegram_username": str(user.get("username") or ""),
+                "first_name": str(user.get("first_name") or ""),
+                "created": int(time.time()), "status": "pending"
+            })
+            registrations[:] = registrations[-1000:]
             private_save()
-        return {"ok": True, "role": chosen}
+        return {"ok": True, "pending": True}
     if path == "/api/want":
         if role(user) != "lanceur":
             return {"error": "Seuls les comptes Lanceur peuvent contacter un spitta. Choisis le rôle Lanceur."}
@@ -934,11 +936,31 @@ def api(path, b):
             return {"error": "Accès réservé à l’administrateur."}
         registrations = private_load().setdefault("registrations", [])
         return {"ok": True, "registrations": sorted(registrations, key=lambda x: x.get("created", 0), reverse=True)}
+    if path == "/api/admin/approve-registration":
+        if uid != OWNER:
+            return {"error": "Accès réservé à l’administrateur."}
+        target = str(b.get("user_id", "")).strip()
+        with LOCK:
+            state = private_load()
+            profile = next((x for x in state.setdefault("registrations", [])
+                            if str(x.get("user_id")) == target and x.get("status", "pending") == "pending"), None)
+            if not profile:
+                return {"error": "Demande introuvable ou déjà traitée."}
+            chosen = profile.get("role")
+            if chosen not in ("lanceur", "spitta"):
+                return {"error": "Rôle de demande invalide."}
+            state.setdefault("roles", {})[target] = chosen
+            profile["status"] = "approved"
+            profile["approved_at"] = int(time.time())
+            private_save()
+        return {"ok": True, "user_id": target, "role": chosen}
     if path == "/api/me":
         data, _ = load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
-        return {"role": r, "mine": mine}
+        pending = next((x for x in private_load().setdefault("registrations", [])
+                        if str(x.get("user_id")) == str(uid) and x.get("status", "pending") == "pending"), None)
+        return {"role": r, "mine": mine, "pending": bool(pending)}
     if path == "/api/blacklist":
         now = int(time.time())
         entries = []
@@ -965,8 +987,8 @@ def api(path, b):
             private_save()
         entries.sort(key=lambda x: x["until"], reverse=True)
         return {"ok": True, "entries": entries}
-    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof", "/api/chat/erop", "/api/chat/eraf"):
-        return {"role": None, "error": "Choisis d’abord ton rôle sur l’écran de bienvenue."}
+    if not r:
+        return {"role": None, "error": "Ton accès à RADARPAY est en attente d’autorisation par l’administrateur."}
     if path == "/api/chat/list":
         with LOCK:
             chats_data, _ = chats_load()
