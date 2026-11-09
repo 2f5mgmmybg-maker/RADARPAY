@@ -803,9 +803,19 @@ def api(path, b):
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
                 return {"error": "Discussion introuvable ou accès refusé."}
+            changed = False
             if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
                 c["status"] = "proof_expired"
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
+                changed = True
+            # Une lecture est enregistrée uniquement lorsque le destinataire ouvre/actualise ce chat.
+            if uid in (c.get("client"), c.get("vendor")):
+                read_time = int(time.time())
+                for item in (c.get("messages") or []):
+                    if item.get("from") not in (uid, 0) and not item.get("read_at"):
+                        item["read_at"] = read_time
+                        changed = True
+            if changed:
                 chats_save(chats_data, None)
             c = dict(c)
             c["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
