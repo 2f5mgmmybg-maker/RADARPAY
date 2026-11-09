@@ -121,6 +121,8 @@ def save(data, sha):
 
 
 CHAT_TTL = 24 * 60 * 60  # Conserve les discussions 24 h pour couvrir EROP + ERAF et laisser le temps de répondre.
+EROP_BLACKLIST_SECONDS = 7 * 24 * 60 * 60
+ERAF_BLACKLIST_SECONDS = 10 * 24 * 60 * 60
 PRIVATE_CACHE = None
 
 
@@ -534,13 +536,13 @@ def process_pending_requests():
                 vendor_id = str(c.get("vendor"))
                 blacklist = private_load().setdefault("blacklist", {})
                 blacklist[vendor_id] = {
-                    "until": now + 7 * 24 * 60 * 60,
+                    "until": now + EROP_BLACKLIST_SECONDS,
                     "reason": "Délai EROP de 3 min 30 non respecté",
                     "chat_id": c.get("id"),
                     "guarantee_fee_due": True,
                     "created": now
                 }
-                c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
+                c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                 c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
@@ -557,13 +559,13 @@ def process_pending_requests():
                 vendor_id = str(c.get("vendor"))
                 blacklist = private_load().setdefault("blacklist", {})
                 blacklist[vendor_id] = {
-                    "until": now + 10 * 24 * 60 * 60,
+                    "until": now + ERAF_BLACKLIST_SECONDS,
                     "reason": "Délai ERAF de 10 minutes non respecté",
                     "chat_id": c.get("id"),
                     "guarantee_fee_due": True,
                     "created": now
                 }
-                c["eraf_blacklist_until"] = now + 10 * 24 * 60 * 60
+                c["eraf_blacklist_until"] = now + ERAF_BLACKLIST_SECONDS
                 c["guarantee_fee_due"] = True
                 c["erop_photo_sent"] = False
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
@@ -596,7 +598,7 @@ def process_pending_requests():
                  "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("erop_vendor_notified", vendor_id,
-                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie sont dues : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
                  vendor_done),
             ):
                 if already_sent:
@@ -623,7 +625,7 @@ def process_pending_requests():
                  "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("eraf_vendor_notified", vendor_id,
-                 "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
                  vendor_done),
             ):
                 if already_sent:
@@ -979,9 +981,9 @@ def api(path, b):
                 now = int(time.time())
                 c["status"] = "erop_expired"
                 private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = {
-                    "until": now + 7 * 24 * 60 * 60, "reason": "Délai EROP non respecté",
+                    "until": now + EROP_BLACKLIST_SECONDS, "reason": "Délai EROP non respecté",
                     "chat_id": c.get("id"), "guarantee_fee_due": True, "created": now}
-                c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
+                c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                 c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai EROP dépassé. Discussion bloquée. Spitta blacklisté 7 jours ; frais de garantie signalés comme dus.", "time": now})
@@ -1183,9 +1185,9 @@ def api(path, b):
                     now = int(time.time())
                     c["status"] = "erop_expired"
                     private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = {
-                        "until": now + 7 * 24 * 60 * 60, "reason": "Délai EROP non respecté",
+                        "until": now + EROP_BLACKLIST_SECONDS, "reason": "Délai EROP non respecté",
                         "chat_id": c.get("id"), "guarantee_fee_due": True, "created": now}
-                    c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
+                    c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                     c["guarantee_fee_due"] = True
                     c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                         "text": "⛔ Délai EROP dépassé. Discussion bloquée. Spitta blacklisté 7 jours ; frais de garantie signalés comme dus.", "time": now})
