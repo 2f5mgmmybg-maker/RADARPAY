@@ -20,10 +20,12 @@ class EropSenderProofTests(unittest.TestCase):
         self.chat = {
             "id": "erop-test-chat", "client": self.client["id"],
             "vendor": self.vendor["id"], "status": "erop_pending",
-            "erop_deadline": 0, "erop_sender_proof_submitted": False,
+            "erop_deadline": 0, "erop_sender_deadline": int(time.time()) + 120,
+            "erop_sender_proof_submitted": False, "price": "120 €",
             "messages": []
         }
         self.state = {"chats": [self.chat]}
+        self.private_state = {"roles": {}, "registrations": [], "blacklist": {}}
         self.user = dict(self.client)
         self.patches = [
             patch.object(bot, "verify", side_effect=lambda _data: dict(self.user)),
@@ -31,7 +33,7 @@ class EropSenderProofTests(unittest.TestCase):
             patch.object(bot, "is_blacklisted", return_value=False),
             patch.object(bot, "role", side_effect=lambda user: "lanceur" if user["id"] == self.client["id"] else "spitta"),
             patch.object(bot, "_has_valid_app_session", return_value=True),
-            patch.object(bot, "private_load", return_value={"roles": {}, "registrations": [], "blacklist": {}}),
+            patch.object(bot, "private_load", side_effect=lambda: self.private_state),
             patch.object(bot, "private_save"),
             patch.object(bot, "chats_load", side_effect=lambda: ({"chats": [self.chat]}, None)),
             patch.object(bot, "chats_save", side_effect=self.save_chats),
@@ -98,6 +100,32 @@ class EropSenderProofTests(unittest.TestCase):
         bot.process_pending_requests()
         self.assertEqual(self.chat["status"], "erop_pending")
         self.assertFalse(self.chat.get("erop_blacklist_until"))
+
+    def test_sender_stage_timeout_closes_request_without_blacklisting_spitta(self):
+        self.chat["erop_sender_deadline"] = int(time.time()) - 1
+        bot.process_pending_requests()
+        self.assertEqual(self.chat["status"], "erop_sender_expired")
+        self.assertIn("Délai de 2 minutes dépassé", self.chat["messages"][-1]["text"])
+        self.assertNotIn(str(self.vendor["id"]), self.private_state["blacklist"])
+
+    def test_sender_proof_after_deadline_is_rejected_before_upload(self):
+        self.chat["erop_sender_deadline"] = int(time.time()) - 1
+        result = self.call(self.client, mode="photo", image="data:image/jpeg;base64,dGVzdA==")
+        self.assertIn("délai de 2 minutes", result["error"])
+        self.patches[10].assert_not_called()
+
+    def test_guarantee_fee_is_calculated_and_recorded(self):
+        blacklist_entry = {}
+        amount, currency = bot.record_guarantee_fee(self.chat, blacklist_entry, int(time.time()))
+        self.assertEqual((amount, currency), ("60.00", "EUR"))
+        self.assertEqual(self.chat["guarantee_fee_amount"], "60.00")
+        self.assertEqual(blacklist_entry["guarantee_fee_amount"], "60.00")
+        self.assertTrue(blacklist_entry["guarantee_fee_due"])
+
+    def test_guarantee_fee_parser_handles_european_price_and_unknown_price(self):
+        self.assertEqual(bot.parse_target_amount("1 200,50 €"), ("600.25", "EUR"))
+        self.assertEqual(bot.parse_target_amount("120"), ("60.00", None))
+        self.assertEqual(bot.parse_target_amount("prix à confirmer"), (None, None))
 
     def test_duplicate_sender_proof_is_rejected(self):
         self.call(self.client, mode="unavailable")
