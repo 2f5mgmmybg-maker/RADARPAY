@@ -992,7 +992,7 @@ def api(path, b):
                 c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                 c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP dépassé. Discussion bloquée. Spitta blacklisté 7 jours ; frais de garantie signalés comme dus.", "time": now})
+                    "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
                 c["status"] = "proof_expired"
@@ -1196,9 +1196,9 @@ def api(path, b):
                     c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                     c["guarantee_fee_due"] = True
                     c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                        "text": "⛔ Délai EROP dépassé. Discussion bloquée. Spitta blacklisté 7 jours ; frais de garantie signalés comme dus.", "time": now})
+                        "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                     chats_save(chats_data, None)
-                    return {"error": "Le délai EROP est terminé. Discussion bloquée ; compte blacklisté 7 jours et frais de garantie dus."}
+                    return {"error": "Le délai EROP est dépassé. La discussion est bloquée et le compte du Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus."}
                 is_erop = True
             elif c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
                 is_erop = False
