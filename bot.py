@@ -829,6 +829,29 @@ def api(path, b):
         mine = [p["id"] for p in data["photos"] if p.get("id") and
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
         return {"role": r, "mine": mine}
+    if path == "/api/blacklist":
+        now = int(time.time())
+        entries = []
+        blacklist = private_load().setdefault("blacklist", {})
+        changed = False
+        for blocked_id, entry in list(blacklist.items()):
+            until = int(entry.get("until", 0))
+            if until <= now:
+                blacklist.pop(blocked_id, None)
+                changed = True
+                continue
+            # Ne jamais exposer les identifiants Telegram complets publiquement.
+            masked = "Spitta ••••" + str(blocked_id)[-4:]
+            entries.append({
+                "label": masked,
+                "until": until,
+                "reason": entry.get("reason") or "Non-respect du délai EROP",
+                "guarantee_fee_due": bool(entry.get("guarantee_fee_due"))
+            })
+        if changed:
+            private_save()
+        entries.sort(key=lambda x: x["until"], reverse=True)
+        return {"ok": True, "entries": entries}
     if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof", "/api/chat/erop"):
         return {"role": None, "error": "Choisis d’abord ton rôle sur l’écran de bienvenue."}
     if path == "/api/chat/list":
