@@ -505,7 +505,7 @@ $("chatsend").onclick=function(){
 var voiceRecorder=null,voiceChunks=[],voiceTimer=null;
 $("chatrecord").onclick=function(){
   if(voiceRecorder&&voiceRecorder.state==="recording"){voiceRecorder.stop();return}
-  if(!ACTIVE_CHAT||$("chatui").hidden)return;
+  if(document.visibilityState!=="visible"||!ACTIVE_CHAT||$("chatui").hidden)return;
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){
     $("chaterror").textContent="Enregistrement vocal indisponible. Autorise le micro dans Telegram ou utilise un navigateur compatible.";return;
   }
@@ -541,7 +541,7 @@ $("chattext").addEventListener("keydown",function(e){if(e.key==="Enter")$("chats
 setInterval(function(){
   if(!ACTIVE_CHAT||$("chatui").hidden)return;
   call(ADMIN_CHAT_MODE?"/api/adminchat/messages":"/api/chat/messages",{id:ACTIVE_CHAT}).then(function(r){if(r.ok){LAST_CHAT_RENDER="";renderMessages(r.chat)}}).catch(function(){});
-},2500);
+},1500);
  setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
