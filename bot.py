@@ -1558,18 +1558,18 @@ def api(path, b):
         except (ValueError, KeyError):
             return {"error": "Photo invalide ou trop lourde. Utilise une image JPEG, PNG, GIF ou WebP."}
         pid = str(int(time.time() * 1000))
+        photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "o": enc(uid, pid)}
+        if photo["categorie"] not in ("2500", "5000", "9900"):
+            photo["categorie"] = ""
+        try:
+            percentage = float(photo["pourcentage"]) if photo["pourcentage"] else None
+        except ValueError:
+            return {"error": "Le pourcentage doit être un nombre entre 0 et 100."}
+        if percentage is not None and not 0 <= percentage <= 100:
+            return {"error": "Le pourcentage doit être compris entre 0 et 100."}
         with LOCK:
             gh_put(f"photos/{pid}.jpg", raw, "Ajout d'une photo")
             data, sha = load()
-            photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "o": enc(uid, pid)}
-            if photo["categorie"] not in ("2500", "5000", "9900"):
-                photo["categorie"] = ""
-            try:
-                percentage = float(photo["pourcentage"]) if photo["pourcentage"] else None
-            except ValueError:
-                return {"error": "Le pourcentage doit être un nombre entre 0 et 100."}
-            if percentage is not None and not 0 <= percentage <= 100:
-                return {"error": "Le pourcentage doit être compris entre 0 et 100."}
             data["photos"].insert(0, photo)
             save(data, sha)
         return {"ok": True, "photo": {k: photo[k] for k in ("id", "image", "prix", "pays", "pourcentage", "categorie")}}
