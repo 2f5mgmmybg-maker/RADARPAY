@@ -596,7 +596,7 @@ def process_pending_requests():
                  "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("erop_vendor_notified", vendor_id,
-                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie sont dues : contacte l’administration pour connaître le montant et confirmer le règlement.",
                  vendor_done),
             ):
                 if already_sent:
