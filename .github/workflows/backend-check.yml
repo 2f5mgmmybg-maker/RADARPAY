@@ -61,12 +61,12 @@ jobs:
 
           html = Path("index.html").read_text(encoding="utf-8")
           backend = Path("bot.py").read_text(encoding="utf-8")
-          ids = re.findall(r'\\bid=["\\']([^"\\']+)["\\']', html)
+          ids = re.findall(r'\bid=["\']([^"\']+)["\']', html)
           duplicates = [key for key, count in Counter(ids).items() if count > 1]
-          references = set(re.findall(r'\\$\\(["\\']([^"\\']+)["\\']\\)', html))
+          references = set(re.findall(r'\$\(["\']([^"\']+)["\']\)', html))
           missing_ids = sorted(references - set(ids))
-          frontend_routes = set(re.findall(r'call\\(\\s*["\\']([^"\\']+)["\\']', html))
-          backend_routes = set(re.findall(r'if path == ["\\']([^"\\']+)["\\']:', backend))
+          frontend_routes = set(re.findall(r'call\(\s*["\']([^"\']+)["\']', html))
+          backend_routes = set(re.findall(r'if path == ["\']([^"\']+)["\']:', backend))
           missing_routes = sorted(frontend_routes - backend_routes)
 
           assert not duplicates, f"Duplicate HTML IDs: {duplicates}"
