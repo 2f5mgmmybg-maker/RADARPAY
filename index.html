@@ -166,6 +166,7 @@ section.on{display:block;animation:in .4s ease both}
 .spitta-product-photo{display:block;width:100%;height:auto;max-height:340px;aspect-ratio:16/10;object-fit:contain;background:#050505}
 .spitta-product-info{display:flex;flex-direction:column;gap:12px;padding:16px}
 .spitta-product-price{font-family:Inter,system-ui,sans-serif;font-size:1.12rem;color:#eeeae2;font-weight:600;overflow-wrap:anywhere}
+.spitta-category-heading{grid-column:1/-1;margin:22px 0 0;padding:10px 12px;border-bottom:1px solid var(--line);font-size:1.05rem;color:var(--sweep)}
 .spitta-product-actions{display:flex;flex-direction:column;gap:10px}
 .spitta-product-actions .btn{width:100%;min-height:48px;padding:12px 16px;font-size:1rem;font-weight:700;white-space:normal}
 .spitta-delete{border-color:#77746d!important;background:rgba(238,234,226,.08)!important;color:#eeeae2!important}
@@ -276,9 +277,13 @@ section.on{display:block;animation:in .4s ease both}
     <p class="lead" id="publications-intro">Espace Spitta : publie tes produits avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
     <div class="spitta-publish-card" id="spitta-publish-card">
       <h3>Publier un produit</h3>
-      <p class="spitta-publish-help">Ajoute une photo nette, indique ton prix ou tes conditions, puis sélectionne le pays concerné.</p>
+      <p class="spitta-publish-help">Ajoute une photo nette, indique ton prix, le pourcentage que tu souhaites et choisis la catégorie du produit (2 500, 5 000 ou 9 900), puis sélectionne le pays concerné.</p>
       <label class="spitta-field-label" for="spittaprice">Prix / conditions</label>
-      <input class="inp spitta-field" id="spittaprice" placeholder="Ex. : 150 € — conditions à préciser">
+      <input class="inp spitta-field" id="spittaprice" placeholder="Ex. : 2 500 € — conditions à préciser">
+      <label class="spitta-field-label" for="spittapercentage">Pourcentage souhaité (%)</label>
+      <input class="inp spitta-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
+      <label class="spitta-field-label" for="spittacategory">Catégorie du produit</label>
+      <select class="inp spitta-field" id="spittacategory"><option value="">Choisir une catégorie</option><option value="2500">Produits à 2 500</option><option value="5000">Produits à 5 000</option><option value="9900">Produits à 9 900</option></select>
       <label class="spitta-field-label" for="spittacountry">Pays</label>
       <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
       <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du produit</span></button>
@@ -532,20 +537,27 @@ function loadSpittaItems(){
     var mine=(r.mine||[]);
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
     if(!own.length){host.textContent=isAdmin?"Aucune publication enregistrée pour le moment.":"Tu n’as pas encore publié de Target.";return}
-    own.forEach(function(p){
-      var d=document.createElement("article");d.className="spitta-product-card";
-      var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée à Target";d.appendChild(im);
-      var info=document.createElement("div");info.className="spitta-product-info";
-      var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
-      var actions=document.createElement("div");actions.className="spitta-product-actions";
-      var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent=isAdmin?"Publication visible dans l’espace administrateur.":"Target est publié sur ton espace.";actions.appendChild(hint);
-      if(!isAdmin){
-        var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer Target";
-        del.onclick=function(){if(!confirm("Supprimer définitivement Target ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer Target"})};
-        actions.appendChild(del);
-      }
-      info.appendChild(actions);d.appendChild(info);host.appendChild(d);
-    });
+    var groups=[{key:"2500",label:"Produits à 2 500"},{key:"5000",label:"Produits à 5 000"},{key:"9900",label:"Produits à 9 900"},{key:"other",label:"Autres produits"}];
+    groups.forEach(function(group){
+      var items=own.filter(function(p){return (p.categorie||"other")===group.key;});
+      if(!items.length)return;
+      var heading=document.createElement("h3");heading.className="spitta-category-heading";heading.textContent=group.label;host.appendChild(heading);
+      items.forEach(function(p){
+        var d=document.createElement("article");d.className="spitta-product-card";
+        var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée au produit";d.appendChild(im);
+        var info=document.createElement("div");info.className="spitta-product-info";
+        var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
+        if(p.pourcentage){var pct=document.createElement("div");pct.className="spitta-product-hint";pct.textContent="Pourcentage souhaité : "+p.pourcentage+" %";info.appendChild(pct);}
+        var actions=document.createElement("div");actions.className="spitta-product-actions";
+        var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent=isAdmin?"Publication visible dans l’espace administrateur.":"Target est publié sur ton espace.";actions.appendChild(hint);
+        if(!isAdmin){
+          var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer Target";
+          del.onclick=function(){if(!confirm("Supprimer définitivement Target ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer Target"})};
+          actions.appendChild(del);
+        }
+        info.appendChild(actions);d.appendChild(info);host.appendChild(d);
+      });
+    });;
   }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
 }
 function loadRegistrations(){
@@ -827,21 +839,21 @@ $("addp").onclick=function(){$("pf").click()};
 $("spittaadd").onclick=function(){$("spittafile").click()};
 $("spittafile").onchange=function(){
   var f=this.files[0];this.value="";if(!f)return;$("spittamsg").textContent="Préparation de Target…";
-  shrink(f,function(src){$("spittamsg").textContent="Publication…";call("/api/add",{image:src,prix:$("spittaprice").value,pays:$("spittacountry").value}).then(function(r){
+  shrink(f,function(src){$("spittamsg").textContent="Publication…";call("/api/add",{image:src,prix:$("spittaprice").value,pourcentage:$("spittapercentage").value,categorie:$("spittacategory").value,pays:$("spittacountry").value}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Publication impossible.");
-    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||""});$("spittaprice").value="";$("spittamsg").textContent="Publication de Target réussie.";render();loadSpittaItems();
+    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});$("spittaprice").value="";$("spittapercentage").value="";$("spittacategory").value="";$("spittamsg").textContent="Publication de Target réussie.";render();loadSpittaItems();
   }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."})});
 };
 $("pf").onchange=function(){var f=this.files[0];this.value="";if(!f)return;$("pm").textContent="Préparation de la photo…";
   shrink(f,function(src){$("pm").textContent="Envoi et publication…";call("/api/add",{image:src,prix:$("pp").value,pays:$("photoCountry").value}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Erreur de publication.");
-    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||""});$("pp").value="";$("pm").textContent="Photo publiée et visible.";render();adminOpen();
+    var p=r.photo||{};PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});$("pp").value="";$("pm").textContent="Photo publiée et visible.";render();adminOpen();
   }).catch(function(e){$("pm").textContent=(e&&e.message)||"Connexion à l’API impossible."})})};
 fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   if(!r.ok)throw new Error("photos.json HTTP "+r.status);
   return r.json();
 }).then(function(d){
-  PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||""}});
+  PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""}});
   ST.maj=d.maj||"";
   API=(d.api||"").trim().replace(/\/$/,"");
   render();if(USER_ROLE==="spitta")loadSpittaItems();
@@ -855,7 +867,7 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
 // Actualisation automatique des disponibilités physiques toutes les 25 minutes.
 setInterval(function(){
   fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Actualisation indisponible");return r.json()}).then(function(d){
-    PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||""}});
+    PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""}});
     ST.maj=d.maj||"";nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;render();if(USER_ROLE==="spitta")loadSpittaItems();
   }).catch(function(e){console.warn("RADAR PAYMENT: actualisation automatique échouée",e)});
 },PHYSICAL_REFRESH_MS);
@@ -863,7 +875,7 @@ setInterval(function(){
 var tabs=document.getElementById("tabs");
 $("refresh").onclick=function(){
   $("refresh").textContent="↻ Actualisation…";
-  Promise.all([fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||""}});ST.maj=d.maj||"";render()}),loadChatList()]);
+  Promise.all([fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""}});ST.maj=d.maj||"";render()}),loadChatList()]);
   setTimeout(function(){$("refresh").textContent="↻ Actualiser"},1200);
 };
 $("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
