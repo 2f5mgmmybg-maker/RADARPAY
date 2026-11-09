@@ -589,7 +589,7 @@ $("chattext").addEventListener("keydown",function(e){if(e.key==="Enter")$("chats
 var CHAT_POLL_BUSY=false;
 setInterval(function(){
   var countdown=$("chatcountdown"),deadline=Number(countdown.dataset.deadline||0);
-  if(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));countdown.textContent=(countdown.dataset.kind||"")+" · temps restant : "+left+" secondes;}
+  if(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));countdown.textContent=(countdown.dataset.kind||"")+" · temps restant : "+left+" secondes";}
 },500);
 setInterval(function(){
   if(document.visibilityState!=="visible"||!ACTIVE_CHAT||$("chatui").hidden||CHAT_POLL_BUSY)return;
