@@ -179,6 +179,9 @@ section.on{display:block;animation:in .4s ease both}
   <div class="radar"><i></i><i></i><i></i></div>
   <h1>Bienvenue</h1>
   <p>Choisis ton profil pour accéder au bon espace.</p>
+  <div style="max-width:360px;margin:0 auto 14px">
+    <input class="inp" id="signup-pseudo" maxlength="24" minlength="3" placeholder="Choisis ton pseudo (3 à 24 caractères)" autocomplete="nickname" required>
+  </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
     <button class="btn" id="choose-lanceur">Je suis Lanceur</button>
     <button class="btn" id="choose-spitta">Je suis Spitta</button>
@@ -213,7 +216,11 @@ section.on{display:block;animation:in .4s ease both}
       <select class="inp" id="photoCountry"><option value="">Non précisé / vente en ligne</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
       <button class="btn s" id="addp">Choisir une photo</button><input type="file" id="pf" accept="image/*" hidden>
       <p class="lead" id="pm"></p><div class="grid" id="mine"></div>
-      <div id="adminchatlist" hidden><h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Chats privés avec les Lanceurs</h3><div id="adminlaunchers"></div></div></div>
+      <div id="adminchatlist" hidden>
+      <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
+      <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
+      <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
+      <h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Chats privés avec les Lanceurs</h3><div id="adminlaunchers"></div></div></div>
   </section>
 
   <section id="b">
@@ -396,7 +403,7 @@ function showMe(r,fromCode){
   if(!ok){$("msg").textContent=r.error||"Accès administrateur réservé au propriétaire.";return}
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
-  loadChatList();
+  loadChatList();loadRegistrations();
   PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1}).forEach(function(p){
     var d=document.createElement("div");d.className="slot";
     var im=document.createElement("img");im.src=p.src;d.appendChild(im);
@@ -433,6 +440,24 @@ function loadSpittaItems(){
     });
   }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
 }
+function loadRegistrations(){
+  var host=$("registrationslist"),msg=$("registrationsmsg");if(!host||!msg||!ADMIN)return;
+  msg.textContent="Chargement des inscriptions…";host.innerHTML="";
+  call("/api/admin/registrations",{}).then(function(r){
+    if(!r.ok)throw new Error(r.error||"Historique indisponible.");
+    var items=r.registrations||[];
+    if(!items.length){msg.textContent="Aucune nouvelle inscription pour le moment.";return}
+    msg.textContent=items.length+" inscription(s) enregistrée(s).";
+    items.forEach(function(x){
+      var card=document.createElement("div");card.className="chatitem";
+      var title=document.createElement("b");title.textContent=x.pseudo+" · "+(x.role==="lanceur"?"Lanceur":"Spitta");card.appendChild(title);
+      var detail=document.createElement("small");
+      detail.textContent=new Date(x.created*1000).toLocaleString("fr-FR")+(x.telegram_username?" · @"+x.telegram_username:"")+(x.first_name?" · "+x.first_name:"");
+      card.appendChild(detail);host.appendChild(card);
+    });
+  }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."});
+}
+$("refreshregistrations").onclick=loadRegistrations;
 function loadBlacklist(){
   var host=$("blacklistitems"),msg=$("blacklistmsg");if(!host||!msg)return;
   msg.textContent="Chargement…";host.innerHTML="";
@@ -685,8 +710,10 @@ function arrangeTabs(){
   tabs.querySelector(".pill").style.width="calc("+100/buttons.length+"% - 3.2px)";
 }
 function chooseRole(role){
+  var pseudo=$("signup-pseudo").value.trim();
+  if(pseudo.length<3||pseudo.length>24){$("role-message").textContent="Entre un pseudo de 3 à 24 caractères avant de continuer."; $("signup-pseudo").focus();return}
   $("role-message").textContent="Enregistrement de ton profil…";
-  call("/api/role",{role:role}).then(function(r){
+  call("/api/role",{role:role,pseudo:pseudo}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Impossible d’enregistrer le profil.");
     USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");
     $("role-message").textContent="";
