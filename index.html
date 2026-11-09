@@ -960,14 +960,44 @@ tabs.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
-  if(b.dataset.t==="c")adminOpen();
+  if(b.dataset.t==="c"){adminOpen();loadBlacklist();}
   if(b.dataset.t==="g")loadBlacklist();
+  if(b.dataset.t==="f")loadBlacklist();
   if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
 });
 function arrangeTabs(){
   tabs.classList.toggle("admin-tabs",USER_ROLE==="owner");
+}
+function moveSectionContents(sourceId,targetId,headingText,prepend){
+  var source=$(sourceId),target=$(targetId);
+  if(!source||!target||source.dataset.contentsMoved==="1")return;
+  var wrap=document.createElement("div");wrap.className="merged-area";
+  var heading=document.createElement("h3");heading.textContent=headingText;wrap.appendChild(heading);
+  while(source.firstChild)wrap.appendChild(source.firstChild);
+  if(prepend&&target.firstChild)target.insertBefore(wrap,target.firstChild);else target.appendChild(wrap);
+  source.dataset.contentsMoved="1";
+}
+function simplifyWorkspaceTabs(){
+  if(USER_ROLE==="lanceur"){
+    moveSectionContents("b","a","Targets physiques");
+    moveSectionContents("d","f","Mes actions et paiements",true);
+    moveSectionContents("g","f","Liste noire");
+    var names={"a":"Explorer","f":"Mes échanges"};
+    tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
+  }else if(USER_ROLE==="spitta"){
+    moveSectionContents("g","f","Liste noire");
+    var names={"b":"Targets","e":"Mes publications","f":"Messages & suivi"};
+    tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
+  }else if(USER_ROLE==="owner"){
+    moveSectionContents("b","a","Targets physiques");
+    moveSectionContents("e","a","Publications");
+    moveSectionContents("f","panel","Discussions en direct");
+    moveSectionContents("g","panel","Liste noire");
+    var names={"a":"Catalogue","c":"Administration"};
+    tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
+  }
 }
 function setAuthView(view){
   ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
@@ -976,35 +1006,22 @@ function setAuthView(view){
 function enterApp(response){
   SESSION_TOKEN=response.session_token||"";
   USER_ROLE=response.role;
+  simplifyWorkspaceTabs();
   document.body.classList.add("authorized");
   renderServices();
   $("welcome").classList.add("gone");
   if(USER_ROLE==="owner"){
-    $("spitta-tab").hidden=false;
-    $("spitta-tab").textContent="Publications";
-    $("admin-tab").hidden=false;
-    $("admin-tab").textContent="Administration";
     $("tabs").querySelectorAll("button").forEach(function(b){
-      b.hidden=false;
       b.classList.toggle("on",b.dataset.t==="c");
     });
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c");});
     arrangeTabs();
     showMe(response,false);
     loadSpittaItems();
-    loadAdminChats();return;
+    loadAdminChats();
+    loadBlacklist();return;
   }
-  $("spitta-tab").hidden=USER_ROLE!=="spitta";
-  $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
-  $("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";
-  $("admin-tab").hidden=true;
-  if(USER_ROLE==="spitta"){
-    $("tabs").querySelector('[data-t="a"]').hidden=true;
-    $("tabs").querySelector('[data-t="d"]').hidden=true;
-    $("spitta-tab").textContent="Mes publications";
-    loadSpittaItems();
-  }
-  if(USER_ROLE==="lanceur")$("tabs").querySelector('[data-t="d"]').hidden=false;
+  if(USER_ROLE==="spitta")loadSpittaItems();
   arrangeTabs();loadChatList();
   if(USER_ROLE==="spitta"){
     $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b");});
