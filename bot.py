@@ -1362,7 +1362,7 @@ def api(path, b):
                 PROOF_CACHE.pop(proof_file, None)
             return {"error": "La demande EROP a changé d’état. La preuve n’a pas été enregistrée."}
         try:
-            say(vendor_id, "📸 Le Lanceur a transmis son élément de preuve EROP. Tu as maintenant 3 min 30 pour envoyer volontairement la deuxième capture dans RADAR PAYMENT.")
+            say(vendor_id, ("⚠️ Le Lanceur a déclaré ne pas pouvoir joindre de photo de preuve EROP. Tu as maintenant 3 min 30 pour envoyer volontairement la deuxième capture dans RADAR PAYMENT." if mode == "unavailable" else "📸 Le Lanceur a joint une photo de sa preuve EROP. Tu as maintenant 3 min 30 pour envoyer volontairement la deuxième capture dans RADAR PAYMENT."))
         except Exception as e:
             print("notification preuve EROP au Spitta impossible:", repr(e))
         return {"ok": True, "deadline": deadline}
