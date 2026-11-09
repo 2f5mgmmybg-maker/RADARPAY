@@ -379,7 +379,7 @@ function openLb(p){
     w.onclick=function(){
       if(w.dataset.s!=="1"){w.dataset.s="1";w.textContent="Confirmer";m.textContent="Ton choix sera transmis au spitta. Dans 50 secondes, tu auras une réponse.";return}
       w.disabled=true;m.textContent="Envoi…";
-      ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Notification non confirmée. Réessaie."):"Le spitta est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");if(r.notification===false||!r.ok){w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"}else{w.textContent="Envoyé"}if(r.chat)openChat(r.chat)}).catch(function(){m.textContent="Le serveur ne répond pas. Réessaie.";w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"})};}
+      ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Notification non confirmée. Réessaie."):"Le spitta est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");if(r.notification===false||!r.ok){w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"}else{w.textContent="Envoyé"}if(r.chat)openChat(r.chat)}).catch(function(e){m.textContent=(e&&e.message)||"Le serveur ne répond pas. Réessaie.";w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"})};}
   var im=l.querySelector("img");im.classList.remove("z");im.src=p.src;
   l.querySelector("#lbp").textContent=p.prix||"";CUR=p;var w0=l.querySelector("#lbw");w0.disabled=false;w0.dataset.s="";w0.textContent="Je le veux";l.querySelector("#lbm").textContent="";l.classList.add("on");
 }
