@@ -58,6 +58,9 @@ header h2{margin:0;font-size:1.15rem;font-weight:700}
 header span{margin-left:auto;color:var(--mute);font-size:.8rem}
 .refresh{background:#111110;border:1px solid #55534e;color:#eeeae2;border-radius:999px;padding:8px 11px;font:600 .72rem Inter,system-ui,sans-serif;cursor:pointer}
 .tabs{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:9px;background:transparent;border:0;border-radius:0;padding:0;margin:0 0 24px}
+.tabs.admin-tabs{grid-template-columns:repeat(2,minmax(0,1fr));max-width:560px}
+.tabs.admin-tabs button{min-height:52px}
+#spitta-publish-card[hidden],#spitta-requests[hidden]{display:none!important}
 .tabs button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:54px;padding:12px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg2);color:var(--mute);font:600 .9rem Inter,system-ui,sans-serif;cursor:pointer;transition:background .2s,border-color .2s,color .2s;white-space:normal;text-align:center;line-height:1.25}
 .tabs button.on{color:var(--bg);background:var(--sweep);border-color:var(--sweep);box-shadow:0 5px 18px rgba(238,234,226,.12)}
 .tabs .pill{display:none}
@@ -270,8 +273,8 @@ section.on{display:block;animation:in .4s ease both}
   </section>
   <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
-    <p class="lead">Espace Spitta : publie tes produits avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
-    <div class="spitta-publish-card">
+    <p class="lead" id="publications-intro">Espace Spitta : publie tes produits avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
+    <div class="spitta-publish-card" id="spitta-publish-card">
       <h3>Publier un produit</h3>
       <p class="spitta-publish-help">Ajoute une photo nette, indique ton prix ou tes conditions, puis sélectionne le pays concerné.</p>
       <label class="spitta-field-label" for="spittaprice">Prix / conditions</label>
@@ -283,8 +286,8 @@ section.on{display:block;animation:in .4s ease both}
       <p class="spitta-publish-help">Ta publication sera envoyée dès que tu auras sélectionné une photo.</p>
       <p class="lead" id="spittamsg" aria-live="polite"></p>
     </div>
-    <h3>Mes publications</h3><div class="grid" id="spittamine"></div>
-    <h3>Demandes reçues</h3><div id="spittachatitems"></div>
+    <h3 id="publications-title">Mes publications</h3><div class="grid" id="spittamine"></div>
+    <div id="spitta-requests"><h3>Demandes reçues</h3><div id="spittachatitems"></div></div>
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de Target. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
   <section id="g">
@@ -521,22 +524,27 @@ function showMe(r,fromCode){
     d.appendChild(x);m.appendChild(d)});
 }
 function loadSpittaItems(){
-  if(USER_ROLE!=="spitta")return;
+  if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
+  var isAdmin=USER_ROLE==="owner";
+  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications actuellement enregistrées sur RADAR PAYMENT.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;$("spitta-requests").hidden=true;}
   call("/api/me",{}).then(function(r){
     var host=$("spittamine");if(!host)return;host.innerHTML="";
     var mine=(r.mine||[]);
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
-    if(!own.length){host.textContent="Tu n’as pas encore publié de Target.";return}
+    if(!own.length){host.textContent=isAdmin?"Aucune publication enregistrée pour le moment.":"Tu n’as pas encore publié de Target.";return}
     own.forEach(function(p){
       var d=document.createElement("article");d.className="spitta-product-card";
       var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée à Target";d.appendChild(im);
       var info=document.createElement("div");info.className="spitta-product-info";
       var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
       var actions=document.createElement("div");actions.className="spitta-product-actions";
-      var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent="Target est publié sur ton espace.";actions.appendChild(hint);
-      var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer Target";
-      del.onclick=function(){if(!confirm("Supprimer définitivement Target ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer Target"})};
-      actions.appendChild(del);info.appendChild(actions);d.appendChild(info);host.appendChild(d);
+      var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent=isAdmin?"Publication visible dans l’espace administrateur.":"Target est publié sur ton espace.";actions.appendChild(hint);
+      if(!isAdmin){
+        var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer Target";
+        del.onclick=function(){if(!confirm("Supprimer définitivement Target ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer Target"})};
+        actions.appendChild(del);
+      }
+      info.appendChild(actions);d.appendChild(info);host.appendChild(d);
     });
   }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
 }
@@ -869,7 +877,8 @@ tabs.addEventListener("click",function(e){
   if(navigator.vibrate)navigator.vibrate(8);
 });
 function arrangeTabs(){
-  tabs.style.gridTemplateColumns="repeat(auto-fit,minmax(125px,1fr))";
+  tabs.classList.toggle("admin-tabs",USER_ROLE==="owner");
+  tabs.style.gridTemplateColumns=USER_ROLE==="owner"?"repeat(2,minmax(0,1fr))":"repeat(auto-fit,minmax(125px,1fr))";
 }
 function setAuthView(view){
   ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
@@ -882,14 +891,18 @@ function enterApp(response){
   renderServices();
   $("welcome").classList.add("gone");
   if(USER_ROLE==="owner"){
+    $("spitta-tab").hidden=false;
+    $("spitta-tab").textContent="Publications";
+    $("admin-tab").hidden=false;
+    $("admin-tab").textContent="Administration";
     $("tabs").querySelectorAll("button").forEach(function(b){
-      b.hidden=b.dataset.t!=="c";
+      b.hidden=b.dataset.t!=="e"&&b.dataset.t!=="c";
       b.classList.toggle("on",b.dataset.t==="c");
     });
-    $("admin-tab").textContent="Administration";
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c");});
     arrangeTabs();
     showMe(response,false);
+    loadSpittaItems();
     loadAdminChats();return;
   }
   $("spitta-tab").hidden=USER_ROLE!=="spitta";
