@@ -175,6 +175,7 @@ def private_load():
     global PRIVATE_CACHE
     if PRIVATE_CACHE is not None:
         PRIVATE_CACHE.setdefault("blacklist", {})
+        PRIVATE_CACHE.setdefault("registrations", [])
         return PRIVATE_CACHE
 
     pool = ensure_db()
@@ -635,15 +636,32 @@ def api(path, b):
         if is_blacklisted(uid):
             return {"error": "Ton compte est blacklisté pendant 7 jours après le non-respect du délai EROP. Les frais de garantie sont dus. Contacte l’administration."}
         chosen = str(b.get("role", ""))
+        pseudo = re.sub(r"\\s+", " ", str(b.get("pseudo", "")).strip())
         if chosen not in ("lanceur", "spitta"):
             return {"error": "Choisis Lanceur ou Spitta."}
+        if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\\w .@-]+", pseudo, re.UNICODE):
+            return {"error": "Choisis un pseudo de 3 à 24 caractères (lettres, chiffres, espaces, . _ @ -)."}
         with LOCK:
-            roles = load_roles()
+            state = private_load()
+            roles = state.setdefault("roles", {})
+            registrations = state.setdefault("registrations", [])
             existing = roles.get(str(uid))
             if existing and existing != chosen:
                 return {"error": "Ton profil est déjà fixé. Contacte l’administrateur pour le modifier."}
-            roles[str(uid)] = chosen
-            save_roles()
+            if not existing:
+                roles[str(uid)] = chosen
+                registrations.append({
+                    "user_id": str(uid), "pseudo": pseudo, "role": chosen,
+                    "telegram_username": str(user.get("username") or ""),
+                    "first_name": str(user.get("first_name") or ""),
+                    "created": int(time.time())
+                })
+                registrations[:] = registrations[-1000:]
+            else:
+                profile = next((x for x in registrations if x.get("user_id") == str(uid)), None)
+                if profile:
+                    profile["pseudo"] = pseudo
+            private_save()
         return {"ok": True, "role": chosen}
     if path == "/api/want":
         if role(user) != "lanceur":
@@ -824,6 +842,11 @@ def api(path, b):
         except Exception as e:
             print("notification paiement admin:", repr(e))
         return {"ok": True}
+    if path == "/api/admin/registrations":
+        if uid != OWNER:
+            return {"error": "Accès réservé à l’administrateur."}
+        registrations = private_load().setdefault("registrations", [])
+        return {"ok": True, "registrations": sorted(registrations, key=lambda x: x.get("created", 0), reverse=True)}
     if path == "/api/me":
         data, _ = load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and
