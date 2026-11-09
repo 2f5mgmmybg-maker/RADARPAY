@@ -852,9 +852,15 @@ def api(path, b):
                 return {"error": "Discussion introuvable ou accès refusé."}
             changed = False
             if c.get("status") == "erop_pending" and time.time() >= c.get("erop_deadline", 0):
+                now = int(time.time())
                 c["status"] = "erop_expired"
+                private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = {
+                    "until": now + 7 * 24 * 60 * 60, "reason": "Délai EROP non respecté",
+                    "chat_id": c.get("id"), "guarantee_fee_due": True, "created": now}
+                c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
+                c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée.", "time": int(time.time())})
+                    "text": "⛔ Délai EROP dépassé. Discussion bloquée. Spitta blacklisté 7 jours ; frais de garantie signalés comme dus.", "time": now})
                 changed = True
             if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
                 c["status"] = "proof_expired"
@@ -1024,9 +1030,17 @@ def api(path, b):
                 return {"error": "Seul le spitta peut envoyer la capture."}
             if c.get("status") == "erop_pending":
                 if time.time() >= c.get("erop_deadline", 0):
+                    now = int(time.time())
                     c["status"] = "erop_expired"
+                    private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = {
+                        "until": now + 7 * 24 * 60 * 60, "reason": "Délai EROP non respecté",
+                        "chat_id": c.get("id"), "guarantee_fee_due": True, "created": now}
+                    c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
+                    c["guarantee_fee_due"] = True
+                    c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                        "text": "⛔ Délai EROP dépassé. Discussion bloquée. Spitta blacklisté 7 jours ; frais de garantie signalés comme dus.", "time": now})
                     chats_save(chats_data, None)
-                    return {"error": "Le délai EROP de 3 min 30 est terminé. La discussion est bloquée."}
+                    return {"error": "Le délai EROP est terminé. Discussion bloquée ; compte blacklisté 7 jours et frais de garantie dus."}
                 is_erop = True
             elif c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
                 is_erop = False
