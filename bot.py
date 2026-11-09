@@ -239,12 +239,18 @@ def private_save():
         sha = None
     gh_put("radar_private.enc", encrypted, "Sauvegarde chiffrée RADAR PAYMENT", sha)
 
+def chat_last_activity(chat):
+    messages = chat.get("messages") or []
+    last_message = messages[-1] if messages else {}
+    return int(last_message.get("time") or chat.get("updated") or chat.get("created", 0))
+
+
 def chats_load():
     data = private_load()
     now = int(time.time())
     old_chats = data.get("chats", [])
     data["chats"] = [c for c in old_chats
-                     if now - int(c.get("created", now)) < CHAT_TTL]
+                     if now - chat_last_activity(c) < CHAT_TTL]
     if len(data["chats"]) != len(old_chats):
         private_save()
         for expired in old_chats:
