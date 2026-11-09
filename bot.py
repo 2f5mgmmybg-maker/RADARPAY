@@ -543,7 +543,7 @@ def process_pending_requests():
                 c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
                 c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 10 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "erop_expired" and (
                     not c.get("erop_client_notified") or not c.get("erop_vendor_notified")):
@@ -557,7 +557,7 @@ def process_pending_requests():
                 vendor_id = str(c.get("vendor"))
                 blacklist = private_load().setdefault("blacklist", {})
                 blacklist[vendor_id] = {
-                    "until": now + 7 * 24 * 60 * 60,
+                    "until": now + 10 * 24 * 60 * 60,
                     "reason": "Délai ERAF de 10 minutes non respecté",
                     "chat_id": c.get("id"),
                     "guarantee_fee_due": True,
@@ -593,10 +593,10 @@ def process_pending_requests():
             _, rid, client_id, vendor_id, price, client_done, vendor_done = action
             for field, recipient, message, already_sent in (
                 ("erop_client_notified", client_id,
-                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
+                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("erop_vendor_notified", vendor_id,
-                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
                  vendor_done),
             ):
                 if already_sent:
@@ -938,10 +938,13 @@ def api(path, b):
                 blacklist.pop(blocked_id, None)
                 changed = True
                 continue
-            # Ne jamais exposer les identifiants Telegram complets publiquement.
-            masked = "Spitta ••••" + str(blocked_id)[-4:]
+            # Le pseudo d'inscription est affiché publiquement; aucun identifiant Telegram n'est exposé.
+            profile = next((x for x in private_load().get("registrations", [])
+                            if str(x.get("user_id")) == str(blocked_id)), {})
+            display_name = (profile.get("pseudo") or profile.get("first_name")
+                            or (("@" + profile.get("telegram_username")) if profile.get("telegram_username") else "Spitta"))
             entries.append({
-                "label": masked,
+                "label": str(display_name)[:40],
                 "until": until,
                 "reason": entry.get("reason") or "Non-respect du délai EROP",
                 "guarantee_fee_due": bool(entry.get("guarantee_fee_due"))
