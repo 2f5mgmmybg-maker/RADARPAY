@@ -196,6 +196,7 @@ section.on{display:block;animation:in .4s ease both}
     <button data-t="d">Lanceur</button>
     <button data-t="e" id="spitta-tab">Spitta</button>
     <button data-t="f">Chat direct</button>
+    <button data-t="g">Spitta Blacklist</button>
     <button data-t="c" id="admin-tab" hidden>Admin</button>
   </div>
 
@@ -234,6 +235,12 @@ section.on{display:block;animation:in .4s ease both}
     <h3>Demandes reçues</h3><div id="spittachatitems"></div>
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les conversations sont supprimées après 10 minutes.</p><div id="livechatitems"></div></section>
+  <section id="g">
+    <p class="lead">Liste publique des comptes Spitta temporairement blacklistés après le non-respect d’une demande EROP. Les identifiants sont masqués. La durée de blocage est de 7 jours.</p>
+    <button class="btn s" id="blacklistrefresh">↻ Actualiser la liste</button>
+    <p class="lead" id="blacklistmsg">Chargement de la liste…</p>
+    <div id="blacklistitems"></div>
+  </section>
 </main>
 <div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
@@ -426,6 +433,24 @@ function loadSpittaItems(){
     });
   }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
 }
+function loadBlacklist(){
+  var host=$("blacklistitems"),msg=$("blacklistmsg");if(!host||!msg)return;
+  msg.textContent="Chargement…";host.innerHTML="";
+  call("/api/blacklist",{}).then(function(r){
+    if(!r.ok)throw new Error(r.error||"Liste indisponible.");
+    var entries=r.entries||[];
+    if(!entries.length){msg.textContent="Aucun Spitta actuellement blacklisté.";return}
+    msg.textContent=entries.length+" compte(s) actuellement blacklisté(s).";
+    entries.forEach(function(entry){
+      var card=document.createElement("div");card.className="chatitem";
+      var title=document.createElement("b");title.textContent=entry.label;card.appendChild(title);
+      var detail=document.createElement("small");
+      detail.textContent="Fin du blocage : "+new Date(entry.until*1000).toLocaleString("fr-FR")+" · "+entry.reason+(entry.guarantee_fee_due?" · Frais de garantie signalés comme dus (validation admin)":"");
+      card.appendChild(detail);host.appendChild(card);
+    });
+  }).catch(function(e){msg.textContent=e.message||"Impossible de charger la liste."});
+}
+$("blacklistrefresh").onclick=loadBlacklist;
 function loadChatList(){
   call("/api/chat/list",{}).then(function(r){
     var host=$("adminchatitems");if(host){host.innerHTML="";}
@@ -650,7 +675,7 @@ $("countryfilters").addEventListener("click",function(e){var b=e.target.closest(
 tabs.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
-  var visibleTabs=Array.prototype.slice.call(tabs.querySelectorAll("button")).filter(function(x){return !x.hidden});tabs.querySelector(".pill").style.transform="translateX("+visibleTabs.indexOf(b)*100+"%)";if(b.dataset.t==="c")adminOpen();if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
+  var visibleTabs=Array.prototype.slice.call(tabs.querySelectorAll("button")).filter(function(x){return !x.hidden});tabs.querySelector(".pill").style.transform="translateX("+visibleTabs.indexOf(b)*100+"%)";if(b.dataset.t==="c")adminOpen();if(b.dataset.t==="g")loadBlacklist();if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
   document.querySelectorAll("section").forEach(function(s){s.classList.toggle("on",s.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
 });
