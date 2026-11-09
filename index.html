@@ -383,15 +383,20 @@ function openLb(p){
   l.querySelector("#lbp").textContent=p.prix||"";CUR=p;var w0=l.querySelector("#lbw");w0.disabled=false;w0.dataset.s="";w0.textContent="Je le veux";l.querySelector("#lbm").textContent="";l.classList.add("on");
 }
 function shrink(file,cb,onError){
-  var objectUrl="",finished=false;
+  var objectUrl="",finished=false,loadTimer=null;
+  function cleanup(){
+    if(loadTimer!==null){clearTimeout(loadTimer);loadTimer=null}
+    if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=""}
+  }
   function fail(message){
     if(finished)return;finished=true;
-    if(objectUrl)URL.revokeObjectURL(objectUrl);
+    cleanup();
     if(typeof onError==="function")onError(new Error(message||"Impossible de lire cette image. Choisis un autre fichier."));
   }
   if(!file||!file.type||file.type.indexOf("image/")!==0){fail("Fichier image invalide. Choisis une photo au format JPG, PNG ou WebP.");return}
   try{
     objectUrl=URL.createObjectURL(file);
+    loadTimer=setTimeout(function(){fail("La photo met trop longtemps à se charger. Réessaie avec une image plus légère ou un autre format.")},15000);
     var img=new Image();
     img.onerror=function(){fail("La photo n’a pas pu être ouverte. Essaie une autre image (JPG, PNG ou WebP).")};
     img.onload=function(){
@@ -407,7 +412,7 @@ function shrink(file,cb,onError){
         context.drawImage(img,0,0,canvas.width,canvas.height);
         var data=canvas.toDataURL("image/jpeg",.62);
         if(!data||data==="data:,"){fail("Cette image ne peut pas être préparée. Essaie une autre photo.");return}
-        finished=true;URL.revokeObjectURL(objectUrl);cb(data);
+        finished=true;cleanup();cb(data);
       }catch(e){fail("Échec de préparation de la photo. Essaie une image JPG, PNG ou WebP plus légère.")}
     };
     img.src=objectUrl;
