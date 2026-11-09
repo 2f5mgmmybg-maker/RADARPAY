@@ -1037,9 +1037,8 @@ def api(path, b):
         registrations = []
         for item in state.setdefault("registrations", []):
             profile = dict(item)
-            profile["status"] = profile.get("status") or (
-                "approved" if roles.get(str(profile.get("user_id"))) == profile.get("role") else "pending"
-            )
+            role_is_approved = roles.get(str(profile.get("user_id"))) == profile.get("role")
+            profile["status"] = "approved" if role_is_approved else (profile.get("status") or "pending")
             for secret_key in ("pin_hash", "pin_salt", "session_hash", "session_expires",
                                "pin_failures", "pin_locked_until"):
                 profile.pop(secret_key, None)
@@ -1051,14 +1050,21 @@ def api(path, b):
         target = str(b.get("user_id", "")).strip()
         with LOCK:
             state = private_load()
+            roles = state.setdefault("roles", {})
             profile = next((x for x in state.setdefault("registrations", [])
-                            if str(x.get("user_id")) == target and x.get("status", "pending") == "pending"), None)
+                            if str(x.get("user_id")) == target), None)
             if not profile:
                 return {"error": "Demande introuvable ou déjà traitée."}
             chosen = profile.get("role")
             if chosen not in ("lanceur", "spitta"):
                 return {"error": "Rôle de demande invalide."}
-            state.setdefault("roles", {})[target] = chosen
+            if roles.get(target) == chosen:
+                profile["status"] = "approved"
+                private_save()
+                return {"error": "Cette inscription est déjà approuvée."}
+            if profile.get("status", "pending") != "pending":
+                return {"error": "Demande introuvable ou déjà traitée."}
+            roles[target] = chosen
             profile["status"] = "approved"
             profile["approved_at"] = int(time.time())
             private_save()
