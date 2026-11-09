@@ -274,19 +274,19 @@ section.on{display:block;animation:in .4s ease both}
   </section>
   <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
-    <p class="lead" id="publications-intro">Espace Spitta : publie tes produits avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
+    <p class="lead" id="publications-intro">Espace Spitta : publie tes Targets avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
     <div class="spitta-publish-card" id="spitta-publish-card">
-      <h3>Publier un produit</h3>
+      <h3>Publier un Target</h3>
       <p class="spitta-publish-help">Ajoute une photo nette, indique ton prix, le pourcentage que tu souhaites et choisis la catégorie du produit (2 500, 5 000 ou 9 900), puis sélectionne le pays concerné.</p>
       <label class="spitta-field-label" for="spittaprice">Prix / conditions</label>
       <input class="inp spitta-field" id="spittaprice" placeholder="Ex. : 2 500 € — conditions à préciser">
       <label class="spitta-field-label" for="spittapercentage">Pourcentage souhaité (%)</label>
       <input class="inp spitta-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" required inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
-      <label class="spitta-field-label" for="spittacategory">Catégorie du produit</label>
-      <select class="inp spitta-field" id="spittacategory" required><option value="">Choisir une catégorie</option><option value="2500">Produits à 2 500</option><option value="5000">Produits à 5 000</option><option value="9900">Produits à 9 900</option></select>
+      <label class="spitta-field-label" for="spittacategory">Catégorie du Target</label>
+      <select class="inp spitta-field" id="spittacategory" required><option value="">Choisir une catégorie</option><option value="2500">Targets à 2 500</option><option value="5000">Targets à 5 000</option><option value="9900">Targets à 9 900</option></select>
       <label class="spitta-field-label" for="spittacountry">Pays</label>
       <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
-      <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du produit</span></button>
+      <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du Target</span></button>
       <input type="file" id="spittafile" accept="image/*" hidden>
       <p class="spitta-publish-help">Ta publication sera envoyée dès que tu auras sélectionné une photo.</p>
       <p class="lead" id="spittamsg" aria-live="polite"></p>
@@ -537,14 +537,14 @@ function loadSpittaItems(){
     var mine=(r.mine||[]);
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
     if(!own.length){host.textContent=isAdmin?"Aucune publication enregistrée pour le moment.":"Tu n’as pas encore publié de Target.";return}
-    var groups=[{key:"2500",label:"Produits à 2 500"},{key:"5000",label:"Produits à 5 000"},{key:"9900",label:"Produits à 9 900"},{key:"other",label:"Autres produits"}];
+    var groups=[{key:"2500",label:"Targets à 2 500"},{key:"5000",label:"Targets à 5 000"},{key:"9900",label:"Targets à 9 900"},{key:"other",label:"Autres Targets"}];
     groups.forEach(function(group){
       var items=own.filter(function(p){return (p.categorie||"other")===group.key;});
       if(!items.length)return;
       var heading=document.createElement("h3");heading.className="spitta-category-heading";heading.textContent=group.label;host.appendChild(heading);
       items.forEach(function(p){
         var d=document.createElement("article");d.className="spitta-product-card";
-        var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée au produit";d.appendChild(im);
+        var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée au Target";d.appendChild(im);
         var info=document.createElement("div");info.className="spitta-product-info";
         var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
         if(p.pourcentage){var pct=document.createElement("div");pct.className="spitta-product-hint";pct.textContent="Pourcentage souhaité : "+p.pourcentage+" %";info.appendChild(pct);}
