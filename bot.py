@@ -123,10 +123,69 @@ CHAT_TTL = 600
 PRIVATE_CACHE = None
 
 
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+DB_POOL = None
+
+
+def ensure_db():
+    """Pool PostgreSQL partagé; l'état privé reste chiffré."""
+    global DB_POOL
+    if not DATABASE_URL:
+        return None
+    if DB_POOL is None:
+        from psycopg_pool import ConnectionPool
+        DB_POOL = ConnectionPool(DATABASE_URL, min_size=1, max_size=8, timeout=10)
+        with DB_POOL.connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS radarpay_private_state (
+                    id SMALLINT PRIMARY KEY CHECK (id = 1),
+                    payload BYTEA NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+    return DB_POOL
+
+
+def _decode_private(encrypted):
+    migrated = False
+    try:
+        decrypted = FERNET.decrypt(encrypted)
+    except InvalidToken as primary_error:
+        if not DATA_ENCRYPTION_KEY:
+            raise RuntimeError("Le fichier privé chiffré est illisible; aucune donnée n'a été écrasée.") from primary_error
+        try:
+            decrypted = LEGACY_FERNET.decrypt(encrypted)
+            migrated = True
+        except InvalidToken as legacy_error:
+            raise RuntimeError("Clé de chiffrement invalide; aucune donnée n'a été écrasée.") from legacy_error
+    try:
+        data = json.loads(decrypted.decode())
+    except (ValueError, UnicodeDecodeError) as e:
+        raise RuntimeError("Le fichier privé déchiffré est invalide; aucune donnée n'a été écrasée.") from e
+    data.setdefault("roles", {})
+    data.setdefault("chats", [])
+    data.setdefault("admin_chats", {})
+    data.setdefault("site_clicks", {})
+    data.setdefault("payment_reports", [])
+    return data, migrated
+
+
 def private_load():
     global PRIVATE_CACHE
     if PRIVATE_CACHE is not None:
         return PRIVATE_CACHE
+
+    pool = ensure_db()
+    if pool is not None:
+        with pool.connection() as conn:
+            row = conn.execute("SELECT payload FROM radarpay_private_state WHERE id = 1").fetchone()
+        if row:
+            PRIVATE_CACHE, migrated = _decode_private(bytes(row[0]))
+            if migrated:
+                private_save()
+            return PRIVATE_CACHE
+
+    # Première initialisation PostgreSQL : importer l'état GitHub historique sans le supprimer.
     try:
         f = gh_get("radar_private.enc")
     except requests.HTTPError as e:
@@ -141,37 +200,32 @@ def private_load():
                 PRIVATE_CACHE = None
                 raise
         private_save()
-        gh_del("user_roles.json", "Migration vers les données privées chiffrées")
-    else:
-        migrate_key = False
-        encrypted = base64.b64decode(f.get("content", ""))
-        try:
-            decrypted = FERNET.decrypt(encrypted)
-        except InvalidToken as primary_error:
-            if not DATA_ENCRYPTION_KEY:
-                raise RuntimeError("Le fichier privé chiffré est illisible; aucune donnée n'a été écrasée.") from primary_error
-            try:
-                # Migration transparente de l’ancienne clé dérivée du token Telegram.
-                decrypted = LEGACY_FERNET.decrypt(encrypted)
-                migrate_key = True
-            except InvalidToken as legacy_error:
-                raise RuntimeError("Clé de chiffrement invalide; aucune donnée n'a été écrasée.") from legacy_error
-        try:
-            PRIVATE_CACHE = json.loads(decrypted.decode())
-        except (ValueError, json.JSONDecodeError) as e:
-            raise RuntimeError("Le fichier privé déchiffré est invalide; aucune donnée n'a été écrasée.") from e
-    PRIVATE_CACHE.setdefault("roles", {})
-    PRIVATE_CACHE.setdefault("chats", [])
-    PRIVATE_CACHE.setdefault("admin_chats", {})
-    PRIVATE_CACHE.setdefault("site_clicks", {})
-    PRIVATE_CACHE.setdefault("payment_reports", [])
-    if locals().get("migrate_key", False):
+        if pool is None:
+            gh_del("user_roles.json", "Migration vers les données privées chiffrées")
+        return PRIVATE_CACHE
+
+    encrypted = base64.b64decode(f.get("content", ""))
+    PRIVATE_CACHE, migrated = _decode_private(encrypted)
+    if pool is not None or migrated:
         private_save()
     return PRIVATE_CACHE
 
 
 def private_save():
-    encrypted = FERNET.encrypt(json.dumps(private_load(), ensure_ascii=False, separators=(",", ":")).encode())
+    data = private_load()
+    encrypted = FERNET.encrypt(json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode())
+    pool = ensure_db()
+    if pool is not None:
+        with pool.connection() as conn:
+            conn.execute("""
+                INSERT INTO radarpay_private_state (id, payload, updated_at)
+                VALUES (1, %s, NOW())
+                ON CONFLICT (id) DO UPDATE
+                SET payload = EXCLUDED.payload, updated_at = NOW()
+            """, (encrypted,))
+        return
+
+    # Compatibilité si DATABASE_URL n'est pas encore configuré.
     try:
         sha = gh_get("radar_private.enc").get("sha")
     except requests.HTTPError as e:
@@ -179,7 +233,6 @@ def private_save():
             raise
         sha = None
     gh_put("radar_private.enc", encrypted, "Sauvegarde chiffrée RADAR PAYMENT", sha)
-
 
 def chats_load():
     data = private_load()
@@ -969,6 +1022,12 @@ def startup():
     # car c'est là que se trouvent photos.json et le dossier photos/.
     print(f"RADAR PAYMENT config: repo={REPO}, branch={BRANCH}, api_url={'définie' if API_URL else 'ABSENTE'}, site_url={'définie' if SITE else 'ABSENTE'}")
     try:
+        if DATABASE_URL:
+            ensure_db()
+            private_load()  # préchauffe PostgreSQL et importe l'historique chiffré si nécessaire
+            print("PostgreSQL RADARPAY activé; état privé chargé.")
+        else:
+            print("ATTENTION: DATABASE_URL absent; stockage historique GitHub (lent) encore utilisé.")
         if SITE:
             tg("setChatMenuButton", menu_button={"type": "web_app", "text": "Ouvrir", "web_app": {"url": SITE}})
         if not API_URL:
