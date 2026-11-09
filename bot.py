@@ -720,7 +720,11 @@ def api(path, b):
             say(other, "💬 Nouveau message dans ton chat RADAR PAYMENT avec l’administrateur. Ouvre la mini-app.")
         except Exception as e:
             print("notification chat admin:", repr(e))
-        return {"ok": True}
+        with LOCK:
+            pdata = private_load()
+            admin_messages = [dict(item) for item in pdata.setdefault("admin_chats", {}).get(target, [])]
+        return {"ok": True, "chat": {"id": target, "client": int(target), "vendor": OWNER,
+                                      "status": "proof_received", "messages": admin_messages}}
     if path == "/api/payment/report":
         if r != "lanceur":
             return {"error": "Seuls les Lanceurs peuvent déclarer un paiement."}
