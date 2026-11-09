@@ -63,17 +63,17 @@ class RegistrationApprovalFlowTests(unittest.TestCase):
         # 4. A non-admin cannot approve the request.
         denied = self.call_as(self.test_user, "/api/admin/approve-registration", user_id=str(self.test_user["id"]))
         self.assertIn("administrateur", denied["error"])
-        self.assertNotIn(str(self.user["id"]), self.state["roles"])
+        self.assertNotIn(str(self.test_user["id"]), self.state["roles"])
 
         # 5. Admin sees pending request and approves it.
         admin_list = self.call_as(self.owner, "/api/admin/registrations")
         self.assertTrue(admin_list["ok"])
         self.assertEqual(admin_list["registrations"][0]["status"], "pending")
         approved = self.call_as(
-            self.owner, "/api/admin/approve-registration", user_id=str(self.user["id"])
+            self.owner, "/api/admin/approve-registration", user_id=str(self.test_user["id"])
         )
         self.assertEqual(approved, {
-            "ok": True, "user_id": str(self.user["id"]), "role": "spitta"
+            "ok": True, "user_id": str(self.test_user["id"]), "role": "spitta"
         })
         self.assertEqual(self.state["roles"][str(self.test_user["id"])], "spitta")
         self.assertEqual(self.state["registrations"][0]["status"], "approved")
@@ -85,7 +85,7 @@ class RegistrationApprovalFlowTests(unittest.TestCase):
 
         # 7. Approval is one-shot; a second approval is rejected.
         again = self.call_as(
-            self.owner, "/api/admin/approve-registration", user_id=str(self.user["id"])
+            self.owner, "/api/admin/approve-registration", user_id=str(self.test_user["id"])
         )
         self.assertIn("introuvable", again["error"])
 
@@ -104,7 +104,7 @@ class RegistrationApprovalFlowTests(unittest.TestCase):
     def test_legacy_account_with_matching_role_is_reported_approved(self):
         self.state["roles"][str(self.test_user["id"])] = "spitta"
         self.state["registrations"].append({
-            "user_id": str(self.user["id"]), "pseudo": "Ancien compte",
+            "user_id": str(self.test_user["id"]), "pseudo": "Ancien compte",
             "role": "spitta", "created": 1
         })
         result = self.call_as(self.owner, "/api/admin/registrations")
