@@ -899,7 +899,9 @@ def api(path, b):
             except Exception as e:
                 print("notification fichier impossible:", repr(e))
         threading.Thread(target=notify_attachment, daemon=True).start()
-        return {"ok": True}
+        public_chat = {k: c.get(k) for k in ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline")}
+        public_chat["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
+        return {"ok": True, "chat": public_chat}
     if path == "/api/chat/accept":
         rid = str(b.get("id", ""))
         with LOCK:
@@ -1042,7 +1044,9 @@ def api(path, b):
             except Exception as e:
                 print("alerte nouveau message non envoyée:", repr(e))
         threading.Thread(target=notify, daemon=True).start()
-        return {"ok": True}
+        public_chat = {k: c.get(k) for k in ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline")}
+        public_chat["messages"] = [dict(item) for item in (c.get("messages") or [])]
+        return {"ok": True, "chat": public_chat}
     if path in ("/api/add", "/api/update", "/api/delete") and r not in ("owner", "spitta"):
         return {"error": "Accès réservé."}
     if path == "/api/add":
