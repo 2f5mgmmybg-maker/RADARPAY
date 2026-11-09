@@ -174,6 +174,7 @@ def _decode_private(encrypted):
 def private_load():
     global PRIVATE_CACHE
     if PRIVATE_CACHE is not None:
+        PRIVATE_CACHE.setdefault("blacklist", {})
         return PRIVATE_CACHE
 
     pool = ensure_db()
@@ -491,9 +492,22 @@ def load_roles():
 def save_roles():
     private_save()
 
+def is_blacklisted(user_id):
+    entry = private_load().setdefault("blacklist", {}).get(str(user_id))
+    if not entry:
+        return False
+    if int(time.time()) >= int(entry.get("until", 0)):
+        private_load()["blacklist"].pop(str(user_id), None)
+        private_save()
+        return False
+    return True
+
+
 def role(user, code=None):
     if user["id"] == OWNER:
         return "owner"
+    if is_blacklisted(user["id"]):
+        return None
     return load_roles().get(str(user["id"]))
 
 
@@ -516,8 +530,19 @@ def process_pending_requests():
         for c in data.get("chats", []):
             if c.get("status") == "erop_pending" and now >= int(c.get("erop_deadline", 0)):
                 c["status"] = "erop_expired"
+                vendor_id = str(c.get("vendor"))
+                blacklist = private_load().setdefault("blacklist", {})
+                blacklist[vendor_id] = {
+                    "until": now + 7 * 24 * 60 * 60,
+                    "reason": "Délai EROP de 3 min 30 non respecté",
+                    "chat_id": c.get("id"),
+                    "guarantee_fee_due": True,
+                    "created": now
+                }
+                c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
+                c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée.", "time": now})
+                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "erop_expired" and not c.get("erop_notified"):
                 c["erop_notified"] = True
@@ -542,8 +567,9 @@ def process_pending_requests():
             if kind == "remind":
                 say(first, f"⏱️ Plus que 20 secondes pour répondre à la demande ({price or 'sans prix'}) !")
             elif kind == "erop_expired":
-                say(first, "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée.")
-                say(second, "⛔ Le Spitta n'a pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée.")
+                until = int(time.time()) + 7 * 24 * 60 * 60
+                say(first, "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.")
+                say(second, "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.")
             else:
                 say(first, "⏱️ Le délai de 50 secondes est dépassé. Tu peux poursuivre la discussion dans RADAR PAYMENT.")
                 say(second, "⌛ La demande a expiré. Le Lanceur peut encore t'écrire dans la discussion.")
@@ -594,11 +620,20 @@ def api(path, b):
     if not user:
         return {"error": "Ouvre l'app depuis Telegram."}
     uid = user["id"]
+    if uid != OWNER and path != "/api/role" and is_blacklisted(uid):
+        entry = private_load().get("blacklist", {}).get(str(uid), {})
+        remaining = max(0, int(entry.get("until", 0)) - int(time.time()))
+        return {"error": "Compte temporairement blacklisté jusqu’au " +
+                time.strftime("%d/%m/%Y à %H:%M", time.localtime(entry.get("until", 0))) +
+                ". Motif : délai EROP non respecté. Les frais de garantie sont signalés comme dus. " +
+                "Contacte l’administration. Temps restant : " + str(remaining // 86400) + " jour(s)."}
     if not rate_allowed(uid, path):
         return {"error": "Trop de requêtes. Attends quelques secondes puis réessaie."}
     if path == "/api/role":
         if uid == OWNER:
             return {"ok": True, "role": "owner"}
+        if is_blacklisted(uid):
+            return {"error": "Ton compte est blacklisté pendant 7 jours après le non-respect du délai EROP. Les frais de garantie sont dus. Contacte l’administration."}
         chosen = str(b.get("role", ""))
         if chosen not in ("lanceur", "spitta"):
             return {"error": "Choisis Lanceur ou Spitta."}
