@@ -1,4 +1,5 @@
 import os, time, json, base64, hashlib, hmac, threading, requests, re, secrets
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from cryptography.fernet import Fernet, InvalidToken
 from urllib.parse import parse_qsl
 from datetime import datetime
@@ -238,6 +239,65 @@ def private_save():
             raise
         sha = None
     gh_put("radar_private.enc", encrypted, "Sauvegarde chiffrée RADAR PAYMENT", sha)
+
+def parse_target_amount(value):
+    """Retourne (frais à 50 %, devise) si le prix est interprétable sans supposition."""
+    raw = str(value or "").strip()
+    if not raw or len(raw) > 40:
+        return None, None
+    currency = None
+    for token, code in (("EUR", "EUR"), ("USD", "USD"), ("GBP", "GBP"), ("CHF", "CHF"),
+                        ("€", "EUR"), ("$", "USD"), ("£", "GBP")):
+        found = token in raw.upper() if token.isalpha() else token in raw
+        if found:
+            currency = code
+            raw = re.sub(re.escape(token), "", raw, flags=re.I).strip()
+            break
+    if re.search(r"[A-Za-z]", raw):
+        return None, None
+    raw = raw.replace(" ", "").replace("\u00a0", "").replace("'", "").replace("’", "")
+    if not re.fullmatch(r"\d+(?:[.,]\d+)*", raw):
+        return None, None
+    if "," in raw and "." in raw:
+        decimal_sep = "," if raw.rfind(",") > raw.rfind(".") else "."
+        grouping_sep = "." if decimal_sep == "," else ","
+        raw = raw.replace(grouping_sep, "").replace(decimal_sep, ".")
+    elif "," in raw or "." in raw:
+        sep = "," if "," in raw else "."
+        chunks = raw.split(sep)
+        if len(chunks) > 2:
+            if not all(len(part) == 3 for part in chunks[1:]):
+                return None, None
+            raw = "".join(chunks)
+        elif len(chunks[1]) == 3:
+            raw = "".join(chunks)
+        elif len(chunks[1]) in (1, 2):
+            raw = chunks[0] + "." + chunks[1]
+        else:
+            return None, None
+    try:
+        amount = Decimal(raw)
+        if not amount.is_finite() or amount <= 0:
+            return None, None
+        fee = (amount * Decimal("0.50")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return str(fee), currency
+    except (InvalidOperation, ValueError):
+        return None, None
+
+
+def record_guarantee_fee(chat, blacklist_entry, now):
+    amount, currency = parse_target_amount(chat.get("price"))
+    chat["guarantee_fee_due"] = True
+    chat["guarantee_fee_rate"] = 50
+    chat["guarantee_fee_amount"] = amount
+    chat["guarantee_fee_currency"] = currency
+    blacklist_entry.update({
+        "guarantee_fee_due": True, "guarantee_fee_rate": 50,
+        "guarantee_fee_amount": amount, "guarantee_fee_currency": currency,
+        "created": now
+    })
+    return amount, currency
+
 
 def eraf_validation_pending(chat):
     return bool(chat.get("erop_photo_sent") and not chat.get("erop_confirmed"))
@@ -559,6 +619,13 @@ def process_pending_requests():
         changed = False
         now = int(time.time())
         for c in data.get("chats", []):
+            if (c.get("status") == "erop_pending" and not c.get("erop_sender_proof_submitted")
+                    and int(c.get("erop_sender_deadline", 0)) > 0
+                    and now >= int(c.get("erop_sender_deadline", 0))):
+                c["status"] = "erop_sender_expired"
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⛔ Délai de 2 minutes dépassé : le Lanceur n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au Spitta pour cette étape qui dépend du Lanceur.", "time": now})
+                changed = True
             if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and now >= int(c.get("erop_deadline", 0)):
                 c["status"] = "erop_expired"
                 vendor_id = str(c.get("vendor"))
@@ -566,12 +633,10 @@ def process_pending_requests():
                 blacklist[vendor_id] = {
                     "until": now + EROP_BLACKLIST_SECONDS,
                     "reason": "Délai EROP de 3 min 30 non respecté",
-                    "chat_id": c.get("id"),
-                    "guarantee_fee_due": True,
-                    "created": now
+                    "chat_id": c.get("id")
                 }
+                record_guarantee_fee(c, blacklist[vendor_id], now)
                 c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
-                c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
@@ -589,12 +654,10 @@ def process_pending_requests():
                 blacklist[vendor_id] = {
                     "until": now + ERAF_BLACKLIST_SECONDS,
                     "reason": "Délai ERAF de 10 minutes non respecté",
-                    "chat_id": c.get("id"),
-                    "guarantee_fee_due": True,
-                    "created": now
+                    "chat_id": c.get("id")
                 }
+                record_guarantee_fee(c, blacklist[vendor_id], now)
                 c["eraf_blacklist_until"] = now + ERAF_BLACKLIST_SECONDS
-                c["guarantee_fee_due"] = True
                 c["erop_photo_sent"] = False
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 10 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
@@ -1113,7 +1176,10 @@ def api(path, b):
                 "label": str(display_name)[:40],
                 "until": until,
                 "reason": entry.get("reason") or "Non-respect du délai EROP",
-                "guarantee_fee_due": bool(entry.get("guarantee_fee_due"))
+                "guarantee_fee_due": bool(entry.get("guarantee_fee_due")),
+                "guarantee_fee_rate": entry.get("guarantee_fee_rate"),
+                "guarantee_fee_amount": entry.get("guarantee_fee_amount"),
+                "guarantee_fee_currency": entry.get("guarantee_fee_currency")
             })
         if changed:
             private_save()
@@ -1129,7 +1195,8 @@ def api(path, b):
             else:
                 visible = [c for c in chats_data.get("chats", []) if uid in (c.get("client"), c.get("vendor"))]
             result = [{k: c.get(k) for k in
-                       ("id", "client", "vendor", "product", "price", "client_name", "created", "status")}
+                       ("id", "client", "vendor", "product", "price", "client_name", "created", "status",
+                        "guarantee_fee_due", "guarantee_fee_rate", "guarantee_fee_amount", "guarantee_fee_currency")}
                       | {"last": (c.get("messages") or [{}])[-1].get("text", "")}
                       for c in sorted(visible, key=lambda x: x.get("created", 0), reverse=True)]
         return {"ok": True, "chats": result}
@@ -1141,14 +1208,22 @@ def api(path, b):
             if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
                 return {"error": "Discussion introuvable ou accès refusé."}
             changed = False
+            if (c.get("status") == "erop_pending" and not c.get("erop_sender_proof_submitted")
+                    and int(c.get("erop_sender_deadline", 0)) > 0
+                    and time.time() >= c.get("erop_sender_deadline", 0)):
+                c["status"] = "erop_sender_expired"
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⛔ Délai de 2 minutes dépassé : le Lanceur n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au Spitta pour cette étape qui dépend du Lanceur.", "time": int(time.time())})
+                changed = True
             if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and time.time() >= c.get("erop_deadline", 0):
                 now = int(time.time())
                 c["status"] = "erop_expired"
-                private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = {
+                blacklist_entry = {
                     "until": now + EROP_BLACKLIST_SECONDS, "reason": "Délai EROP non respecté",
-                    "chat_id": c.get("id"), "guarantee_fee_due": True, "created": now}
+                    "chat_id": c.get("id")}
+                record_guarantee_fee(c, blacklist_entry, now)
+                private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = blacklist_entry
                 c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
-                c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                 changed = True
@@ -1168,7 +1243,7 @@ def api(path, b):
             c = dict(c)
             c["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
         public_chat = {k: c.get(k) for k in
-                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "erop_deadline", "erop_photo_sent", "erop_confirmed", "erop_sender_proof_submitted", "erop_sender_proof_unavailable", "eraf_deadline")}
+                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "erop_deadline", "erop_sender_deadline", "erop_photo_sent", "erop_confirmed", "erop_sender_proof_submitted", "erop_sender_proof_unavailable", "eraf_deadline")}
         public_chat["messages"] = c["messages"]
         for msg in public_chat.get("messages") or []:
             proof_file = msg.get("proof_file")
@@ -1297,13 +1372,14 @@ def api(path, b):
             c["erop_photo_sent"] = False
             c["erop_sender_proof_submitted"] = False
             c["erop_sender_proof_unavailable"] = False
+            c["erop_sender_deadline"] = int(time.time()) + 120
             c["erop_deadline"] = 0
             c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                "text": "📸 EROP — étape 1/2 : le Lanceur doit d’abord envoyer une photo lisible de sa preuve d’envoi ou déclarer qu’il ne peut pas fournir de photo. Le délai du Spitta (3 min 30) ne démarre qu’après l’enregistrement de cette étape.", "time": int(time.time())})
+                "text": "📸 EROP — étape 1/2 : le Lanceur doit envoyer une photo lisible de sa preuve d’envoi ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du Spitta (3 min 30) ne démarre qu’après l’enregistrement de cette étape.", "time": int(time.time())})
             chats_save(chats_data, None)
             vendor_id = c.get("vendor")
         try:
-            say(vendor_id, "📸 EROP — étape 1/2 : le Lanceur doit d’abord envoyer une photo lisible de sa preuve d’envoi ou déclarer qu’il ne peut pas fournir de photo. Le délai du Spitta (3 min 30) ne démarre qu’après l’enregistrement de cette étape. Aucune capture n’est prise à distance.")
+            say(vendor_id, "📸 EROP — étape 1/2 : le Lanceur doit envoyer sa photo de preuve ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du Spitta (3 min 30) ne démarre qu’après cette étape. Aucune capture n’est prise à distance.")
         except Exception as e:
             print("notification EROP impossible:", repr(e))
         return {"ok": True}
@@ -1352,8 +1428,11 @@ def api(path, b):
             if (c and uid == c.get("client") and c.get("status") == "erop_pending"
                     and not c.get("erop_sender_proof_submitted")):
                 now = int(time.time())
+                if now >= int(c.get("erop_sender_deadline", 0)):
+                    return {"error": "Le délai de 2 minutes pour l’étape du Lanceur est dépassé. Cette demande EROP est clôturée."}
                 c["erop_sender_proof_submitted"] = True
                 c["erop_sender_proof_unavailable"] = mode == "unavailable"
+                c.pop("erop_sender_deadline", None)
                 deadline = now + 210
                 c["erop_deadline"] = deadline
                 message = {
@@ -1426,11 +1505,12 @@ def api(path, b):
                 if time.time() >= c.get("erop_deadline", 0):
                     now = int(time.time())
                     c["status"] = "erop_expired"
-                    private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = {
+                    blacklist_entry = {
                         "until": now + EROP_BLACKLIST_SECONDS, "reason": "Délai EROP non respecté",
-                        "chat_id": c.get("id"), "guarantee_fee_due": True, "created": now}
+                        "chat_id": c.get("id")}
+                    record_guarantee_fee(c, blacklist_entry, now)
+                    private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = blacklist_entry
                     c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
-                    c["guarantee_fee_due"] = True
                     c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                         "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                     chats_save(chats_data, None)
