@@ -259,10 +259,42 @@ input::placeholder,textarea::placeholder{color:#bda9cb!important}
       <input class="inp" id="signup-pin-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirme ton code secret" autocomplete="new-password">
       <button class="btn" id="signup-next" type="button" style="width:100%">Suivant</button>
     </div>
-    <div id="signup-step-role" hidden style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <div id="signup-step-role" hidden>
       <p class="lead" style="width:100%">Étape 2 : choisis ton profil.</p>
-      <button class="btn" id="choose-lanceur" type="button">Je suis Lanceur</button>
-      <button class="btn" id="choose-spitta" type="button">Je suis Spitta</button>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button class="btn" id="choose-lanceur" type="button">Je suis Lanceur</button>
+        <button class="btn" id="choose-spitta" type="button">Je suis Spitta</button>
+      </div>
+    </div>
+    <div id="signup-step-rules" hidden style="width:100%;text-align:left">
+      <h3 id="signup-rules-title">Règlement</h3>
+      <div id="signup-rules-lanceur" hidden>
+        <p><b>Règlement du Lanceur</b></p>
+        <ul>
+          <li>Tu consultes les Targets publiées et contactes le Spitta concerné uniquement si tu souhaites réellement poursuivre.</li>
+          <li>Tu attends la réponse du Spitta. Après sa confirmation et ton acceptation de la vente, le délai de la première capture est de <b>2 minutes</b>.</li>
+          <li>Si une procédure EROP est déclenchée, tu dois envoyer ta photo de preuve dans RADAR PAYMENT ou déclarer que tu ne peux pas joindre de photo. Cette déclaration ne constitue pas une preuve photographique.</li>
+          <li>Le délai de <b>3 min 30</b> accordé au Spitta pour la deuxième capture commence uniquement après l’enregistrement de ton étape EROP.</li>
+          <li>Tu n’as pas à envoyer de SCREEN : les 3 SCREEN relèvent du Spitta.</li>
+          <li>Les frais de garantie prévus par le règlement représentent <b>50 % du montant de la Target</b>. En cas de manquement sanctionné, ils peuvent être signalés comme dus et leur règlement est vérifié par l’administration.</li>
+        </ul>
+      </div>
+      <div id="signup-rules-spitta" hidden>
+        <p><b>Règlement du Spitta</b></p>
+        <ul>
+          <li>Tu publies des Targets exactes et loyales, avec les informations demandées et une photo correspondant à la Target.</li>
+          <li>Tu réponds à une demande du Lanceur dans un délai de <b>50 secondes</b>.</li>
+          <li>Après avoir confirmé la disponibilité et que le Lanceur a accepté la vente, tu disposes de <b>2 minutes</b> pour envoyer la première capture.</li>
+          <li>Si une procédure EROP est déclenchée, tu attends que le Lanceur ait envoyé sa preuve ou enregistré sa déclaration d’indisponibilité. À partir de cette étape, tu disposes de <b>3 min 30</b> pour envoyer volontairement la deuxième capture.</li>
+          <li>Après l’envoi de la deuxième capture, tu disposes de <b>10 minutes</b> pour valider ERAF.</li>
+          <li>Un dépassement du délai EROP entraîne un blocage de <b>7 jours</b> ; un dépassement du délai ERAF entraîne un blocage de <b>10 jours</b>. Les 3 SCREEN sont à envoyer par le Spitta.</li>
+          <li>Les frais de garantie représentent <b>50 % du montant de la Target</b>. En cas de manquement sanctionné, ce montant est signalé comme dû ; son règlement doit être confirmé par l’administration.</li>
+        </ul>
+      </div>
+      <p style="margin:14px 0 8px">Pour accepter ce règlement, écris exactement <b>Garant</b> dans le champ ci-dessous.</p>
+      <input class="inp" id="signup-guarantee-word" maxlength="20" placeholder="Écris Garant pour accepter" autocomplete="off">
+      <button class="btn" id="signup-accept-rules" type="button" style="width:100%">Accepter et terminer l’inscription</button>
+      <button class="btn s" id="signup-back-role" type="button" style="width:100%;margin-top:8px">Retour au choix du profil</button>
     </div>
     <button class="btn s" id="back-auth-register" type="button" style="width:100%;margin-top:10px">Retour</button>
   </div>
@@ -985,18 +1017,31 @@ function showPending(message){
   $("check-approval").hidden=false;
   $("role-message").textContent=message||"Ton inscription attend la validation de l’administrateur. Tu n’as pas besoin de recommencer l’inscription.";
 }
+var SIGNUP_ROLE=null;
+function selectSignupRole(role){
+  SIGNUP_ROLE=role;
+  $("signup-step-role").hidden=true;
+  $("signup-step-rules").hidden=false;
+  $("signup-rules-title").textContent=role==="lanceur"?"Règlement du Lanceur":"Règlement du Spitta";
+  $("signup-rules-lanceur").hidden=role!=="lanceur";
+  $("signup-rules-spitta").hidden=role!=="spitta";
+  $("signup-guarantee-word").value="";
+  $("role-message").textContent="Étape 3 : lis le règlement correspondant à ton profil.";
+}
 function registerRole(role){
   var pseudo=$("signup-pseudo").value.trim();
   var pin=$("signup-pin").value;
   if(!pseudo||pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return;}
   if(!/^\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
+  if(role!==SIGNUP_ROLE||$("signup-guarantee-word").value.trim()!=="Garant"){$("role-message").textContent='Pour continuer, lis le règlement et écris exactement « Garant ». ';return;}
   $("role-message").textContent="Envoi de ton inscription…";
-  $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;
-  call("/api/register",{role:role,pseudo:pseudo,pin:pin}).then(function(r){
-    if(r.pending){showPending("Inscription envoyée ! Ton accès sera disponible après validation par l’administrateur. Ton compte et ton code sont enregistrés : ne recommence pas l’inscription.");return;}
+  $("signup-accept-rules").disabled=true;
+  call("/api/register",{role:role,pseudo:pseudo,pin:pin,guarantee_acceptance:$("signup-guarantee-word").value.trim()}).then(function(r){
+    if(r.pending){showPending("Inscription envoyée ! Ton règlement a été accepté et ton accès attend la validation de l’administrateur. Ne recommence pas l’inscription.");return;}
     if(r.role==="owner"||r.ok)enterApp(r);
     else throw new Error(r.error||"Inscription impossible.");
-  }).catch(function(e){$("role-message").textContent=e.message||"Inscription impossible.";$("choose-lanceur").disabled=false;$("choose-spitta").disabled=false;});
+  }).catch(function(e){$("role-message").textContent=e.message||"Inscription impossible.";})
+    .finally(function(){$("signup-accept-rules").disabled=false;});
 }
 function doLogin(){
   var pin=$("login-pin").value;
@@ -1017,7 +1062,7 @@ function setupLegacyPin(){
   .catch(function(e){$("role-message").textContent=e.message||"Enregistrement impossible."})
   .finally(function(){$("legacy-pin-submit").disabled=false;});
 }
-$("show-register").onclick=function(){$("signup-step-account").hidden=false;$("signup-step-role").hidden=true;$("choose-lanceur").disabled=false;$("choose-spitta").disabled=false;setAuthView("signup-panel");$("role-message").textContent="Étape 1 : renseigne ton pseudo et crée ton code secret.";};
+$("show-register").onclick=function(){$("signup-step-account").hidden=false;$("signup-step-role").hidden=true;$("signup-step-rules").hidden=true;SIGNUP_ROLE=null;$("signup-guarantee-word").value="";$("signup-accept-rules").disabled=false;setAuthView("signup-panel");$("role-message").textContent="Étape 1 : renseigne ton pseudo et crée ton code secret.";};
 $("show-login").onclick=function(){setAuthView("login-panel");$("role-message").textContent="Entre le code secret créé lors de ton inscription.";};
 $("back-auth-register").onclick=function(){setAuthView("auth-choices");$("role-message").textContent="Choisis Inscription ou Se connecter.";};
 $("back-auth-login").onclick=function(){setAuthView("auth-choices");$("role-message").textContent="Choisis Inscription ou Se connecter.";};
@@ -1038,8 +1083,10 @@ $("signup-next").onclick=function(){
   $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
   $("role-message").textContent="Étape 2 : choisis ton profil."; 
 };
-$("choose-lanceur").onclick=function(){registerRole("lanceur");};
-$("choose-spitta").onclick=function(){registerRole("spitta");};
+$("choose-lanceur").onclick=function(){selectSignupRole("lanceur");};
+$("choose-spitta").onclick=function(){selectSignupRole("spitta");};
+$("signup-accept-rules").onclick=function(){if(!SIGNUP_ROLE){$("role-message").textContent="Choisis d’abord ton profil.";return;}registerRole(SIGNUP_ROLE);};
+$("signup-back-role").onclick=function(){$("signup-step-rules").hidden=true;$("signup-step-role").hidden=false;SIGNUP_ROLE=null;$("signup-guarantee-word").value="";$("role-message").textContent="Étape 2 : choisis ton profil.";};
 $("login-submit").onclick=doLogin;
 $("legacy-pin-submit").onclick=setupLegacyPin;
 if(INIT){
