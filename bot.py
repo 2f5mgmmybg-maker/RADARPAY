@@ -545,10 +545,11 @@ def process_pending_requests():
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
-            if c.get("status") == "erop_expired" and not c.get("erop_notified"):
-                c["erop_notified"] = True
-                actions.append(("erop_expired", c.get("client"), c.get("vendor"), c.get("price")))
-                changed = True
+            if c.get("status") == "erop_expired" and (
+                    not c.get("erop_client_notified") or not c.get("erop_vendor_notified")):
+                actions.append(("erop_expired", c.get("id"), c.get("client"), c.get("vendor"),
+                                c.get("price"), bool(c.get("erop_client_notified")),
+                                bool(c.get("erop_vendor_notified"))))
             if c.get("status") != "pending" or not c.get("request_deadline"):
                 continue
             if now >= int(c["request_deadline"]):
@@ -563,17 +564,41 @@ def process_pending_requests():
                 changed = True
         if changed:
             chats_save(data, None)
-    for kind, first, second, price in actions:
+    for action in actions:
+        kind = action[0]
+        if kind == "erop_expired":
+            _, rid, client_id, vendor_id, price, client_done, vendor_done = action
+            for field, recipient, message, already_sent in (
+                ("erop_client_notified", client_id,
+                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
+                 client_done),
+                ("erop_vendor_notified", vendor_id,
+                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 vendor_done),
+            ):
+                if already_sent:
+                    continue
+                try:
+                    say(recipient, message)
+                except Exception as e:
+                    print("notification EROP non envoyée; nouvel essai prévu:", repr(e))
+                    continue
+                try:
+                    with LOCK:
+                        chats_data, _ = chats_load()
+                        chat = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+                        if chat and chat.get("status") == "erop_expired":
+                            chat[field] = True
+                            chats_save(chats_data, None)
+                except Exception as e:
+                    print("confirmation notification EROP non sauvegardée:", repr(e))
+            continue
         try:
             if kind == "remind":
-                say(first, f"⏱️ Plus que 20 secondes pour répondre à la demande ({price or 'sans prix'}) !")
-            elif kind == "erop_expired":
-                until = int(time.time()) + 7 * 24 * 60 * 60
-                say(first, "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.")
-                say(second, "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.")
+                say(action[1], f"⏱️ Plus que 20 secondes pour répondre à la demande ({action[3] or 'sans prix'}) !")
             else:
-                say(first, "⏱️ Le délai de 50 secondes est dépassé. Tu peux poursuivre la discussion dans RADAR PAYMENT.")
-                say(second, "⌛ La demande a expiré. Le Lanceur peut encore t'écrire dans la discussion.")
+                say(action[1], "⏱️ Le délai de 50 secondes est dépassé. Tu peux poursuivre la discussion dans RADAR PAYMENT.")
+                say(action[2], "⌛ La demande a expiré. Le Lanceur peut encore t'écrire dans la discussion.")
         except Exception as e:
             print("notification délai:", repr(e))
 
