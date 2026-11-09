@@ -550,6 +550,29 @@ def process_pending_requests():
                 actions.append(("erop_expired", c.get("id"), c.get("client"), c.get("vendor"),
                                 c.get("price"), bool(c.get("erop_client_notified")),
                                 bool(c.get("erop_vendor_notified"))))
+            if (c.get("erop_photo_sent") and not c.get("erop_confirmed")
+                    and c.get("eraf_deadline") and now >= int(c.get("eraf_deadline", 0))
+                    and c.get("status") != "eraf_expired"):
+                c["status"] = "eraf_expired"
+                vendor_id = str(c.get("vendor"))
+                blacklist = private_load().setdefault("blacklist", {})
+                blacklist[vendor_id] = {
+                    "until": now + 7 * 24 * 60 * 60,
+                    "reason": "Délai ERAF de 10 minutes non respecté",
+                    "chat_id": c.get("id"),
+                    "guarantee_fee_due": True,
+                    "created": now
+                }
+                c["eraf_blacklist_until"] = now + 7 * 24 * 60 * 60
+                c["guarantee_fee_due"] = True
+                c["erop_photo_sent"] = False
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                changed = True
+            if c.get("status") == "eraf_expired" and (
+                    not c.get("eraf_client_notified") or not c.get("eraf_vendor_notified")):
+                actions.append(("eraf_expired", c.get("id"), c.get("client"), c.get("vendor"),
+                                bool(c.get("eraf_client_notified")), bool(c.get("eraf_vendor_notified"))))
             if c.get("status") != "pending" or not c.get("request_deadline"):
                 continue
             if now >= int(c["request_deadline"]):
@@ -592,6 +615,33 @@ def process_pending_requests():
                             chats_save(chats_data, None)
                 except Exception as e:
                     print("confirmation notification EROP non sauvegardée:", repr(e))
+            continue
+        if kind == "eraf_expired":
+            _, rid, client_id, vendor_id, client_done, vendor_done = action
+            for field, recipient, message, already_sent in (
+                ("eraf_client_notified", client_id,
+                 "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
+                 client_done),
+                ("eraf_vendor_notified", vendor_id,
+                 "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 vendor_done),
+            ):
+                if already_sent:
+                    continue
+                try:
+                    say(recipient, message)
+                except Exception as e:
+                    print("notification ERAF non envoyée; nouvel essai prévu:", repr(e))
+                    continue
+                try:
+                    with LOCK:
+                        chats_data, _ = chats_load()
+                        chat = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+                        if chat and chat.get("status") == "eraf_expired":
+                            chat[field] = True
+                            chats_save(chats_data, None)
+                except Exception as e:
+                    print("confirmation notification ERAF non sauvegardée:", repr(e))
             continue
         try:
             if kind == "remind":
