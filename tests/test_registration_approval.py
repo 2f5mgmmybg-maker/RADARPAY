@@ -61,6 +61,8 @@ class RegistrationAndPinLoginTests(unittest.TestCase):
         self.assertIn("autre profil", changed["error"])
         self.assertEqual(len(self.state["registrations"]), 1)
         self.assertEqual(self.state["registrations"][0]["role"], "spitta")
+        self.approve()
+        self.assertTrue(self.login("4826")["ok"])
 
     def test_pending_user_cannot_login_or_access_protected_routes(self):
         self.register()
@@ -71,6 +73,30 @@ class RegistrationAndPinLoginTests(unittest.TestCase):
         self.assertTrue(self.login()["pending"])
         self.assertIn("attente", self.call_as(self.test_user, "/api/chat/list")["error"])
         self.assertIn("attente", self.call_as(self.test_user, "/api/blacklist")["error"])
+
+    def test_expired_pin_session_is_rejected(self):
+        self.register()
+        self.approve()
+        login = self.login("4826")
+        self.assertTrue(login["ok"])
+        profile = self.state["registrations"][0]
+        profile["session_expires"] = int(bot.time.time()) - 1
+        denied = self.call_as(
+            self.test_user, "/api/chat/list", sessionToken=login["session_token"]
+        )
+        self.assertIn("Session fermée", denied["error"])
+
+    def test_approved_legacy_profile_is_not_marked_pending(self):
+        uid = str(self.test_user["id"])
+        self.state["roles"][uid] = "spitta"
+        self.state["registrations"].append({
+            "user_id": uid, "pseudo": "Ancien compte", "role": "spitta",
+            "status": "pending", "created": 1
+        })
+        result = self.call_as(self.test_user, "/api/me")
+        self.assertEqual(result["role"], "spitta")
+        self.assertFalse(result["pending"])
+        self.assertFalse(result["has_pin"])
 
     def test_owner_is_recognized_as_admin_without_registration_or_pin(self):
         me = self.call_as(self.owner, "/api/me")
