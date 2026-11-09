@@ -339,6 +339,7 @@ input::placeholder,textarea::placeholder{color:#bda9cb!important}
     <div id="panel" hidden><p class="lead">Catalogue complet des Targets : tu peux vérifier les publications, modifier leur prix ou leur pays, et les supprimer si nécessaire.</p>
       <p class="lead" id="pm"></p><div class="grid" id="mine"></div>
       <div id="adminchatlist" hidden>
+      <h3>Vue complète de RADARPAY</h3><p class="lead">Depuis cet espace, tu peux consulter toutes les publications de tous les Spitta, les Targets physiques, les inscriptions, les discussions des Lanceurs et des Spitta, ainsi que la liste noire. Le catalogue est dans l’onglet Catalogue.</p><button class="btn s" id="adminrefreshall" type="button">↻ Actualiser toutes les données</button><p class="lead" id="adminrefreshmsg" aria-live="polite"></p>
       <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
       <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
       <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
@@ -665,6 +666,17 @@ function loadRegistrations(){
   }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."});
 }
 $("refreshregistrations").onclick=loadRegistrations;
+$("adminrefreshall").onclick=function(){
+  var button=$("adminrefreshall"),msg=$("adminrefreshmsg");
+  button.disabled=true;msg.textContent="Actualisation du catalogue, des publications, des discussions et des listes…";
+  fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){
+    PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""}});
+    ST.maj=d.maj||"";render();
+    loadSpittaItems();loadChatList();loadAdminChats();loadBlacklist();loadRegistrations();
+    msg.textContent="Actualisation lancée. Les différentes listes se rechargent.";
+  }).catch(function(e){msg.textContent=e.message||"Actualisation impossible."})
+    .finally(function(){button.disabled=false;});
+};
 setInterval(function(){if(ADMIN&&$("c").classList.contains("on"))loadRegistrations()},20000);
 function loadBlacklist(){
   var host=$("blacklistitems"),msg=$("blacklistmsg");if(!host||!msg)return;
