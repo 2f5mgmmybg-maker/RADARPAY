@@ -1408,6 +1408,8 @@ def api(path, b):
                 return {"error": "Aucune demande EROP n’attend ta preuve."}
             if c.get("erop_sender_proof_submitted"):
                 return {"error": "Ta preuve EROP a déjà été enregistrée."}
+            if int(time.time()) >= int(c.get("erop_sender_deadline", 0)):
+                return {"error": "Le délai de 2 minutes pour l’étape du Lanceur est dépassé. Cette demande EROP est clôturée."}
             vendor_id = c.get("vendor")
 
         proof_file = None
@@ -1426,10 +1428,9 @@ def api(path, b):
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if (c and uid == c.get("client") and c.get("status") == "erop_pending"
-                    and not c.get("erop_sender_proof_submitted")):
+                    and not c.get("erop_sender_proof_submitted")
+                    and int(time.time()) < int(c.get("erop_sender_deadline", 0))):
                 now = int(time.time())
-                if now >= int(c.get("erop_sender_deadline", 0)):
-                    return {"error": "Le délai de 2 minutes pour l’étape du Lanceur est dépassé. Cette demande EROP est clôturée."}
                 c["erop_sender_proof_submitted"] = True
                 c["erop_sender_proof_unavailable"] = mode == "unavailable"
                 c.pop("erop_sender_deadline", None)
