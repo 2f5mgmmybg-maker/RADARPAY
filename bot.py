@@ -514,6 +514,13 @@ def process_pending_requests():
         changed = False
         now = int(time.time())
         for c in data.get("chats", []):
+            if c.get("status") == "erop_pending" and now >= int(c.get("erop_deadline", 0)):
+                c["status"] = "erop_expired"
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée.", "time": now})
+                actions.append(("erop_expired", c.get("client"), c.get("vendor"), c.get("price")))
+                changed = True
+                continue
             if c.get("status") != "pending" or not c.get("request_deadline"):
                 continue
             if now >= int(c["request_deadline"]):
@@ -532,6 +539,9 @@ def process_pending_requests():
         try:
             if kind == "remind":
                 say(first, f"⏱️ Plus que 20 secondes pour répondre à la demande ({price or 'sans prix'}) !")
+            elif kind == "erop_expired":
+                say(first, "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée.")
+                say(second, "⛔ Le Spitta n'a pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée.")
             else:
                 say(first, "⏱️ Le délai de 50 secondes est dépassé. Tu peux poursuivre la discussion dans RADAR PAYMENT.")
                 say(second, "⌛ La demande a expiré. Le Lanceur peut encore t'écrire dans la discussion.")
@@ -782,7 +792,7 @@ def api(path, b):
         mine = [p["id"] for p in data["photos"] if p.get("id") and
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
         return {"role": r, "mine": mine}
-    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof"):
+    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof", "/api/chat/erop"):
         return {"role": None, "error": "Choisis d’abord ton rôle sur l’écran de bienvenue."}
     if path == "/api/chat/list":
         with LOCK:
@@ -804,6 +814,11 @@ def api(path, b):
             if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
                 return {"error": "Discussion introuvable ou accès refusé."}
             changed = False
+            if c.get("status") == "erop_pending" and time.time() >= c.get("erop_deadline", 0):
+                c["status"] = "erop_expired"
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée.", "time": int(time.time())})
+                changed = True
             if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
                 c["status"] = "proof_expired"
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
@@ -820,7 +835,7 @@ def api(path, b):
             c = dict(c)
             c["messages"] = [dict(msg) for msg in (c.get("messages") or [])]
         public_chat = {k: c.get(k) for k in
-                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline")}
+                ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline", "erop_deadline")}
         public_chat["messages"] = c["messages"]
         for msg in public_chat.get("messages") or []:
             proof_file = msg.get("proof_file")
@@ -933,6 +948,27 @@ def api(path, b):
         except Exception as e:
             print("notification délai preuve impossible:", repr(e))
         return {"ok": True}
+    if path == "/api/chat/erop":
+        rid = str(b.get("id", ""))
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid != c.get("client"):
+                return {"error": "Seul le lanceur peut demander une capture EROP."}
+            if c.get("status") not in ("proof_received", "expired"):
+                return {"error": "La discussion doit être ouverte et ne doit pas déjà être verrouillée."}
+            c["erop_previous_status"] = c.get("status")
+            c["status"] = "erop_pending"
+            c["erop_deadline"] = int(time.time()) + 210
+            c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                "text": "📸 Demande EROP : le Lanceur demande une deuxième capture. Le Spitta doit l’ajouter volontairement dans les 3 min 30.", "time": int(time.time())})
+            chats_save(chats_data, None)
+            vendor_id = c.get("vendor")
+        try:
+            say(vendor_id, "📸 Le Lanceur demande une deuxième capture EROP. Ouvre RADAR PAYMENT et joins volontairement une capture à la discussion sous 3 min 30. Aucune capture n’est prise à distance.")
+        except Exception as e:
+            print("notification EROP impossible:", repr(e))
+        return {"ok": True}
     if path == "/api/chat/proof":
         rid, image = str(b.get("id", "")), str(b.get("image", ""))
         if not image.startswith("data:image/") or len(image) > 4_200_000:
@@ -949,13 +985,22 @@ def api(path, b):
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid != c.get("vendor"):
                 return {"error": "Seul le spitta peut envoyer la capture."}
-            if c.get("status") != "proof_pending" or time.time() > c.get("proof_deadline", 0):
+            if c.get("status") == "erop_pending":
+                if time.time() >= c.get("erop_deadline", 0):
+                    c["status"] = "erop_expired"
+                    chats_save(chats_data, None)
+                    return {"error": "Le délai EROP de 3 min 30 est terminé. La discussion est bloquée."}
+                is_erop = True
+            elif c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
+                is_erop = False
+            else:
                 if c.get("status") == "proof_pending":
                     c["status"] = "proof_expired"
                     chats_save(chats_data, None)
-                return {"error": "Le délai de 2 minutes est terminé. La vente est bloquée."}
+                return {"error": "Aucune demande de capture n’est en cours."}
 
-        proof_file = "private_proofs/" + rid + ".enc"
+        proof_file = ("private_proofs/" + rid + "/" + secrets.token_hex(12) + ".enc"
+                      if is_erop else "private_proofs/" + rid + ".enc")
         try:
             gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une capture")
             PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
@@ -968,20 +1013,28 @@ def api(path, b):
         with LOCK:
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
-            if (c and uid == c.get("vendor") and c.get("status") == "proof_pending"
-                    and time.time() <= c.get("proof_deadline", 0)):
-                c["status"] = "proof_received"
-                c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
-                    "text": "📸 Capture d’écran envoyée — preuve reçue.", "proof_file": proof_file, "time": int(time.time())})
-                chats_save(chats_data, None)
-                client_id = c.get("client")
-                accepted = True
+            if c and uid == c.get("vendor"):
+                if is_erop and c.get("status") == "erop_pending" and time.time() < c.get("erop_deadline", 0):
+                    c["status"] = c.get("erop_previous_status") or "proof_received"
+                    c.pop("erop_previous_status", None)
+                    c.pop("erop_deadline", None)
+                    message_text = "📸 Deuxième capture EROP envoyée — demande satisfaite."
+                    accepted = True
+                elif not is_erop and c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
+                    c["status"] = "proof_received"
+                    message_text = "📸 Capture d’écran envoyée — preuve reçue."
+                    accepted = True
+                if accepted:
+                    c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
+                        "text": message_text, "proof_file": proof_file, "time": int(time.time())})
+                    chats_save(chats_data, None)
+                    client_id = c.get("client")
         if not accepted:
             gh_del(proof_file, "Nettoyage d'une capture arrivée hors délai")
             PROOF_CACHE.pop(proof_file, None)
             return {"error": "Le délai est terminé ou la vente a changé d’état. La capture n’a pas été enregistrée."}
         try:
-            say(client_id, "📸 Le spitta a envoyé sa capture. La discussion est maintenant ouverte.")
+            say(client_id, "📸 Le Spitta a envoyé la capture demandée. La discussion est ouverte.")
         except Exception as e:
             print("notification capture impossible:", repr(e))
         return {"ok": True}
