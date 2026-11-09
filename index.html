@@ -57,12 +57,16 @@ header{display:flex;align-items:center;gap:10px;margin-bottom:24px;flex-wrap:wra
 header h2{margin:0;font-size:1.15rem;font-weight:700}
 header span{margin-left:auto;color:var(--mute);font-size:.8rem}
 .refresh{background:#111110;border:1px solid #55534e;color:#eeeae2;border-radius:999px;padding:8px 11px;font:600 .72rem Inter,system-ui,sans-serif;cursor:pointer}
-.tabs{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:9px;background:transparent;border:0;border-radius:0;padding:0;margin:0 0 24px}
-.tabs.admin-tabs{grid-template-columns:repeat(2,minmax(0,1fr));max-width:560px}
-.tabs.admin-tabs button{min-height:52px}
+.tabs{position:relative;display:flex;align-items:center;gap:clamp(18px,4vw,27px);width:100%;max-width:100%;margin:0 0 24px;padding:0 2px 3px;background:transparent;border:0;border-radius:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.tabs::-webkit-scrollbar{display:none}
+.tabs.admin-tabs{display:flex;max-width:100%;gap:30px}
+.tabs.admin-tabs button{min-height:46px}
 #spitta-publish-card[hidden],#spitta-requests[hidden]{display:none!important}
-.tabs button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:54px;padding:12px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg2);color:var(--mute);font:600 .9rem Inter,system-ui,sans-serif;cursor:pointer;transition:background .2s,border-color .2s,color .2s;white-space:normal;text-align:center;line-height:1.25}
-.tabs button.on{color:var(--bg);background:var(--sweep);border-color:var(--sweep);box-shadow:0 5px 18px rgba(238,234,226,.12)}
+.tabs button{position:relative;z-index:1;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-height:46px;padding:8px 1px 11px;border:0;border-radius:0;background:transparent;color:#85837d;font:500 .88rem Inter,system-ui,sans-serif;cursor:pointer;transition:color .22s ease,opacity .22s ease;white-space:nowrap;text-align:center;line-height:1.25}
+.tabs button::after{content:"";position:absolute;left:0;right:0;bottom:1px;height:2px;border-radius:2px;background:var(--sweep);transform:scaleX(0);transform-origin:center;opacity:0;transition:transform .25s ease,opacity .25s ease}
+.tabs button.on{color:var(--ink);background:transparent;border:0;box-shadow:none}
+.tabs button.on::after{transform:scaleX(1);opacity:1}
+.tabs button:focus-visible{outline:1px solid var(--sweep);outline-offset:4px;border-radius:4px}
 .tabs .pill{display:none}
 .lead{line-height:1.9;margin:0 0 22px}
 .row{margin-bottom:15px;padding:18px}
@@ -882,6 +886,7 @@ $("countryfilters").addEventListener("click",function(e){var b=e.target.closest(
 tabs.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
+  b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c")adminOpen();
   if(b.dataset.t==="g")loadBlacklist();
   if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
@@ -890,7 +895,6 @@ tabs.addEventListener("click",function(e){
 });
 function arrangeTabs(){
   tabs.classList.toggle("admin-tabs",USER_ROLE==="owner");
-  tabs.style.gridTemplateColumns=USER_ROLE==="owner"?"repeat(2,minmax(0,1fr))":"repeat(auto-fit,minmax(125px,1fr))";
 }
 function setAuthView(view){
   ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
