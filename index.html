@@ -325,7 +325,7 @@ input::placeholder,textarea::placeholder{color:#bda9cb!important}
     <button data-t="d">Mes actions</button>
     <button data-t="e" id="spitta-tab">Mes publications</button>
     <button data-t="f">Messages</button>
-    <button data-t="g">Liste noire</button>
+
     <button data-t="c" id="admin-tab" hidden>Admin</button>
   </div>
 
@@ -377,12 +377,6 @@ input::placeholder,textarea::placeholder{color:#bda9cb!important}
     <div id="spitta-requests"><h3>Demandes reçues</h3><div id="spittachatitems"></div></div>
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de Target. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
-  <section id="g">
-    <p class="lead">Liste publique des Spitta placés sur liste noire : leur pseudo et le temps restant de leur blocage sont affichés. En cas de non-validation d’ERAF dans les 10 minutes, le blocage dure 10 jours.</p>
-    <button class="btn s" id="blacklistrefresh">↻ Actualiser la liste</button>
-    <p class="lead" id="blacklistmsg">Chargement de la liste…</p>
-    <div id="blacklistitems"></div>
-  </section>
 </main>
 <div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="erop-sender-proof" hidden style="margin:14px 0;padding:16px;border:1px solid var(--sweep);border-radius:16px;background:var(--bg2)"><b>Preuve d’envoi demandée par EROP</b><p class="lead" style="margin:8px 0 12px">Avant que le délai du Spitta commence, joins une photo lisible de ta preuve d’envoi. Si tu ne peux vraiment pas fournir de photo, déclare-le avec le bouton ci-dessous. Le délai de 3 min 30 du Spitta démarre seulement après ton choix et son enregistrement.</p><button class="btn" id="erop-sender-photo" type="button" style="width:100%">📷 Joindre une photo de preuve</button><button class="btn s" id="erop-sender-unavailable" type="button" style="width:100%;margin-top:8px">Je ne peux pas envoyer de photo</button><input type="file" id="erop-sender-file" accept="image/*" hidden></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
@@ -972,9 +966,7 @@ tabs.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
-  if(b.dataset.t==="c"){adminOpen();loadBlacklist();}
-  if(b.dataset.t==="g")loadBlacklist();
-  if(b.dataset.t==="f")loadBlacklist();
+  if(b.dataset.t==="c")adminOpen();
   if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
@@ -994,20 +986,14 @@ function moveSectionContents(sourceId,targetId,headingText,prepend){
 function simplifyWorkspaceTabs(){
   if(USER_ROLE==="lanceur"){
     moveSectionContents("d","f","Mes actions et paiements",true);
-    moveSectionContents("g","f","Liste noire");
     var names={"a":"Explorer","b":"Targets physiques","f":"Mes échanges"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
     moveSectionContents("b","e","Targets physiques",true);
-    moveSectionContents("g","f","Liste noire");
     var names={"e":"Mes Targets","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
-    moveSectionContents("b","a","Targets physiques");
-    moveSectionContents("e","a","Publications");
-    moveSectionContents("f","panel","Discussions en direct");
-    moveSectionContents("g","panel","Liste noire");
-    var names={"a":"Catalogue","c":"Administration"};
+    var names={"a":"Services en ligne","b":"Targets physiques","d":"Mes actions","e":"Mes publications","f":"Messages","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
 }
@@ -1031,7 +1017,7 @@ function enterApp(response){
     showMe(response,false);
     loadSpittaItems();
     loadAdminChats();
-    loadBlacklist();return;
+    loadChatList();return;
   }
   if(USER_ROLE==="spitta")loadSpittaItems();
   arrangeTabs();loadChatList();
