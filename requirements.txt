@@ -1,2 +1,3 @@
 requests
 cryptography>=42.0.0
+psycopg[binary,pool]>=3.2,<4
