@@ -1560,12 +1560,14 @@ def api(path, b):
         pid = str(int(time.time() * 1000))
         photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "o": enc(uid, pid)}
         if photo["categorie"] not in ("2500", "5000", "9900"):
-            photo["categorie"] = ""
+            return {"error": "Choisis une catégorie : 2 500, 5 000 ou 9 900."}
+        if not photo["pourcentage"]:
+            return {"error": "Indique le pourcentage souhaité avant de publier."}
         try:
-            percentage = float(photo["pourcentage"]) if photo["pourcentage"] else None
+            percentage = float(photo["pourcentage"])
         except ValueError:
             return {"error": "Le pourcentage doit être un nombre entre 0 et 100."}
-        if percentage is not None and not 0 <= percentage <= 100:
+        if not 0 <= percentage <= 100:
             return {"error": "Le pourcentage doit être compris entre 0 et 100."}
         with LOCK:
             gh_put(f"photos/{pid}.jpg", raw, "Ajout d'une photo")
