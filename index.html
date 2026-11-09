@@ -833,7 +833,7 @@ function registerRole(role){
   var pseudo=$("signup-pseudo").value.trim();
   var pin=$("signup-pin").value;
   if(!pseudo||pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return;}
-  if(!/^\\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
+  if(!/^\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
   $("role-message").textContent="Envoi de ton inscription…";
   $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;
   call("/api/register",{role:role,pseudo:pseudo,pin:pin}).then(function(r){
@@ -844,7 +844,7 @@ function registerRole(role){
 }
 function doLogin(){
   var pin=$("login-pin").value;
-  if(!/^\\d{4}$/.test(pin)){$("role-message").textContent="Entre ton code secret à 4 chiffres.";return;}
+  if(!/^\d{4}$/.test(pin)){$("role-message").textContent="Entre ton code secret à 4 chiffres.";return;}
   $("login-submit").disabled=true;$("role-message").textContent="Connexion…";
   call("/api/login",{pin:pin}).then(function(r){
     if(r.needs_pin){setAuthView("legacy-pin-panel");$("role-message").textContent="Ton compte est déjà enregistré. Crée simplement ton code secret pour les prochaines connexions.";return;}
@@ -855,7 +855,7 @@ function doLogin(){
 }
 function setupLegacyPin(){
   var pin=$("legacy-pin").value;
-  if(!/^\\d{4}$/.test(pin)||pin!==$("legacy-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
+  if(!/^\d{4}$/.test(pin)||pin!==$("legacy-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
   $("legacy-pin-submit").disabled=true;
   call("/api/pin/setup",{pin:pin}).then(function(r){if(!r.ok)throw new Error(r.error||"Enregistrement impossible.");enterApp(r);})
   .catch(function(e){$("role-message").textContent=e.message||"Enregistrement impossible."})
@@ -866,7 +866,7 @@ $("show-login").onclick=function(){setAuthView("login-panel");$("role-message").
 $("signup-next").onclick=function(){
   var pseudo=$("signup-pseudo").value.trim(),pin=$("signup-pin").value;
   if(pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return;}
-  if(!/^\\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Le code doit comporter 4 chiffres identiques dans les deux champs.";return;}
+  if(!/^\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Le code doit comporter 4 chiffres identiques dans les deux champs.";return;}
   $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
   $("role-message").textContent="Étape 2 : choisis ton profil."; 
 };
