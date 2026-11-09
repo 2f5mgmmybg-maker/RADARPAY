@@ -918,6 +918,8 @@ if(INIT){
       return;
     }
     setAuthView("auth-choices");
+    var telegramId=tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id;
+    $("role-message").textContent="Bienvenue sur RADAR PAYMENT. Choisis Inscription ou Se connecter.\n\nPropriétaire : si tu dois avoir accès à Admin, vérifie que OWNER_ID sur Render correspond à ton identifiant Telegram : "+(telegramId||"indisponible")+". Après toute modification, redémarre le service Render.";
   }).catch(function(e){
     setAuthView("auth-choices");
     $("role-message").textContent=(e&&e.message)||"Impossible de vérifier ton compte Telegram. Ouvre RADAR PAYMENT depuis Telegram.";
