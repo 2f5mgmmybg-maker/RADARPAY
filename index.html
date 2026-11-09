@@ -436,7 +436,8 @@ function call(path,body){
       if(data.error&&!data.ok&&!data.pending){
         var apiMessage=data.error;
         if(apiMessage.indexOf("Session fermée.")===0){
-          SESSION_TOKEN="";
+          SESSION_TOKEN="";USER_ROLE=null;ADMIN=false;ACTIVE_CHAT=null;
+          if($("chatui"))$("chatui").hidden=true;
           if(document.body.classList.contains("authorized")){
             document.body.classList.remove("authorized");$("welcome").classList.remove("gone");
             setAuthView("login-panel");
@@ -445,7 +446,8 @@ function call(path,body){
           throw new Error("Ta session a expiré. Connecte-toi à nouveau avec ton code secret à 4 chiffres.");
         }
         if(apiMessage.indexOf("Ouvre l'app depuis Telegram.")===0){
-          SESSION_TOKEN="";
+          SESSION_TOKEN="";USER_ROLE=null;ADMIN=false;ACTIVE_CHAT=null;
+          if($("chatui"))$("chatui").hidden=true;
           if(document.body.classList.contains("authorized")){
             document.body.classList.remove("authorized");$("welcome").classList.remove("gone");
             setAuthView("auth-choices");
