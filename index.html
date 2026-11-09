@@ -474,7 +474,11 @@ function renderMessages(c){
     var d=document.createElement("div");d.className="chatmsg"+(m.from===me?" mine":"");
     d.appendChild(document.createTextNode((m.name||"Utilisateur")+": "+m.text));
     if(m.image){var im=document.createElement("img");im.src=m.image;im.alt="Capture envoyée";im.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";d.appendChild(im)}
-    if(m.audio){var au=document.createElement("audio");au.controls=true;au.preload="none";au.src=m.audio;d.appendChild(au)}
+    if(m.voice_file){
+      var au=document.createElement("audio");au.controls=true;au.preload="none";au.style.cssText="display:block;width:min(260px,70vw);margin-top:8px";au.setAttribute("aria-label","Message vocal");au.src="";
+      call("/api/chat/file",{id:c.id,file:m.voice_file}).then(function(result){if(result.ok)au.src=result.data;else throw new Error(result.error||"Vocal indisponible.")}).catch(function(){au.title="Vocal indisponible"});
+      d.appendChild(au);
+    }else if(m.audio){var legacyAudio=document.createElement("audio");legacyAudio.controls=true;legacyAudio.preload="none";legacyAudio.src=m.audio;d.appendChild(legacyAudio)}
     if(m.attachment_file){
       var fileBox=document.createElement("div");fileBox.className="chat-attachment";fileBox.textContent="📎 "+(m.attachment_name||"Fichier")+" · "+Math.max(1,Math.round((m.attachment_size||0)/1024))+" Ko";d.appendChild(fileBox);
       call("/api/chat/file",{id:c.id,file:m.attachment_file}).then(function(result){
