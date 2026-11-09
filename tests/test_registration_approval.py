@@ -35,13 +35,25 @@ class RegistrationAndPinLoginTests(unittest.TestCase):
         return bot.api(path, {"initData": "test-init-data", **payload})
 
     def register(self, role="spitta", pin="4826"):
-        return self.call_as(self.test_user, "/api/register", role=role, pseudo="Pseudo Test", pin=pin)
+        return self.call_as(self.test_user, "/api/register", role=role, pseudo="Pseudo Test", pin=pin, guarantee_acceptance="Garant")
 
     def approve(self):
         self.call_as(self.owner, "/api/admin/approve-registration", user_id=str(self.test_user["id"]))
 
     def login(self, pin="4826"):
         return self.call_as(self.test_user, "/api/login", pin=pin)
+
+    def test_registration_requires_exact_guarantee_acceptance(self):
+        rejected = self.call_as(self.test_user, "/api/register", role="spitta",
+                                pseudo="Pseudo Test", pin="4826", guarantee_acceptance="garant")
+        self.assertIn("écris exactement Garant", rejected["error"])
+        self.assertEqual(self.state["registrations"], [])
+        accepted = self.register()
+        self.assertTrue(accepted["pending"])
+        profile = self.state["registrations"][0]
+        self.assertTrue(profile["guarantee_accepted"])
+        self.assertEqual(profile["guarantee_acceptance_word"], "Garant")
+        self.assertEqual(profile["guarantee_rules_version"], "2026-11-09")
 
     def test_registration_waits_for_approval_and_stores_only_pin_hash(self):
         result = self.register()
@@ -152,11 +164,11 @@ class RegistrationAndPinLoginTests(unittest.TestCase):
 
     def test_invalid_role_pseudo_or_pin_does_not_create_registration(self):
         self.assertIn("Choisis Lanceur", self.call_as(self.test_user, "/api/register",
-                    role="admin", pseudo="Pseudo Test", pin="1234")["error"])
+                    role="admin", pseudo="Pseudo Test", pin="1234", guarantee_acceptance="Garant")["error"])
         self.assertIn("pseudo", self.call_as(self.test_user, "/api/register",
-                    role="spitta", pseudo="x", pin="1234")["error"])
+                    role="spitta", pseudo="x", pin="1234", guarantee_acceptance="Garant")["error"])
         self.assertIn("4 chiffres", self.call_as(self.test_user, "/api/register",
-                    role="spitta", pseudo="Pseudo Test", pin="12ab")["error"])
+                    role="spitta", pseudo="Pseudo Test", pin="12ab", guarantee_acceptance="Garant")["error"])
         self.assertEqual(self.state["registrations"], [])
 
     def test_five_wrong_pin_attempts_temporarily_lock_login(self):
