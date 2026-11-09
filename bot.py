@@ -1095,6 +1095,8 @@ def api(path, b):
                 return {"error": "Envoie d’abord la deuxième capture EROP avant de valider ERAF."}
             if c.get("erop_confirmed"):
                 return {"error": "ERAF a déjà été validé pour cette demande."}
+            if int(time.time()) > int(c.get("eraf_deadline", 0)):
+                return {"error": "Le délai de 10 minutes pour valider ERAF est dépassé."}
             c["erop_confirmed"] = True
             c["erop_photo_sent"] = False
             c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
@@ -1166,6 +1168,7 @@ def api(path, b):
                     c.pop("erop_deadline", None)
                     c["erop_photo_sent"] = True
                     c["erop_confirmed"] = False
+                    c["eraf_deadline"] = int(time.time()) + 600
                     message_text = "📸 Deuxième capture EROP envoyée — en attente de validation ERAF par le Spitta."
                     accepted = True
                 elif not is_erop and c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
