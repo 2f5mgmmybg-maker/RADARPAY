@@ -1,4 +1,4 @@
-import os, time, json, base64, hashlib, hmac, threading, requests, re
+import os, time, json, base64, hashlib, hmac, threading, requests, re, secrets
 from cryptography.fernet import Fernet, InvalidToken
 from urllib.parse import parse_qsl
 from datetime import datetime
@@ -39,6 +39,7 @@ FERNET = (Fernet(base64.urlsafe_b64encode(hashlib.sha256(DATA_ENCRYPTION_KEY.enc
           if DATA_ENCRYPTION_KEY else LEGACY_FERNET)
 PROOF_CACHE = {}
 VOICE_CACHE = {}
+ATTACHMENT_CACHE = {}
 GH = f"https://api.github.com/repos/{REPO}/contents"
 H = {"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"}
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
@@ -810,6 +811,9 @@ def api(path, b):
         for msg in public_chat.get("messages") or []:
             proof_file = msg.get("proof_file")
             voice_file = msg.get("voice_file")
+            # Les fichiers joints sont chargés à la demande via /api/chat/file,
+            # jamais dans chaque réponse de polling du chat.
+            msg.pop("attachment_data", None)
             if proof_file:
                 try:
                     if proof_file not in PROOF_CACHE:
@@ -827,6 +831,81 @@ def api(path, b):
                 except Exception as e:
                     print("lecture vocal chiffré:", repr(e))
         return {"ok": True, "chat": public_chat}
+    if path == "/api/chat/file":
+        rid, file_key = str(b.get("id", "")), str(b.get("file", ""))
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid not in (c.get("client"), c.get("vendor")):
+                return {"error": "Discussion introuvable ou accès refusé."}
+            msg = next((m for m in (c.get("messages") or []) if m.get("attachment_file") == file_key), None)
+            if not msg or not file_key.startswith("private_chat_files/" + rid + "/"):
+                return {"error": "Fichier introuvable ou accès refusé."}
+            mime = msg.get("attachment_mime", "application/octet-stream")
+            name = msg.get("attachment_name", "fichier")
+        try:
+            if file_key not in ATTACHMENT_CACHE:
+                encrypted = base64.b64decode(gh_get(file_key).get("content", ""))
+                ATTACHMENT_CACHE[file_key] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+            return {"ok": True, "data": "data:" + mime + ";base64," + ATTACHMENT_CACHE[file_key],
+                    "name": name, "mime": mime}
+        except Exception as e:
+            print("lecture pièce jointe chiffrée:", repr(e))
+            return {"error": "Impossible de charger ce fichier."}
+    if path == "/api/chat/attachment":
+        rid = str(b.get("id", ""))
+        data_uri = str(b.get("data", ""))
+        name = re.sub(r"[^A-Za-z0-9._ -]", "_", os.path.basename(str(b.get("name", "fichier"))))[:100] or "fichier"
+        mime = str(b.get("mime", "")).split(";", 1)[0].lower()
+        allowed_mimes = ("image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf")
+        if mime not in allowed_mimes or not data_uri.startswith("data:" + mime + ";base64,"):
+            return {"error": "Format non pris en charge. Envoie une image ou un PDF."}
+        try:
+            raw_file = base64.b64decode(data_uri.split(",", 1)[1], validate=True)
+        except Exception:
+            return {"error": "Fichier invalide. Réessaie."}
+        if not raw_file or len(raw_file) > 4_000_000:
+            return {"error": "Fichier trop lourd. Limite : 4 Mo."}
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid not in (c.get("client"), c.get("vendor")):
+                return {"error": "Discussion introuvable ou accès refusé."}
+            if c.get("status") not in ("proof_received", "expired"):
+                return {"error": "La discussion est verrouillée jusqu’à la capture ou à l’expiration du délai."}
+        file_key = "private_chat_files/" + rid + "/" + secrets.token_hex(12) + ".enc"
+        try:
+            gh_put(file_key, FERNET.encrypt(raw_file), "Ajout d'un fichier chiffré à une discussion RADARPAY")
+            ATTACHMENT_CACHE[file_key] = base64.b64encode(raw_file).decode()
+        except Exception as e:
+            print("sauvegarde pièce jointe chiffrée:", repr(e))
+            return {"error": "Impossible d’envoyer le fichier. Réessaie."}
+        accepted = False
+        other = None
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if c and uid in (c.get("client"), c.get("vendor")) and c.get("status") in ("proof_received", "expired"):
+                c.setdefault("messages", []).append({
+                    "from": uid, "name": user.get("first_name", "Utilisateur"),
+                    "text": "📎 " + name, "attachment_file": file_key,
+                    "attachment_name": name, "attachment_mime": mime,
+                    "attachment_size": len(raw_file), "time": int(time.time())
+                })
+                chats_save(chats_data, None)
+                other = c.get("vendor") if uid == c.get("client") else c.get("client")
+                accepted = True
+        if not accepted:
+            gh_del(file_key, "Nettoyage d'une pièce jointe non enregistrée")
+            ATTACHMENT_CACHE.pop(file_key, None)
+            return {"error": "La discussion a changé d’état. Le fichier n’a pas été envoyé."}
+        def notify_attachment():
+            try:
+                say(other, "📎 Nouveau fichier reçu dans ta discussion RADAR PAYMENT.")
+            except Exception as e:
+                print("notification fichier impossible:", repr(e))
+        threading.Thread(target=notify_attachment, daemon=True).start()
+        return {"ok": True}
     if path == "/api/chat/accept":
         rid = str(b.get("id", ""))
         with LOCK:
