@@ -50,6 +50,7 @@ box-shadow:0 0 60px rgba(238,234,226,.12),inset 0 0 40px rgba(238,234,226,.08);o
 
 /* app */
 main{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:22px 18px 40px}
+body:not(.authorized) main{visibility:hidden}
 header{display:flex;align-items:center;gap:10px;margin-bottom:24px;flex-wrap:wrap}
 .dot{width:12px;height:12px;border-radius:50%;background:var(--sweep);box-shadow:0 0 0 0 rgba(238,234,226,.6);animation:ping 2s infinite}
 @keyframes ping{70%{box-shadow:0 0 0 12px rgba(238,234,226,0)}100%{box-shadow:0 0 0 0 rgba(238,234,226,0)}}
@@ -471,8 +472,14 @@ function loadRegistrations(){
       var card=document.createElement("div");card.className="chatitem";
       var title=document.createElement("b");title.textContent=x.pseudo+" · "+(x.role==="lanceur"?"Lanceur":"Spitta");card.appendChild(title);
       var detail=document.createElement("small");
-      detail.textContent=new Date(x.created*1000).toLocaleString("fr-FR")+(x.telegram_username?" · @"+x.telegram_username:"")+(x.first_name?" · "+x.first_name:"");
-      card.appendChild(detail);host.appendChild(card);
+      detail.textContent=(x.status==="approved"?"Accès autorisé":"En attente d’autorisation")+" · "+new Date(x.created*1000).toLocaleString("fr-FR")+(x.telegram_username?" · @"+x.telegram_username:"")+(x.first_name?" · "+x.first_name:"");
+      card.appendChild(detail);
+      if(x.status!=="approved"){
+        var approve=document.createElement("button");approve.className="btn s";approve.type="button";approve.textContent="Autoriser l’accès";
+        approve.onclick=function(){approve.disabled=true;approve.textContent="Validation…";call("/api/admin/approve-registration",{user_id:x.user_id}).then(function(a){if(!a.ok)throw new Error(a.error||"Autorisation impossible.");loadRegistrations()}).catch(function(e){approve.disabled=false;approve.textContent="Autoriser l’accès";msg.textContent=e.message||"Erreur d’autorisation."})};
+        card.appendChild(approve);
+      }
+      host.appendChild(card);
     });
   }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."});
 }
@@ -761,10 +768,14 @@ function arrangeTabs(){
 function chooseRole(role){
   var pseudo=$("signup-pseudo").value.trim();
   // Le serveur reconnaît le propriétaire par son identifiant Telegram : aucun pseudo ne lui est demandé. Les autres comptes sont validés côté serveur.
-  $("role-message").textContent="Enregistrement de ton profil…";
+  $("role-message").textContent="Envoi de ta demande d’accès…";
   call("/api/role",{role:role,pseudo:pseudo}).then(function(r){
-    if(!r.ok)throw new Error(r.error||"Impossible d’enregistrer le profil.");
-    USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");
+    if(!r.ok)throw new Error(r.error||"Impossible d’envoyer la demande.");
+    if(r.pending){
+      $("role-message").textContent="Demande envoyée. Ton accès sera activé après validation par l’administrateur. Reviens dans l’application après approbation.";
+      $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;return;
+    }
+    USER_ROLE=r.role;document.body.classList.add("authorized");renderServices();$("welcome").classList.add("gone");
     $("role-message").textContent="";
     if(USER_ROLE==="owner"){
       $("admin-tab").hidden=false;showMe(r,false);
@@ -795,7 +806,11 @@ function chooseRole(role){
 $("choose-lanceur").onclick=function(){chooseRole("lanceur")};
 $("choose-spitta").onclick=function(){chooseRole("spitta")};
 if(INIT){call("/api/me",{}).then(function(r){
-  if(r.role){USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="a"]').hidden=true;$("tabs").querySelector('[data-t="d"]').hidden=true;$("spitta-tab").textContent="Mes publications"}arrangeTabs();if(USER_ROLE==="spitta"){$("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b")});$("tabs").querySelector(".pill").style.transform="translateX(0)";document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b")})}if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="owner")loadAdminChats();if(USER_ROLE==="spitta")loadSpittaItems()}
+  if(r.role){USER_ROLE=r.role;document.body.classList.add("authorized");renderServices();$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="a"]').hidden=true;$("tabs").querySelector('[data-t="d"]').hidden=true;$("spitta-tab").textContent="Mes publications"}arrangeTabs();if(USER_ROLE==="spitta"){$("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b")});$("tabs").querySelector(".pill").style.transform="translateX(0)";document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b")})}if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="owner")loadAdminChats();if(USER_ROLE==="spitta")loadSpittaItems()}
+  else if(r.pending){
+    $("role-message").textContent="Ta demande d’accès est en attente de validation par l’administrateur.";
+    $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;
+  }
 }).catch(function(){})}
 </script>
 </body>
