@@ -900,7 +900,7 @@ def api(path, b):
             private_save()
         entries.sort(key=lambda x: x["until"], reverse=True)
         return {"ok": True, "entries": entries}
-    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof", "/api/chat/erop"):
+    if not r and path not in ("/api/chat/list", "/api/chat/messages", "/api/chat/send", "/api/chat/voice", "/api/chat/accept", "/api/chat/proof", "/api/chat/erop", "/api/chat/eraf"):
         return {"role": None, "error": "Choisis d’abord ton rôle sur l’écran de bienvenue."}
     if path == "/api/chat/list":
         with LOCK:
@@ -1073,6 +1073,7 @@ def api(path, b):
                 return {"error": "La discussion doit être ouverte et ne doit pas déjà être verrouillée."}
             c["erop_previous_status"] = c.get("status")
             c["status"] = "erop_pending"
+            c["erop_photo_sent"] = False
             c["erop_deadline"] = int(time.time()) + 210
             c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                 "text": "📸 Demande EROP : le Lanceur demande une deuxième capture. Le Spitta doit l’ajouter volontairement dans les 3 min 30.", "time": int(time.time())})
@@ -1083,6 +1084,29 @@ def api(path, b):
         except Exception as e:
             print("notification EROP impossible:", repr(e))
         return {"ok": True}
+    if path == "/api/chat/eraf":
+        rid = str(b.get("id", ""))
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid != c.get("vendor"):
+                return {"error": "Seul le Spitta de cette discussion peut valider ERAF."}
+            if not c.get("erop_photo_sent"):
+                return {"error": "Envoie d’abord la deuxième capture EROP avant de valider ERAF."}
+            if c.get("erop_confirmed"):
+                return {"error": "ERAF a déjà été validé pour cette demande."}
+            c["erop_confirmed"] = True
+            c["erop_photo_sent"] = False
+            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
+                "text": "✅ ERAF : le Spitta confirme que tout est OK après la deuxième capture.", "time": int(time.time())})
+            chats_save(chats_data, None)
+            client_id = c.get("client")
+        try:
+            say(client_id, "✅ Le Spitta a validé ERAF : tout est OK après la deuxième capture.")
+        except Exception as e:
+            print("notification ERAF au lanceur impossible:", repr(e))
+        return {"ok": True}
+
     if path == "/api/chat/proof":
         rid, image = str(b.get("id", "")), str(b.get("image", ""))
         if not image.startswith("data:image/") or len(image) > 4_200_000:
@@ -1140,7 +1164,9 @@ def api(path, b):
                     c["status"] = c.get("erop_previous_status") or "proof_received"
                     c.pop("erop_previous_status", None)
                     c.pop("erop_deadline", None)
-                    message_text = "📸 Deuxième capture EROP envoyée — demande satisfaite."
+                    c["erop_photo_sent"] = True
+                    c["erop_confirmed"] = False
+                    message_text = "📸 Deuxième capture EROP envoyée — en attente de validation ERAF par le Spitta."
                     accepted = True
                 elif not is_erop and c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
                     c["status"] = "proof_received"
