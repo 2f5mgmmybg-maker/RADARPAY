@@ -89,6 +89,13 @@ class SecurityTests(unittest.TestCase):
         response = bot.api("/api/role", {"initData": urlencode(data), "role": "lanceur"})
         self.assertEqual(response, {"ok": True, "role": "owner"})
 
+    def test_erop_cannot_restart_while_eraf_is_pending(self):
+        pending = {"erop_photo_sent": True, "erop_confirmed": False}
+        confirmed = {"erop_photo_sent": False, "erop_confirmed": True}
+        self.assertTrue(bot.eraf_validation_pending(pending))
+        self.assertFalse(bot.eraf_validation_pending(confirmed))
+        self.assertFalse(bot.eraf_validation_pending({"erop_photo_sent": False}))
+
     def test_chat_retention_covers_full_erop_eraf_flow(self):
         self.assertGreaterEqual(bot.CHAT_TTL, 24 * 60 * 60)
         self.assertEqual(bot.EROP_BLACKLIST_SECONDS, 7 * 24 * 60 * 60)
