@@ -76,6 +76,24 @@ class SecurityTests(unittest.TestCase):
         data["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
         self.assertIsNone(bot.verify(urlencode(data)))
 
+    def test_owner_can_access_admin_without_a_pseudo(self):
+        now = int(time.time())
+        user = {"id": int(os.environ["OWNER_ID"]), "first_name": "Owner"}
+        data = {
+            "auth_date": str(now),
+            "user": json.dumps(user, separators=(",", ":")),
+        }
+        check = "\n".join(f"{key}={value}" for key, value in sorted(data.items()))
+        secret = hmac.new(b"WebAppData", os.environ["BOT_TOKEN"].encode(), hashlib.sha256).digest()
+        data["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+        response = bot.api("/api/role", {"initData": urlencode(data), "role": "lanceur"})
+        self.assertEqual(response, {"ok": True, "role": "owner"})
+
+    def test_chat_retention_covers_full_erop_eraf_flow(self):
+        self.assertGreaterEqual(bot.CHAT_TTL, 24 * 60 * 60)
+        self.assertEqual(bot.EROP_BLACKLIST_SECONDS, 7 * 24 * 60 * 60)
+        self.assertEqual(bot.ERAF_BLACKLIST_SECONDS, 10 * 24 * 60 * 60)
+
 
 if __name__ == "__main__":
     unittest.main()
