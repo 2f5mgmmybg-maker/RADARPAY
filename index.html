@@ -678,7 +678,7 @@ function loadBlacklist(){
       var card=document.createElement("div");card.className="chatitem";
       var title=document.createElement("b");title.textContent=entry.label;card.appendChild(title);
       var detail=document.createElement("small");
-      detail.textContent="Fin du blocage : "+new Date(entry.until*1000).toLocaleString("fr-FR")+" · "+entry.reason+(entry.guarantee_fee_due?" · Frais de garantie signalés comme dus (validation admin)":"");
+      detail.textContent="Fin du blocage : "+new Date(entry.until*1000).toLocaleString("fr-FR")+" · "+entry.reason+(entry.guarantee_fee_due?" · Frais de garantie dus (50 %) : "+(entry.guarantee_fee_amount?entry.guarantee_fee_amount+(entry.guarantee_fee_currency?" "+entry.guarantee_fee_currency:""):"montant à vérifier"):"");
       card.appendChild(detail);
       var timer=document.createElement("b");timer.className="blacklist-timer";timer.dataset.until=String(entry.until);
       timer.style.display="block";timer.style.marginTop="8px";timer.style.fontVariantNumeric="tabular-nums";
@@ -710,7 +710,7 @@ function loadChatList(){
     (r.chats||[]).forEach(function(c){
       var b=document.createElement("button");b.className="chatitem";
       b.textContent=(c.client_name||"Lanceur")+" (Lanceur) ↔ Spitta — "+(c.price||"sans prix")+" — "+(c.status||"en cours");
-      var small=document.createElement("small");small.textContent=c.last||"Aucun message";b.appendChild(small);
+      var small=document.createElement("small");small.textContent=(c.last||"Aucun message")+(c.guarantee_fee_due?" · Frais de garantie dus (50 %) : "+(c.guarantee_fee_amount?c.guarantee_fee_amount+(c.guarantee_fee_currency?" "+c.guarantee_fee_currency:""):"montant à vérifier"):"");b.appendChild(small);
       b.onclick=function(){openChat(c.id)};
       if(userhost&&me&&Number(c.client)===me)userhost.appendChild(b.cloneNode(true)),userhost.lastChild.onclick=function(){openChat(c.id)};
       if(spittahost&&me&&Number(c.vendor)===me)spittahost.appendChild(b.cloneNode(true)),spittahost.lastChild.onclick=function(){openChat(c.id)};
@@ -753,7 +753,7 @@ $("paymentreport").onclick=function(){
 };
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 function renderMessages(c){
-  var signature=JSON.stringify([c.status,c.proof_deadline,c.erop_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
+  var signature=JSON.stringify([c.status,c.proof_deadline,c.erop_deadline,c.erop_sender_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
   $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le Lanceur #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
@@ -761,8 +761,8 @@ function renderMessages(c){
   $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
   $("chatattach").disabled=ADMIN_CHAT_MODE||observer||!open;
   $("chattext").placeholder=observer&&!ADMIN_CHAT_MODE?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
-  var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
-  var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"EROP — en attente de la preuve du Lanceur (le délai du Spitta n’a pas commencé)":labels[c.status]||c.status;
+  var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_sender_expired:"EROP — étape du Lanceur expirée",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
+  var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"EROP — preuve du Lanceur attendue (délai de 2 minutes)":labels[c.status]||c.status;
   $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+statusLabel;
   var senderProof=$("erop-sender-proof");
   senderProof.hidden=ADMIN_CHAT_MODE||observer||!(client&&c.status==="erop_pending"&&!c.erop_sender_proof_submitted);
@@ -776,10 +776,10 @@ function renderMessages(c){
   $("chateraf").hidden=!(vendor&&!ADMIN_CHAT_MODE&&c.erop_photo_sent&&!c.erop_confirmed);
   $("chateraf").disabled=!erafAvailable;
   var erafTimer=$("erafcountdown");erafTimer.hidden=!(vendor&&!ADMIN_CHAT_MODE&&c.erop_photo_sent&&!c.erop_confirmed);erafTimer.dataset.deadline=erafDeadline||"";erafTimer.textContent=erafDeadline>0?"⏱️ Temps restant pour ERAF : "+formatErafTime(erafDeadline):"⏱️ Délai ERAF indisponible";
-  var countdown=$("chatcountdown"),deadline=c.status==="proof_pending"?c.proof_deadline:c.status==="erop_pending"?c.erop_deadline:0;
+  var countdown=$("chatcountdown"),deadline=c.status==="proof_pending"?c.proof_deadline:c.status==="erop_pending"?(c.erop_sender_proof_submitted?c.erop_deadline:c.erop_sender_deadline):0;
   countdown.dataset.deadline=deadline||"";
   countdown.dataset.kind=c.status==="erop_pending"?"EROP":c.status==="proof_pending"?"Capture":"";
-  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_pending"&&!c.erop_sender_proof_submitted?(client?"À toi : joins ta photo de preuve ou déclare que tu ne peux pas en fournir. Le délai du Spitta n’a pas commencé.":"Le Lanceur doit d’abord joindre sa photo de preuve ou déclarer qu’il ne peut pas en fournir. Le délai du Spitta n’a pas commencé.") :c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
+  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_sender_expired"?"Délai de 2 minutes écoulé. Demande EROP clôturée.":c.status==="erop_pending"&&!c.erop_sender_proof_submitted?(client?"À toi : joins ta photo de preuve ou déclare que tu ne peux pas en fournir dans les 2 minutes.":"Le Lanceur doit joindre sa photo de preuve ou déclarer qu’il ne peut pas en fournir dans les 2 minutes.") :c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
   var host=$("chatmessages"),previousScrollHeight=host.scrollHeight,previousScrollTop=host.scrollTop;var stickToBottom=(previousScrollHeight-previousScrollTop-host.clientHeight)<90;host.innerHTML="";
   (c.messages||[]).forEach(function(m){
     var mine=m.from===me;
