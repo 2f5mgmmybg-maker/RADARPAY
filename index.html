@@ -981,10 +981,9 @@ function moveSectionContents(sourceId,targetId,headingText,prepend){
 }
 function simplifyWorkspaceTabs(){
   if(USER_ROLE==="lanceur"){
-    moveSectionContents("b","a","Targets physiques");
     moveSectionContents("d","f","Mes actions et paiements",true);
     moveSectionContents("g","f","Liste noire");
-    var names={"a":"Explorer","f":"Mes échanges"};
+    var names={"a":"Explorer","b":"Targets physiques","f":"Mes échanges"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
     moveSectionContents("b","e","Targets physiques",true);
