@@ -559,7 +559,7 @@ def process_pending_requests():
         changed = False
         now = int(time.time())
         for c in data.get("chats", []):
-            if c.get("status") == "erop_pending" and now >= int(c.get("erop_deadline", 0)):
+            if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and now >= int(c.get("erop_deadline", 0)):
                 c["status"] = "erop_expired"
                 vendor_id = str(c.get("vendor"))
                 blacklist = private_load().setdefault("blacklist", {})
