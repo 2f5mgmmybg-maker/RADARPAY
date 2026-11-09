@@ -736,40 +736,111 @@ def api(path, b):
     if not rate_allowed(uid, path):
         return {"error": "Trop de requêtes. Attends quelques secondes puis réessaie."}
     if path == "/api/role":
+        return {"error": "Mise à jour requise. Utilise Inscription ou Se connecter."}
+    if path == "/api/register":
         if uid == OWNER:
             return {"ok": True, "role": "owner"}
         if is_blacklisted(uid):
-            return {"error": "Ton compte est temporairement blacklisté pour non-respect d’un délai de sécurité. Les frais de garantie sont signalés comme dus. Contacte l’administration."}
+            return {"error": "Ton compte est temporairement blacklisté. Contacte l’administration."}
         chosen = str(b.get("role", ""))
-        pseudo = re.sub(r"\s+", " ", str(b.get("pseudo", "")).strip())
+        pseudo = re.sub(r"\\s+", " ", str(b.get("pseudo", "")).strip())
+        pin = str(b.get("pin", ""))
         if chosen not in ("lanceur", "spitta"):
             return {"error": "Choisis Lanceur ou Spitta."}
-        if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\w .@-]+", pseudo, re.UNICODE):
-            return {"error": "Choisis un pseudo de 3 à 24 caractères (lettres, chiffres, espaces, . _ @ -)."}
+        if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\\w .@-]+", pseudo, re.UNICODE):
+            return {"error": "Choisis un pseudo de 3 à 24 caractères (lettres, chiffres, espaces, . _ @ -)." }
+        if not re.fullmatch(r"\\d{4}", pin):
+            return {"error": "Le code secret doit contenir exactement 4 chiffres."}
         with LOCK:
             state = private_load()
-            roles = state.setdefault("roles", {})
+            uid_key = str(uid)
+            existing_role = state.setdefault("roles", {}).get(uid_key)
             registrations = state.setdefault("registrations", [])
-            existing = roles.get(str(uid))
-            if existing and existing != chosen:
-                return {"error": "Ton profil est déjà fixé. Contacte l’administrateur pour le modifier."}
-            if existing:
-                return {"ok": True, "role": existing}
-            pending = next((x for x in registrations if str(x.get("user_id")) == str(uid)
-                            and x.get("status", "pending") == "pending"), None)
-            if pending:
-                if pending.get("role") != chosen:
-                    return {"error": "Ta demande est déjà en attente pour ce rôle. Contacte l’administrateur pour la modifier."}
-                return {"ok": True, "pending": True}
+            profile = next((x for x in registrations if str(x.get("user_id")) == uid_key), None)
+            if existing_role:
+                return {"error": "Ce compte existe déjà. Utilise Se connecter."}
+            if profile:
+                if profile.get("status", "pending") == "pending":
+                    return {"ok": True, "pending": True}
+                return {"error": "Ce compte existe déjà. Utilise Se connecter."}
+            salt = secrets.token_hex(16)
             registrations.append({
-                "user_id": str(uid), "pseudo": pseudo, "role": chosen,
+                "user_id": uid_key, "pseudo": pseudo, "role": chosen,
                 "telegram_username": str(user.get("username") or ""),
                 "first_name": str(user.get("first_name") or ""),
+                "pin_salt": salt, "pin_hash": _pin_digest(pin, salt),
                 "created": int(time.time()), "status": "pending"
             })
             registrations[:] = registrations[-1000:]
             private_save()
         return {"ok": True, "pending": True}
+    if path == "/api/login":
+        if uid == OWNER:
+            return {"ok": True, "role": "owner"}
+        pin = str(b.get("pin", ""))
+        if not re.fullmatch(r"\\d{4}", pin):
+            return {"error": "Entre ton code secret à 4 chiffres."}
+        with LOCK:
+            state = private_load()
+            uid_key = str(uid)
+            profile = next((x for x in state.setdefault("registrations", []) if str(x.get("user_id")) == uid_key), None)
+            existing_role = state.setdefault("roles", {}).get(uid_key)
+            if not existing_role:
+                if profile and profile.get("status", "pending") == "pending":
+                    return {"pending": True, "error": "Ton inscription attend encore la validation de l’administrateur."}
+                return {"error": "Aucun compte trouvé. Choisis Inscription."}
+            if not profile or not profile.get("pin_hash") or not profile.get("pin_salt"):
+                return {"needs_pin": True, "role": existing_role}
+            now = int(time.time())
+            if int(profile.get("pin_locked_until", 0)) > now:
+                wait = int(profile["pin_locked_until"]) - now
+                return {"error": "Trop de codes incorrects. Réessaie dans " + str(max(1, (wait + 59) // 60)) + " minute(s)." }
+            if not hmac.compare_digest(str(profile.get("pin_hash", "")), _pin_digest(pin, profile["pin_salt"])):
+                failures = [int(x) for x in profile.get("pin_failures", []) if now - int(x) < 900]
+                failures.append(now)
+                profile["pin_failures"] = failures[-5:]
+                if len(failures) >= 5:
+                    profile["pin_locked_until"] = now + 900
+                    profile["pin_failures"] = []
+                private_save()
+                return {"error": "Code secret incorrect."}
+            profile["pin_failures"] = []
+            profile.pop("pin_locked_until", None)
+            token = _new_app_session(profile)
+            private_save()
+            return {"ok": True, "role": existing_role, "session_token": token}
+    if path == "/api/pin/setup":
+        if uid == OWNER:
+            return {"ok": True, "role": "owner"}
+        existing_role = role(user)
+        if existing_role not in ("lanceur", "spitta"):
+            return {"error": "Ton compte doit être approuvé avant de créer un code secret."}
+        pin = str(b.get("pin", ""))
+        if not re.fullmatch(r"\\d{4}", pin):
+            return {"error": "Le code secret doit contenir exactement 4 chiffres."}
+        with LOCK:
+            state = private_load()
+            registrations = state.setdefault("registrations", [])
+            profile = next((x for x in registrations if str(x.get("user_id")) == str(uid)), None)
+            if profile and profile.get("pin_hash"):
+                return {"error": "Un code secret existe déjà. Utilise Se connecter."}
+            if not profile:
+                profile = {"user_id": str(uid), "pseudo": str(user.get("first_name") or "Utilisateur"),
+                           "role": existing_role, "created": int(time.time()), "status": "approved"}
+                registrations.append(profile)
+            salt = secrets.token_hex(16)
+            profile["pin_salt"] = salt
+            profile["pin_hash"] = _pin_digest(pin, salt)
+            token = _new_app_session(profile)
+            private_save()
+        return {"ok": True, "role": existing_role, "session_token": token}
+    # Toutes les routes de l’application exigent une session ouverte par PIN.
+    # Le propriétaire Telegram est reconnu directement par OWNER_ID.
+    if uid != OWNER and path not in ("/api/me", "/api/register", "/api/login", "/api/pin/setup"):
+        state = private_load()
+        profile = next((x for x in state.setdefault("registrations", []) if str(x.get("user_id")) == str(uid)), None)
+        if role(user) not in ("lanceur", "spitta") or not _has_valid_app_session(profile, b.get("sessionToken", "")):
+            return {"error": "Session fermée. Clique sur Se connecter et entre ton code secret à 4 chiffres."}
     if path == "/api/want":
         if role(user) != "lanceur":
             return {"error": "Seuls les comptes Lanceur peuvent contacter un spitta. Choisis le rôle Lanceur."}
@@ -960,6 +1031,9 @@ def api(path, b):
             profile["status"] = profile.get("status") or (
                 "approved" if roles.get(str(profile.get("user_id"))) == profile.get("role") else "pending"
             )
+            for secret_key in ("pin_hash", "pin_salt", "session_hash", "session_expires",
+                               "pin_failures", "pin_locked_until"):
+                profile.pop(secret_key, None)
             registrations.append(profile)
         return {"ok": True, "registrations": sorted(registrations, key=lambda x: x.get("created", 0), reverse=True)}
     if path == "/api/admin/approve-registration":
@@ -982,11 +1056,14 @@ def api(path, b):
         return {"ok": True, "user_id": target, "role": chosen}
     if path == "/api/me":
         data, _ = load()
+        state = private_load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
-        pending = next((x for x in private_load().setdefault("registrations", [])
-                        if str(x.get("user_id")) == str(uid) and x.get("status", "pending") == "pending"), None)
-        return {"role": r, "mine": mine, "pending": bool(pending)}
+        profile = next((x for x in state.setdefault("registrations", [])
+                        if str(x.get("user_id")) == str(uid)), None)
+        pending = bool(profile and profile.get("status", "pending") == "pending")
+        return {"role": r, "mine": mine, "pending": pending,
+                "has_pin": bool(profile and profile.get("pin_hash"))}
     if path == "/api/blacklist":
         if not role(user):
             return {"error": "Ton accès à RADARPAY est en attente d’autorisation par l’administrateur."}
