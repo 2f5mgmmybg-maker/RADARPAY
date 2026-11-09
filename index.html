@@ -294,7 +294,7 @@ section.on{display:block;animation:in .4s ease both}
     <div id="blacklistitems"></div>
   </section>
 </main>
-<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="erop-sender-proof" hidden style="margin:14px 0;padding:16px;border:1px solid var(--sweep);border-radius:16px;background:var(--bg2)"><b>Preuve d’envoi demandée par EROP</b><p class="lead" style="margin:8px 0 12px">Ajoute une photo de ta preuve d’envoi. Si tu ne peux pas envoyer de photo, utilise le bouton de déclaration ci-dessous.</p><button class="btn" id="erop-sender-photo" type="button" style="width:100%">📷 Joindre une photo de preuve</button><button class="btn s" id="erop-sender-unavailable" type="button" style="width:100%;margin-top:8px">Je ne peux pas envoyer de photo</button><input type="file" id="erop-sender-file" accept="image/*" hidden></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
+<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="erop-sender-proof" hidden style="margin:14px 0;padding:16px;border:1px solid var(--sweep);border-radius:16px;background:var(--bg2)"><b>Preuve d’envoi demandée par EROP</b><p class="lead" style="margin:8px 0 12px">Avant que le délai du Spitta commence, joins une photo lisible de ta preuve d’envoi. Si tu ne peux vraiment pas fournir de photo, déclare-le avec le bouton ci-dessous. Le délai de 3 min 30 du Spitta démarre seulement après ton choix et son enregistrement.</p><button class="btn" id="erop-sender-photo" type="button" style="width:100%">📷 Joindre une photo de preuve</button><button class="btn s" id="erop-sender-unavailable" type="button" style="width:100%;margin-top:8px">Je ne peux pas envoyer de photo</button><input type="file" id="erop-sender-file" accept="image/*" hidden></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
@@ -382,10 +382,36 @@ function openLb(p){
   var im=l.querySelector("img");im.classList.remove("z");im.src=p.src;
   l.querySelector("#lbp").textContent=p.prix||"";CUR=p;var w0=l.querySelector("#lbw");w0.disabled=false;w0.dataset.s="";w0.textContent="Je le veux";l.querySelector("#lbm").textContent="";l.classList.add("on");
 }
-function shrink(file,cb){
-  var img=new Image();
-  img.onload=function(){var s=Math.min(1,720/Math.max(img.width,img.height));var c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.62));URL.revokeObjectURL(img.src)};
-  img.src=URL.createObjectURL(file);
+function shrink(file,cb,onError){
+  var objectUrl="",finished=false;
+  function fail(message){
+    if(finished)return;finished=true;
+    if(objectUrl)URL.revokeObjectURL(objectUrl);
+    if(typeof onError==="function")onError(new Error(message||"Impossible de lire cette image. Choisis un autre fichier."));
+  }
+  if(!file||!file.type||file.type.indexOf("image/")!==0){fail("Fichier image invalide. Choisis une photo au format JPG, PNG ou WebP.");return}
+  try{
+    objectUrl=URL.createObjectURL(file);
+    var img=new Image();
+    img.onerror=function(){fail("La photo n’a pas pu être ouverte. Essaie une autre image (JPG, PNG ou WebP).")};
+    img.onload=function(){
+      if(finished)return;
+      try{
+        if(!img.naturalWidth||!img.naturalHeight){fail("Image vide ou illisible. Choisis une autre photo.");return}
+        var scale=Math.min(1,720/Math.max(img.naturalWidth,img.naturalHeight));
+        var canvas=document.createElement("canvas");
+        canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+        canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+        var context=canvas.getContext("2d");
+        if(!context){fail("Préparation de l’image impossible sur cet appareil. Essaie une autre photo.");return}
+        context.drawImage(img,0,0,canvas.width,canvas.height);
+        var data=canvas.toDataURL("image/jpeg",.62);
+        if(!data||data==="data:,"){fail("Cette image ne peut pas être préparée. Essaie une autre photo.");return}
+        finished=true;URL.revokeObjectURL(objectUrl);cb(data);
+      }catch(e){fail("Échec de préparation de la photo. Essaie une image JPG, PNG ou WebP plus légère.")}
+    };
+    img.src=objectUrl;
+  }catch(e){fail("Impossible de charger cette photo sur cet appareil. Essaie une autre image.")}
 }
 function save(art){
   ST.photos=PHOTOS;ST.maj=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
@@ -630,7 +656,7 @@ function renderMessages(c){
   $("chatattach").disabled=ADMIN_CHAT_MODE||observer||!open;
   $("chattext").placeholder=observer&&!ADMIN_CHAT_MODE?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
   var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
-  var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"demande EROP — preuve du Lanceur attendue":labels[c.status]||c.status;
+  var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"EROP — en attente de la preuve du Lanceur (le délai du Spitta n’a pas commencé)":labels[c.status]||c.status;
   $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+statusLabel;
   var senderProof=$("erop-sender-proof");
   senderProof.hidden=ADMIN_CHAT_MODE||observer||!(client&&c.status==="erop_pending"&&!c.erop_sender_proof_submitted);
@@ -647,7 +673,7 @@ function renderMessages(c){
   var countdown=$("chatcountdown"),deadline=c.status==="proof_pending"?c.proof_deadline:c.status==="erop_pending"?c.erop_deadline:0;
   countdown.dataset.deadline=deadline||"";
   countdown.dataset.kind=c.status==="erop_pending"?"EROP":c.status==="proof_pending"?"Capture":"";
-  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_pending"&&!c.erop_sender_proof_submitted?(client?"En attente de ta preuve d’envoi EROP.":"En attente de la preuve d’envoi du Lanceur.") :c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
+  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_pending"&&!c.erop_sender_proof_submitted?(client?"À toi : joins ta photo de preuve ou déclare que tu ne peux pas en fournir. Le délai du Spitta n’a pas commencé.":"Le Lanceur doit d’abord joindre sa photo de preuve ou déclarer qu’il ne peut pas en fournir. Le délai du Spitta n’a pas commencé.") :c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
   var host=$("chatmessages"),previousScrollHeight=host.scrollHeight,previousScrollTop=host.scrollTop;var stickToBottom=(previousScrollHeight-previousScrollTop-host.clientHeight)<90;host.innerHTML="";
   (c.messages||[]).forEach(function(m){
     var mine=m.from===me;
@@ -727,8 +753,10 @@ $("erop-sender-unavailable").onclick=function(){
 };
 $("erop-sender-file").onchange=function(){
   var file=this.files[0];this.value="";if(!file)return;
-  $("chaterror").textContent="Préparation de ta preuve EROP…";
-  shrink(file,function(data){submitEropSenderProof("photo",data)});
+  $("chaterror").textContent="Préparation de ta photo de preuve EROP…";
+  shrink(file,function(data){submitEropSenderProof("photo",data)},function(err){
+    $("chaterror").textContent=(err&&err.message)||"La photo n’a pas pu être préparée. Choisis une autre image ou utilise « Je ne peux pas envoyer de photo ».";
+  });
 };
 $("chatproofbutton").onclick=function(){$("chatprooffile").click()};
 $("chatprooffile").onchange=function(){
