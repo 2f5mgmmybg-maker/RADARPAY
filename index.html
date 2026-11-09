@@ -126,7 +126,7 @@ section.on{display:block;animation:in .4s ease both}
 .countryfilters button.on{background:#77746d;color:#fff}
 #chatmessages{scroll-behavior:smooth}
 .chatmsg audio{display:block;width:min(260px,70vw);max-width:100%;margin-top:8px}
-#chatbar{align-items:center}
+.chatbar{align-items:center}
 #chatattach{flex:0 0 42px;min-width:42px;height:42px;padding:0;font-size:1.35rem;border-radius:50%}
 #chattext{margin:0;min-width:0}
 .chat-attachment{display:block;max-width:min(260px,68vw);margin-top:8px;border-radius:12px;overflow:hidden}
@@ -469,7 +469,7 @@ function renderMessages(c){
   $("chataccept").hidden=!(client&&c.status==="vendor_confirmed");
   $("chatproofbutton").hidden=!(vendor&&c.status==="proof_pending");
   $("chatcountdown").textContent=c.status==="proof_pending"?"Temps restant : "+Math.max(0,Math.ceil((c.proof_deadline-Date.now()/1000)))+" secondes":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
-  var host=$("chatmessages");var stickToBottom=(host.scrollHeight-host.scrollTop-host.clientHeight)<90;host.innerHTML="";
+  var host=$("chatmessages"),previousScrollHeight=host.scrollHeight,previousScrollTop=host.scrollTop;var stickToBottom=(previousScrollHeight-previousScrollTop-host.clientHeight)<90;host.innerHTML="";
   (c.messages||[]).forEach(function(m){
     var d=document.createElement("div");d.className="chatmsg"+(m.from===me?" mine":"");
     d.appendChild(document.createTextNode((m.name||"Utilisateur")+": "+m.text));
@@ -496,7 +496,7 @@ function renderMessages(c){
     }
     var small=document.createElement("small");small.textContent=new Date((m.time||0)*1000).toLocaleString("fr-FR");d.appendChild(small);host.appendChild(d);
   });
-  if(stickToBottom)host.scrollTop=host.scrollHeight;
+  if(stickToBottom)host.scrollTop=host.scrollHeight;else host.scrollTop=Math.max(0,host.scrollHeight-(previousScrollHeight-previousScrollTop));
 }
 function openChat(id){
   ACTIVE_CHAT=id;LAST_CHAT_RENDER="";$("chatui").hidden=false;$("chaterror").textContent="Chargement…";
