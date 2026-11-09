@@ -433,22 +433,27 @@ function call(path,body){
       var data;
       try{data=JSON.parse(raw)}catch(e){throw new Error("Réponse API invalide (JSON).")}
       if(!data || typeof data!=="object") throw new Error("Réponse API invalide.");
-      if(data.error){
-        if(data.error.indexOf("Session fermée.")===0){
+      if(data.error&&!data.ok&&!data.pending){
+        var apiMessage=data.error;
+        if(apiMessage.indexOf("Session fermée.")===0){
           SESSION_TOKEN="";
           if(document.body.classList.contains("authorized")){
             document.body.classList.remove("authorized");$("welcome").classList.remove("gone");
             setAuthView("login-panel");
             $("role-message").textContent="Ta session a expiré. Connecte-toi à nouveau avec ton code secret à 4 chiffres.";
           }
-        }else if(data.error.indexOf("Ouvre l'app depuis Telegram.")===0){
+          throw new Error("Ta session a expiré. Connecte-toi à nouveau avec ton code secret à 4 chiffres.");
+        }
+        if(apiMessage.indexOf("Ouvre l'app depuis Telegram.")===0){
           SESSION_TOKEN="";
           if(document.body.classList.contains("authorized")){
             document.body.classList.remove("authorized");$("welcome").classList.remove("gone");
             setAuthView("auth-choices");
             $("role-message").textContent="Session Telegram expirée. Ferme puis rouvre RADAR PAYMENT depuis Telegram.";
           }
+          throw new Error("Session Telegram expirée. Ferme puis rouvre RADAR PAYMENT depuis Telegram.");
         }
+        throw new Error(apiMessage);
       }
       if(!r.ok){var message=data.error||("Erreur HTTP "+r.status);if(r.status===401&&message.indexOf("Ouvre l'app depuis Telegram")!==-1)message="Session Telegram expirée. Ferme puis rouvre RADAR PAYMENT depuis Telegram.";throw new Error(message);}
       return data;
