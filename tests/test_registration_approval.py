@@ -61,7 +61,7 @@ class RegistrationApprovalFlowTests(unittest.TestCase):
         self.assertIn("attente", self.call_as(self.test_user, "/api/blacklist")["error"])
 
         # 4. A non-admin cannot approve the request.
-        denied = self.call_as(self.test_user, "/api/admin/approve-registration", user_id=str(self.user["id"]))
+        denied = self.call_as(self.test_user, "/api/admin/approve-registration", user_id=str(self.test_user["id"]))
         self.assertIn("administrateur", denied["error"])
         self.assertNotIn(str(self.user["id"]), self.state["roles"])
 
@@ -75,11 +75,11 @@ class RegistrationApprovalFlowTests(unittest.TestCase):
         self.assertEqual(approved, {
             "ok": True, "user_id": str(self.user["id"]), "role": "spitta"
         })
-        self.assertEqual(self.state["roles"][str(self.user["id"])], "spitta")
+        self.assertEqual(self.state["roles"][str(self.test_user["id"])], "spitta")
         self.assertEqual(self.state["registrations"][0]["status"], "approved")
 
         # 6. After approval, /api/me grants the role and clears pending.
-        me_after = self.call_as(self.user, "/api/me")
+        me_after = self.call_as(self.test_user, "/api/me")
         self.assertEqual(me_after["role"], "spitta")
         self.assertFalse(me_after["pending"])
 
@@ -102,7 +102,7 @@ class RegistrationApprovalFlowTests(unittest.TestCase):
         self.assertIn("administrateur", result["error"])
 
     def test_legacy_account_with_matching_role_is_reported_approved(self):
-        self.state["roles"][str(self.user["id"])] = "spitta"
+        self.state["roles"][str(self.test_user["id"])] = "spitta"
         self.state["registrations"].append({
             "user_id": str(self.user["id"]), "pseudo": "Ancien compte",
             "role": "spitta", "created": 1
