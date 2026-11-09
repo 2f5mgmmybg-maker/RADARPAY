@@ -242,7 +242,7 @@ section.on{display:block;animation:in .4s ease both}
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
   </section>
-  <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les conversations de transaction expirent après 10 minutes.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique seulement le montant et la devise, puis joins obligatoirement une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
+  <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique seulement le montant et la devise, puis joins obligatoirement une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
     <p class="lead">Espace Spitta : publie tes produits avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
     <div class="spitta-publish-card">
@@ -694,8 +694,8 @@ setInterval(function(){
     .then(function(r){if(r.ok&&ACTIVE_CHAT===pollChat&&ADMIN_CHAT_MODE===pollAdmin)renderMessages(r.chat)})
     .catch(function(){})
     .finally(function(){CHAT_POLL_BUSY=false});
-},1500);
- setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},5000);
+},2000);
+ setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},10000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 $("addp").onclick=function(){$("pf").click()};
@@ -756,12 +756,20 @@ function arrangeTabs(){
 }
 function chooseRole(role){
   var pseudo=$("signup-pseudo").value.trim();
-  if(pseudo.length<3||pseudo.length>24){$("role-message").textContent="Entre un pseudo de 3 à 24 caractères avant de continuer."; $("signup-pseudo").focus();return}
+  // Le serveur reconnaît le propriétaire par son identifiant Telegram : aucun pseudo ne lui est demandé. Les autres comptes sont validés côté serveur.
   $("role-message").textContent="Enregistrement de ton profil…";
   call("/api/role",{role:role,pseudo:pseudo}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Impossible d’enregistrer le profil.");
     USER_ROLE=r.role;renderServices();$("welcome").classList.add("gone");
     $("role-message").textContent="";
+    if(USER_ROLE==="owner"){
+      $("admin-tab").hidden=false;showMe(r,false);
+      $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="c")});
+      var visibleAdminTabs=Array.prototype.filter.call($("tabs").querySelectorAll("button"),function(x){return !x.hidden});
+      $("tabs").querySelector(".pill").style.transform="translateX("+visibleAdminTabs.indexOf($("admin-tab"))*100+"%)";
+      document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c")});
+      arrangeTabs();loadAdminChats();return;
+    }
     $("spitta-tab").hidden=USER_ROLE!=="spitta";
     $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
     if(USER_ROLE==="spitta"){
