@@ -1129,7 +1129,7 @@ def api(path, b):
             if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
                 return {"error": "Discussion introuvable ou accès refusé."}
             changed = False
-            if c.get("status") == "erop_pending" and time.time() >= c.get("erop_deadline", 0):
+            if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and time.time() >= c.get("erop_deadline", 0):
                 now = int(time.time())
                 c["status"] = "erop_expired"
                 private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = {
@@ -1283,16 +1283,90 @@ def api(path, b):
             c["erop_previous_status"] = c.get("status")
             c["status"] = "erop_pending"
             c["erop_photo_sent"] = False
-            c["erop_deadline"] = int(time.time()) + 210
+            c["erop_sender_proof_submitted"] = False
+            c["erop_sender_proof_unavailable"] = False
+            c["erop_deadline"] = 0
             c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                "text": "📸 Demande EROP : le Lanceur demande une deuxième capture. Le Spitta doit l’ajouter volontairement dans les 3 min 30.", "time": int(time.time())})
+                "text": "📸 Demande EROP : le Lanceur doit d’abord joindre sa preuve d’envoi (photo ou déclaration d’impossibilité). Le délai de 3 min 30 du Spitta commencera après cette étape.", "time": int(time.time())})
             chats_save(chats_data, None)
             vendor_id = c.get("vendor")
         try:
-            say(vendor_id, "📸 Le Lanceur demande une deuxième capture EROP. Ouvre RADAR PAYMENT et joins volontairement une capture à la discussion sous 3 min 30. Aucune capture n’est prise à distance.")
+            say(vendor_id, "📸 Demande EROP reçue. Le Lanceur doit d’abord joindre sa preuve d’envoi dans le chat. Le délai de 3 min 30 commencera ensuite. Aucune capture n’est prise à distance.")
         except Exception as e:
             print("notification EROP impossible:", repr(e))
         return {"ok": True}
+    if path == "/api/chat/erop-sender-proof":
+        rid = str(b.get("id", ""))
+        mode = str(b.get("mode", "photo"))
+        image = str(b.get("image", ""))
+        raw_image = None
+        if mode == "photo":
+            if not image.startswith("data:image/") or len(image) > 4_200_000:
+                return {"error": "Photo invalide ou trop lourde. Réessaie avec une image plus légère."}
+            try:
+                raw_image = decode_image_data_uri(image)
+            except Exception as e:
+                print("validation preuve EROP du Lanceur:", repr(e))
+                return {"error": "Photo invalide ou trop lourde. Réessaie."}
+        elif mode != "unavailable":
+            return {"error": "Choisis une photo ou confirme que l’envoi de photo est impossible."}
+
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if not c or uid != c.get("client"):
+                return {"error": "Seul le Lanceur de cette discussion peut envoyer sa preuve EROP."}
+            if c.get("status") != "erop_pending":
+                return {"error": "Aucune demande EROP n’attend ta preuve."}
+            if c.get("erop_sender_proof_submitted"):
+                return {"error": "Ta preuve EROP a déjà été enregistrée."}
+            vendor_id = c.get("vendor")
+
+        proof_file = None
+        if raw_image is not None:
+            proof_file = "private_proofs/" + rid + "/erop_sender_" + secrets.token_hex(12) + ".enc"
+            try:
+                gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée de la preuve EROP du Lanceur")
+                PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
+            except Exception as e:
+                print("sauvegarde preuve EROP du Lanceur:", repr(e))
+                return {"error": "Impossible de sauvegarder la photo. Réessaie."}
+
+        accepted = False
+        deadline = 0
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if (c and uid == c.get("client") and c.get("status") == "erop_pending"
+                    and not c.get("erop_sender_proof_submitted")):
+                now = int(time.time())
+                c["erop_sender_proof_submitted"] = True
+                c["erop_sender_proof_unavailable"] = mode == "unavailable"
+                deadline = now + 210
+                c["erop_deadline"] = deadline
+                message = {
+                    "from": uid, "name": user.get("first_name", "Lanceur"),
+                    "text": ("⚠️ Le Lanceur déclare ne pas pouvoir envoyer une photo de sa preuve EROP. Cette déclaration ne constitue pas une preuve photographique."
+                             if mode == "unavailable" else
+                             "📸 Preuve d’envoi EROP transmise par le Lanceur."),
+                    "time": now
+                }
+                if proof_file:
+                    message["proof_file"] = proof_file
+                c.setdefault("messages", []).append(message)
+                chats_save(chats_data, None)
+                accepted = True
+        if not accepted:
+            if proof_file:
+                gh_del(proof_file, "Nettoyage d'une preuve EROP non enregistrée")
+                PROOF_CACHE.pop(proof_file, None)
+            return {"error": "La demande EROP a changé d’état. La preuve n’a pas été enregistrée."}
+        try:
+            say(vendor_id, "📸 Le Lanceur a transmis son élément de preuve EROP. Tu as maintenant 3 min 30 pour envoyer volontairement la deuxième capture dans RADAR PAYMENT.")
+        except Exception as e:
+            print("notification preuve EROP au Spitta impossible:", repr(e))
+        return {"ok": True, "deadline": deadline}
+
     if path == "/api/chat/eraf":
         rid = str(b.get("id", ""))
         with LOCK:
@@ -1335,6 +1409,8 @@ def api(path, b):
             if not c or uid != c.get("vendor"):
                 return {"error": "Seul le spitta peut envoyer la capture."}
             if c.get("status") == "erop_pending":
+                if not c.get("erop_sender_proof_submitted"):
+                    return {"error": "Le Lanceur doit d’abord envoyer sa preuve EROP ou déclarer qu’il ne peut pas joindre de photo."}
                 if time.time() >= c.get("erop_deadline", 0):
                     now = int(time.time())
                     c["status"] = "erop_expired"
