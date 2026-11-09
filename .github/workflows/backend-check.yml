@@ -52,3 +52,25 @@ jobs:
           print(f"Checking {len(inline)} inline script(s)")
           PY
           node --check /tmp/radar-inline.js
+      - name: Audit frontend IDs and API route coverage
+        run: |
+          python - <<'PY'
+          import re
+          from collections import Counter
+          from pathlib import Path
+
+          html = Path("index.html").read_text(encoding="utf-8")
+          backend = Path("bot.py").read_text(encoding="utf-8")
+          ids = re.findall(r'\\bid=["\\']([^"\\']+)["\\']', html)
+          duplicates = [key for key, count in Counter(ids).items() if count > 1]
+          references = set(re.findall(r'\\$\\(["\\']([^"\\']+)["\\']\\)', html))
+          missing_ids = sorted(references - set(ids))
+          frontend_routes = set(re.findall(r'call\\(\\s*["\\']([^"\\']+)["\\']', html))
+          backend_routes = set(re.findall(r'if path == ["\\']([^"\\']+)["\\']:', backend))
+          missing_routes = sorted(frontend_routes - backend_routes)
+
+          assert not duplicates, f"Duplicate HTML IDs: {duplicates}"
+          assert not missing_ids, f"Missing DOM IDs: {missing_ids}"
+          assert not missing_routes, f"Frontend calls without backend routes: {missing_routes}"
+          print(f"Audited {len(ids)} DOM IDs and {len(frontend_routes)} literal API routes.")
+          PY
