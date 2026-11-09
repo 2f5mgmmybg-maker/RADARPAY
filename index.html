@@ -242,7 +242,7 @@ section.on{display:block;animation:in .4s ease both}
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
   </section>
-  <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique seulement le montant et la devise, puis joins obligatoirement une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
+  <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
     <p class="lead">Espace Spitta : publie tes produits avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
     <div class="spitta-publish-card">
@@ -254,15 +254,15 @@ section.on{display:block;animation:in .4s ease both}
       <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
       <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du produit</span></button>
       <input type="file" id="spittafile" accept="image/*" hidden>
-      <p class="spitta-publish-help">La publication démarre dès que tu sélectionnes ta photo.</p>
+      <p class="spitta-publish-help">Ta publication sera envoyée dès que tu auras sélectionné une photo.</p>
       <p class="lead" id="spittamsg" aria-live="polite"></p>
     </div>
     <h3>Mes publications</h3><div class="grid" id="spittamine"></div>
     <h3>Demandes reçues</h3><div id="spittachatitems"></div>
   </section>
-  <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les conversations sont supprimées après 10 minutes.</p><div id="livechatitems"></div></section>
+  <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
   <section id="g">
-    <p class="lead">Liste publique des Spitta blacklistés : leur pseudo et le temps restant de leur blocage sont affichés. Après un délai ERAF dépassé, le blocage dure 10 jours.</p>
+    <p class="lead">Liste publique des Spitta placés sur liste noire : leur pseudo et le temps restant de leur blocage sont affichés. En cas de non-validation d’ERAF dans les 10 minutes, le blocage dure 10 jours.</p>
     <button class="btn s" id="blacklistrefresh">↻ Actualiser la liste</button>
     <p class="lead" id="blacklistmsg">Chargement de la liste…</p>
     <div id="blacklistitems"></div>
@@ -780,7 +780,7 @@ function chooseRole(role){
       $("tabs").querySelector('[data-t="a"]').hidden=true;
       $("tabs").querySelector('[data-t="d"]').hidden=true;
       $("tabs").querySelector('[data-t="e"]').hidden=false;
-      $("spitta-tab").textContent="Mes produits";
+      $("spitta-tab").textContent="Mes publications";
       loadSpittaItems();
     }
     if(USER_ROLE==="lanceur"){$("tabs").querySelector('[data-t="d"]').hidden=false}
