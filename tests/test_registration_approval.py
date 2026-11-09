@@ -1,5 +1,13 @@
+import os
 import unittest
 from unittest.mock import patch
+
+# bot.py reads configuration at import time; use disposable test-only values.
+os.environ.setdefault("BOT_TOKEN", "radarpay-test-token")
+os.environ.setdefault("OWNER_ID", "123456789")
+os.environ.setdefault("GITHUB_TOKEN", "test-github-token")
+os.environ.setdefault("GITHUB_REPO", "test-owner/test-repo")
+os.environ.setdefault("DATA_ENCRYPTION_KEY", "test-encryption-key")
 
 import bot
 
