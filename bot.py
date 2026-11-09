@@ -1068,7 +1068,7 @@ def api(path, b):
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
         profile = next((x for x in state.setdefault("registrations", [])
                         if str(x.get("user_id")) == str(uid)), None)
-        pending = bool(profile and profile.get("status", "pending") == "pending")
+        pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
         return {"role": r, "mine": mine, "pending": pending,
                 "has_pin": bool(profile and profile.get("pin_hash"))}
     if path == "/api/blacklist":
