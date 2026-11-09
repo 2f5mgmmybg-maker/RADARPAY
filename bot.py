@@ -736,6 +736,8 @@ def api(path, b):
     if not rate_allowed(uid, path):
         return {"error": "Trop de requêtes. Attends quelques secondes puis réessaie."}
     if path == "/api/role":
+        if uid == OWNER:
+            return {"ok": True, "role": "owner"}
         return {"error": "Mise à jour requise. Utilise Inscription ou Se connecter."}
     if path == "/api/register":
         if uid == OWNER:
