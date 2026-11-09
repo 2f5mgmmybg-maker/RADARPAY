@@ -517,8 +517,8 @@ $("chatprooffile").onchange=function(){
 };
 $("chatsend").onclick=function(){
   var txt=$("chattext").value.trim();if(!ACTIVE_CHAT||!txt)return;$("chatsend").disabled=true;
-  call(ADMIN_CHAT_MODE?"/api/adminchat/send":"/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";return call(ADMIN_CHAT_MODE?"/api/adminchat/messages":"/api/chat/messages",{id:ACTIVE_CHAT})})
-  .then(function(r){renderMessages(r.chat);$("chaterror").textContent=""}).catch(function(e){$("chaterror").textContent=(e&&e.message)||"Envoi impossible."}).finally(function(){$("chatsend").disabled=false});
+  call(ADMIN_CHAT_MODE?"/api/adminchat/send":"/api/chat/send",{id:ACTIVE_CHAT,text:txt}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("chattext").value="";if(r.chat)renderMessages(r.chat);$("chaterror").textContent=""})
+  .catch(function(e){$("chaterror").textContent=(e&&e.message)||"Envoi impossible."}).finally(function(){$("chatsend").disabled=false});
 };
 $("chatattach").onclick=function(){if(ACTIVE_CHAT&&!ADMIN_CHAT_MODE&&!$("chatattach").disabled)$("chatfile").click()};
 $("chatfile").onchange=function(){
@@ -538,8 +538,8 @@ function sendChatFile(file,data,mime){
   $("chatattach").disabled=true;$("chaterror").textContent="Envoi du fichier…";
   call("/api/chat/attachment",{id:ACTIVE_CHAT,name:file.name,mime:mime,data:data}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Envoi impossible.");
-    LAST_CHAT_RENDER="";return call("/api/chat/messages",{id:ACTIVE_CHAT});
-  }).then(function(r){renderMessages(r.chat);$("chaterror").textContent=""})
+    if(r.chat)renderMessages(r.chat);$("chaterror").textContent="";
+  })
   .catch(function(e){$("chaterror").textContent=e.message||"Envoi du fichier impossible."})
   .finally(function(){$("chatattach").disabled=false});
 }
@@ -548,8 +548,9 @@ var CHAT_POLL_BUSY=false;
 setInterval(function(){
   if(document.visibilityState!=="visible"||!ACTIVE_CHAT||$("chatui").hidden||CHAT_POLL_BUSY)return;
   CHAT_POLL_BUSY=true;
-  call(ADMIN_CHAT_MODE?"/api/adminchat/messages":"/api/chat/messages",{id:ACTIVE_CHAT})
-    .then(function(r){if(r.ok)renderMessages(r.chat)})
+  var pollChat=ACTIVE_CHAT,pollAdmin=ADMIN_CHAT_MODE;
+  call(pollAdmin?"/api/adminchat/messages":"/api/chat/messages",{id:pollChat})
+    .then(function(r){if(r.ok&&ACTIVE_CHAT===pollChat&&ADMIN_CHAT_MODE===pollAdmin)renderMessages(r.chat)})
     .catch(function(){})
     .finally(function(){CHAT_POLL_BUSY=false});
 },1500);
