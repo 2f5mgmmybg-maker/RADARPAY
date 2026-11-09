@@ -573,7 +573,7 @@ def process_pending_requests():
                 c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                 c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "erop_expired" and (
                     not c.get("erop_client_notified") or not c.get("erop_vendor_notified")):
@@ -597,7 +597,7 @@ def process_pending_requests():
                 c["guarantee_fee_due"] = True
                 c["erop_photo_sent"] = False
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 10 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                    "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 10 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "eraf_expired" and (
                     not c.get("eraf_client_notified") or not c.get("eraf_vendor_notified")):
@@ -626,7 +626,7 @@ def process_pending_requests():
                  "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("erop_vendor_notified", vendor_id,
-                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie (50 % du montant de la Target concernée) sont dus : contacte l’administration pour confirmer le montant et le règlement.",
                  vendor_done),
             ):
                 if already_sent:
@@ -653,7 +653,7 @@ def process_pending_requests():
                  "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("eraf_vendor_notified", vendor_id,
-                 "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
+                 "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie (50 % du montant de la Target concernée) sont dus : contacte l’administration pour confirmer le montant et le règlement.",
                  vendor_done),
             ):
                 if already_sent:
@@ -731,7 +731,7 @@ def api(path, b):
         remaining = max(0, int(entry.get("until", 0)) - int(time.time()))
         return {"error": "Compte temporairement blacklisté jusqu’au " +
                 time.strftime("%d/%m/%Y à %H:%M", time.localtime(entry.get("until", 0))) +
-                ". Motif : délai de sécurité non respecté. Les frais de garantie sont signalés comme dus. " +
+                ". Motif : délai de sécurité non respecté. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus. " +
                 "Contacte l’administration. Temps restant : " + str(remaining // 86400) + " jour(s)."}
     if not rate_allowed(uid, path):
         return {"error": "Trop de requêtes. Attends quelques secondes puis réessaie."}
@@ -747,6 +747,9 @@ def api(path, b):
         chosen = str(b.get("role", ""))
         pseudo = re.sub(r"\s+", " ", str(b.get("pseudo", "")).strip())
         pin = str(b.get("pin", ""))
+        guarantee_acceptance = str(b.get("guarantee_acceptance", "")).strip()
+        if guarantee_acceptance != "Garant":
+            return {"error": "Lis le règlement puis écris exactement Garant pour l’accepter."}
         if chosen not in ("lanceur", "spitta"):
             return {"error": "Choisis Lanceur ou Spitta."}
         if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\w .@-]+", pseudo, re.UNICODE):
@@ -765,6 +768,11 @@ def api(path, b):
                 if profile.get("status", "pending") == "pending":
                     if profile.get("role") != chosen:
                         return {"error": "Ta demande est déjà enregistrée pour un autre profil. Contacte l’administrateur."}
+                    profile["guarantee_rules_version"] = "2026-11-09"
+                    profile["guarantee_accepted"] = True
+                    profile["guarantee_acceptance_word"] = "Garant"
+                    profile["guarantee_accepted_at"] = int(time.time())
+                    private_save()
                     return {"ok": True, "pending": True}
                 return {"error": "Ce compte existe déjà. Utilise Se connecter."}
             salt = secrets.token_hex(16)
@@ -773,7 +781,11 @@ def api(path, b):
                 "telegram_username": str(user.get("username") or ""),
                 "first_name": str(user.get("first_name") or ""),
                 "pin_salt": salt, "pin_hash": _pin_digest(pin, salt),
-                "created": int(time.time()), "status": "pending"
+                "created": int(time.time()), "status": "pending",
+                "guarantee_rules_version": "2026-11-09",
+                "guarantee_accepted": True,
+                "guarantee_acceptance_word": "Garant",
+                "guarantee_accepted_at": int(time.time())
             })
             registrations[:] = registrations[-1000:]
             private_save()
@@ -1138,7 +1150,7 @@ def api(path, b):
                 c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                 c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
+                    "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
                 c["status"] = "proof_expired"
@@ -1420,9 +1432,9 @@ def api(path, b):
                     c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                     c["guarantee_fee_due"] = True
                     c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                        "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
+                        "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                     chats_save(chats_data, None)
-                    return {"error": "Le délai EROP est dépassé. La discussion est bloquée et le compte du Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus."}
+                    return {"error": "Le délai EROP est dépassé. La discussion est bloquée et le compte du Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus."}
                 is_erop = True
             elif c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
                 is_erop = False
