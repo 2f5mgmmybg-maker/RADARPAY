@@ -49,12 +49,15 @@ class EropSenderProofTests(unittest.TestCase):
         self.state["chats"] = data["chats"]
         self.chat = self.state["chats"][0]
 
-    def call(self, user, **payload):
+    def call_path(self, path, user, **payload):
         self.user = dict(user)
-        return bot.api("/api/chat/erop-sender-proof", {
+        return bot.api(path, {
             "initData": "test-init-data", "id": self.chat["id"], **payload,
             "sessionToken": "valid-test-session"
         })
+
+    def call(self, user, **payload):
+        return self.call_path("/api/chat/erop-sender-proof", user, **payload)
 
     def test_launcher_can_declare_photo_unavailable_and_starts_vendor_timer(self):
         before = int(time.time())
@@ -82,6 +85,19 @@ class EropSenderProofTests(unittest.TestCase):
         result = self.call(self.client, mode="other")
         self.assertIn("Choisis une photo", result["error"])
         self.assertFalse(self.chat["erop_sender_proof_submitted"])
+
+    def test_vendor_cannot_send_second_capture_before_launcher_evidence(self):
+        result = self.call_path(
+            "/api/chat/proof", self.vendor, image="data:image/jpeg;base64,dGVzdA=="
+        )
+        self.assertIn("Lanceur doit d’abord envoyer sa preuve", result["error"])
+        self.assertEqual(self.chat["status"], "erop_pending")
+
+    def test_background_timeout_does_not_blacklist_vendor_before_launcher_evidence(self):
+        self.chat["erop_deadline"] = 0
+        bot.process_pending_requests()
+        self.assertEqual(self.chat["status"], "erop_pending")
+        self.assertFalse(self.chat.get("erop_blacklist_until"))
 
     def test_duplicate_sender_proof_is_rejected(self):
         self.call(self.client, mode="unavailable")
