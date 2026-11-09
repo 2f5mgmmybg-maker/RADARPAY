@@ -920,8 +920,10 @@ if(INIT){
     if(r.role==="owner"){enterApp(r);return;}
     if(r.pending){showPending("Ton inscription est en attente de validation par l’administrateur. Une fois validée, utilise Se connecter avec ton code secret.");return;}
     if(r.role){
-      if(r.has_pin){setAuthView("login-panel");$("role-message").textContent="Compte reconnu. Connecte-toi avec ton code secret à 4 chiffres.";}
-      else{setAuthView("legacy-pin-panel");$("role-message").textContent="Compte déjà enregistré : crée ton code secret une seule fois pour te connecter ensuite.";}
+      var detectedId=tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id;
+      var ownerHint="\\n\\nSi tu es le propriétaire, vérifie que OWNER_ID sur Render correspond à ton identifiant Telegram : "+(detectedId||"indisponible")+". Redémarre Render après correction.";
+      if(r.has_pin){setAuthView("login-panel");$("role-message").textContent="Compte reconnu ("+r.role+"). Connecte-toi avec ton code secret à 4 chiffres."+ownerHint;}
+      else{setAuthView("legacy-pin-panel");$("role-message").textContent="Compte déjà enregistré : crée ton code secret une seule fois pour te connecter ensuite."+ownerHint;}
       return;
     }
     setAuthView("auth-choices");
