@@ -112,7 +112,7 @@ class EropSenderProofTests(unittest.TestCase):
         self.chat["erop_sender_deadline"] = int(time.time()) - 1
         result = self.call(self.client, mode="photo", image="data:image/jpeg;base64,dGVzdA==")
         self.assertIn("délai de 2 minutes", result["error"])
-        self.patches[10].assert_not_called()
+        self.assertFalse(any("proof_file" in message for message in self.chat["messages"]))
 
     def test_guarantee_fee_is_calculated_and_recorded(self):
         blacklist_entry = {}
@@ -126,6 +126,15 @@ class EropSenderProofTests(unittest.TestCase):
         self.assertEqual(bot.parse_target_amount("1 200,50 €"), ("600.25", "EUR"))
         self.assertEqual(bot.parse_target_amount("120"), ("60.00", None))
         self.assertEqual(bot.parse_target_amount("prix à confirmer"), (None, None))
+
+    def test_spitta_erop_timeout_records_exact_fee_in_blacklist(self):
+        self.chat["erop_sender_proof_submitted"] = True
+        self.chat["erop_deadline"] = int(time.time()) - 1
+        bot.process_pending_requests()
+        entry = self.private_state["blacklist"][str(self.vendor["id"])]
+        self.assertEqual(entry["guarantee_fee_amount"], "60.00")
+        self.assertEqual(entry["guarantee_fee_currency"], "EUR")
+        self.assertEqual(self.chat["guarantee_fee_amount"], "60.00")
 
     def test_duplicate_sender_proof_is_rejected(self):
         self.call(self.client, mode="unavailable")
