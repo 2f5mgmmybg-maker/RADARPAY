@@ -94,6 +94,11 @@ class SecurityTests(unittest.TestCase):
         self.assertEqual(bot.EROP_BLACKLIST_SECONDS, 7 * 24 * 60 * 60)
         self.assertEqual(bot.ERAF_BLACKLIST_SECONDS, 10 * 24 * 60 * 60)
 
+    def test_chat_retention_uses_last_message_activity(self):
+        now = int(time.time())
+        chat = {"created": now - 3 * 24 * 60 * 60, "messages": [{"time": now - 60}]}
+        self.assertEqual(bot.chat_last_activity(chat), now - 60)
+
 
 if __name__ == "__main__":
     unittest.main()
