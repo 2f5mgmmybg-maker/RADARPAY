@@ -848,6 +848,13 @@ def api(path, b):
         rid, image = str(b.get("id", "")), str(b.get("image", ""))
         if not image.startswith("data:image/") or len(image) > 4_200_000:
             return {"error": "Capture invalide ou trop lourde. Réessaie avec une image plus légère."}
+        try:
+            raw_image = decode_image_data_uri(image)
+        except Exception as e:
+            print("validation capture chiffrée:", repr(e))
+            return {"error": "Capture invalide ou trop lourde. Réessaie avec une image plus légère."}
+
+        # Vérification sous verrou, transfert GitHub hors verrou pour ne pas bloquer les autres chats.
         with LOCK:
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
@@ -856,22 +863,36 @@ def api(path, b):
             if c.get("status") != "proof_pending" or time.time() > c.get("proof_deadline", 0):
                 if c.get("status") == "proof_pending":
                     c["status"] = "proof_expired"
-                chats_save(chats_data, None)
+                    chats_save(chats_data, None)
                 return {"error": "Le délai de 2 minutes est terminé. La vente est bloquée."}
-            try:
-                raw_image = decode_image_data_uri(image)
-                proof_file = "private_proofs/" + rid + ".enc"
-                gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une capture")
-                PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
-            except Exception as e:
-                print("sauvegarde capture chiffrée:", repr(e))
-                return {"error": "Impossible de sauvegarder la capture. Réessaie."}
-            c["status"] = "proof_received"
-            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
-                "text": "📸 Capture d’écran envoyée — preuve reçue.", "proof_file": proof_file, "time": int(time.time())})
-            chats_save(chats_data, None)
+
+        proof_file = "private_proofs/" + rid + ".enc"
         try:
-            say(c["client"], "📸 Le spitta a envoyé sa capture. La discussion est maintenant ouverte.")
+            gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une capture")
+            PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
+        except Exception as e:
+            print("sauvegarde capture chiffrée:", repr(e))
+            return {"error": "Impossible de sauvegarder la capture. Réessaie."}
+
+        accepted = False
+        client_id = None
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if (c and uid == c.get("vendor") and c.get("status") == "proof_pending"
+                    and time.time() <= c.get("proof_deadline", 0)):
+                c["status"] = "proof_received"
+                c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
+                    "text": "📸 Capture d’écran envoyée — preuve reçue.", "proof_file": proof_file, "time": int(time.time())})
+                chats_save(chats_data, None)
+                client_id = c.get("client")
+                accepted = True
+        if not accepted:
+            gh_del(proof_file, "Nettoyage d'une capture arrivée hors délai")
+            PROOF_CACHE.pop(proof_file, None)
+            return {"error": "Le délai est terminé ou la vente a changé d’état. La capture n’a pas été enregistrée."}
+        try:
+            say(client_id, "📸 Le spitta a envoyé sa capture. La discussion est maintenant ouverte.")
         except Exception as e:
             print("notification capture impossible:", repr(e))
         return {"ok": True}
@@ -881,6 +902,12 @@ def api(path, b):
         allowed_mimes = ("audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/3gpp")
         if mime not in allowed_mimes or not audio.startswith("data:audio/") or len(audio) > 900_000:
             return {"error": "Vocal invalide ou trop lourd. Réessaie avec un message plus court."}
+        try:
+            raw_audio = decode_audio_data_uri(audio, mime)
+        except Exception as e:
+            print("validation vocal chiffré:", repr(e))
+            return {"error": "Vocal invalide ou trop lourd. Réessaie avec un message plus court."}
+
         with LOCK:
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
@@ -888,18 +915,32 @@ def api(path, b):
                 return {"error": "Discussion introuvable ou accès refusé."}
             if c.get("status") not in ("proof_received", "expired"):
                 return {"error": "La discussion est verrouillée jusqu’à la capture du spitta ou à l’expiration du délai de réponse."}
-            try:
-                raw_audio = decode_audio_data_uri(audio, mime)
-                voice_file = "private_voice/" + rid + "/" + str(int(time.time() * 1000)) + ".enc"
-                gh_put(voice_file, FERNET.encrypt(raw_audio), "Sauvegarde chiffrée d'un message vocal")
-                VOICE_CACHE[voice_file] = base64.b64encode(raw_audio).decode()
-            except Exception as e:
-                print("sauvegarde vocal chiffré:", repr(e))
-                return {"error": "Impossible de sauvegarder le vocal. Réessaie."}
-            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
-                "text": "🎤 Message vocal", "voice_file": voice_file, "mime": mime, "time": int(time.time())})
-            chats_save(chats_data, None)
-        other = c.get("vendor") if uid == c.get("client") else c.get("client")
+
+        voice_file = "private_voice/" + rid + "/" + str(int(time.time() * 1000)) + ".enc"
+        try:
+            gh_put(voice_file, FERNET.encrypt(raw_audio), "Sauvegarde chiffrée d'un message vocal")
+            VOICE_CACHE[voice_file] = base64.b64encode(raw_audio).decode()
+        except Exception as e:
+            print("sauvegarde vocal chiffré:", repr(e))
+            return {"error": "Impossible de sauvegarder le vocal. Réessaie."}
+
+        accepted = False
+        other = None
+        with LOCK:
+            chats_data, _ = chats_load()
+            c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
+            if (c and uid in (c.get("client"), c.get("vendor"))
+                    and c.get("status") in ("proof_received", "expired")):
+                c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
+                    "text": "🎤 Message vocal", "voice_file": voice_file, "mime": mime, "time": int(time.time())})
+                chats_save(chats_data, None)
+                other = c.get("vendor") if uid == c.get("client") else c.get("client")
+                accepted = True
+        if not accepted:
+            gh_del(voice_file, "Nettoyage d'un vocal non enregistré")
+            VOICE_CACHE.pop(voice_file, None)
+            return {"error": "La discussion a changé d’état. Le vocal n’a pas été enregistré."}
+
         def notify_voice():
             try:
                 say(other, "🎤 Nouveau message vocal dans RADAR PAYMENT. Ouvre la mini-app pour l'écouter.")
@@ -967,11 +1008,15 @@ def api(path, b):
 
 
 class Ping(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def _s(self, obj):
         body = json.dumps(obj).encode()
         status = 200 if obj.get("ok") or "role" in obj else (401 if "Ouvre l'app depuis Telegram." in obj.get("error", "") else 400)
         self.send_response(status)
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "keep-alive")
         for k, v in (("Content-Type", "application/json"), ("Access-Control-Allow-Origin", "*"),
                      ("Access-Control-Allow-Headers", "Content-Type"), ("Access-Control-Allow-Methods", "POST, GET, OPTIONS")):
             self.send_header(k, v)
@@ -1012,9 +1057,14 @@ class Ping(BaseHTTPRequestHandler):
         pass
 
 
+class FastThreadingHTTPServer(ThreadingHTTPServer):
+    request_queue_size = 128
+    daemon_threads = True
+
+
 def serve():
     port = int(os.environ.get("PORT", "10000"))
-    ThreadingHTTPServer(("0.0.0.0", port), Ping).serve_forever()
+    FastThreadingHTTPServer(("0.0.0.0", port), Ping).serve_forever()
 
 
 def startup():
