@@ -132,6 +132,29 @@ section.on{display:block;animation:in .4s ease both}
 .chat-attachment{display:block;max-width:min(260px,68vw);margin-top:8px;border-radius:12px;overflow:hidden}
 .chat-attachment img{display:block;max-width:100%;max-height:280px;object-fit:contain}
 .chat-file-link{display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.08);color:var(--ink);text-decoration:none}
+/* Conversation façon iMessage : contrastée, vivante et lisible */
+#chatui{background:radial-gradient(ellipse at 50% -15%,rgba(36,105,255,.20),transparent 48%),linear-gradient(180deg,#090d18 0%,#03050b 100%);padding:max(14px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom));gap:10px}
+#chatui>div:first-child{min-height:52px;padding:5px 2px 11px;border-bottom:1px solid rgba(255,255,255,.09)}
+#chatheading{font-size:1.02rem;letter-spacing:-.02em}
+#chatstatus{margin:0;padding:3px 2px;color:#9daac1;font-size:.76rem}
+#chatmessages{gap:7px;padding:12px 3px 16px;overscroll-behavior:contain}
+.chatmsg{position:relative;max-width:min(82%,390px);padding:10px 14px 7px;border:1px solid rgba(255,255,255,.09);border-radius:19px 19px 19px 6px;background:linear-gradient(145deg,#242b3a,#171d2a);color:#f7f9ff;box-shadow:0 5px 16px rgba(0,0,0,.2);font-size:.93rem;line-height:1.42;animation:chatBubbleIn .22s cubic-bezier(.2,.8,.2,1) both}
+.chatmsg.mine{align-self:flex-end;border:1px solid rgba(119,177,255,.55);border-radius:19px 19px 6px 19px;background:linear-gradient(145deg,#2684ff,#0865e8 72%,#0757ce);color:#fff;box-shadow:0 5px 18px rgba(0,94,255,.18)}
+.chatmsg small{display:block;margin-top:5px;color:rgba(255,255,255,.68);font-size:.65rem;text-align:right;line-height:1.25}
+.chatmsg.mine small{color:rgba(255,255,255,.82)}
+.chatmsg .chat-seen{font-weight:700;color:#9bcaff;letter-spacing:.01em}
+.chatmsg img{border-radius:13px}
+.chatbar{padding:8px 7px calc(8px + env(safe-area-inset-bottom));border:1px solid rgba(255,255,255,.11);border-radius:25px;background:rgba(20,27,41,.94);box-shadow:0 8px 28px rgba(0,0,0,.3);backdrop-filter:blur(18px)}
+#chattext{height:43px;padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:22px;background:#0b1220;color:#fff;font-size:.93rem}
+#chattext::placeholder{color:#8995aa}
+#chatattach{height:42px;min-width:42px;flex-basis:42px;border:1px solid rgba(255,255,255,.15);background:#202b40;color:#b9d6ff}
+#chatsend{min-height:42px;padding:9px 15px;border:0;border-radius:22px;background:linear-gradient(135deg,#3695ff,#0864e8);color:#fff;font-size:.8rem;box-shadow:0 4px 14px rgba(0,105,255,.24)}
+#chatsend:active,#chatattach:active{transform:scale(.94)}
+#chatclose{border-color:rgba(255,255,255,.16);background:#1b2435;color:#dce8ff}
+#chatcountdown{color:#ffc66d}
+@keyframes chatBubbleIn{from{opacity:0;transform:translateY(7px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:420px){.chatmsg{max-width:88%;font-size:.9rem}#chatsend{padding-inline:12px}.chatbar{gap:6px}}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* Cartes Spitta : photo et commandes bien séparées */
@@ -471,8 +494,9 @@ function renderMessages(c){
   $("chatcountdown").textContent=c.status==="proof_pending"?"Temps restant : "+Math.max(0,Math.ceil((c.proof_deadline-Date.now()/1000)))+" secondes":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
   var host=$("chatmessages"),previousScrollHeight=host.scrollHeight,previousScrollTop=host.scrollTop;var stickToBottom=(previousScrollHeight-previousScrollTop-host.clientHeight)<90;host.innerHTML="";
   (c.messages||[]).forEach(function(m){
-    var d=document.createElement("div");d.className="chatmsg"+(m.from===me?" mine":"");
-    d.appendChild(document.createTextNode((m.name||"Utilisateur")+": "+m.text));
+    var mine=m.from===me;
+    var d=document.createElement("div");d.className="chatmsg"+(mine?" mine":"");
+    d.appendChild(document.createTextNode(m.text||""));
     if(m.proof_file){
       var proofImg=document.createElement("img");proofImg.alt="Capture envoyée";proofImg.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";proofImg.loading="lazy";d.appendChild(proofImg);
       call("/api/chat/file",{id:c.id,file:m.proof_file}).then(function(result){if(result.ok)proofImg.src=result.data;else throw new Error(result.error||"Capture indisponible.")}).catch(function(){proofImg.alt="Capture indisponible pour le moment"});
@@ -494,7 +518,12 @@ function renderMessages(c){
         }
       }).catch(function(){fileBox.textContent="📎 "+(m.attachment_name||"Fichier")+" · indisponible pour le moment";});
     }
-    var small=document.createElement("small");small.textContent=new Date((m.time||0)*1000).toLocaleString("fr-FR");d.appendChild(small);host.appendChild(d);
+    var small=document.createElement("small");
+    small.textContent=new Date((m.time||0)*1000).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+    if(mine&&m.read_at&&!ADMIN_CHAT_MODE){
+      var seen=document.createElement("span");seen.className="chat-seen";seen.textContent="  ·  Vu";small.appendChild(seen);
+    }
+    d.appendChild(small);host.appendChild(d);
   });
   if(stickToBottom)host.scrollTop=host.scrollHeight;else host.scrollTop=Math.max(0,host.scrollHeight-(previousScrollHeight-previousScrollTop));
 }
