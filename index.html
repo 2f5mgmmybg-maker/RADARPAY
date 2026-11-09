@@ -458,6 +458,7 @@ function loadRegistrations(){
   }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."});
 }
 $("refreshregistrations").onclick=loadRegistrations;
+setInterval(function(){if(ADMIN&&$("c").classList.contains("on"))loadRegistrations()},20000);
 function loadBlacklist(){
   var host=$("blacklistitems"),msg=$("blacklistmsg");if(!host||!msg)return;
   msg.textContent="Chargement…";host.innerHTML="";
