@@ -445,7 +445,7 @@ function loadSpittaItems(){
     var host=$("spittamine");if(!host)return;host.innerHTML="";
     var mine=(r.mine||[]);
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
-    if(!own.length){host.textContent="Tu n’as pas encore publié d’Target.";return}
+    if(!own.length){host.textContent="Tu n’as pas encore publié de Target.";return}
     own.forEach(function(p){
       var d=document.createElement("article");d.className="spitta-product-card";
       var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée à Target";d.appendChild(im);
