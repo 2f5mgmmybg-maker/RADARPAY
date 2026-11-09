@@ -120,7 +120,7 @@ def save(data, sha):
            "Mise à jour des photos", sha)
 
 
-CHAT_TTL = 600
+CHAT_TTL = 24 * 60 * 60  # Conserve les discussions 24 h pour couvrir EROP + ERAF et laisser le temps de répondre.
 PRIVATE_CACHE = None
 
 
@@ -248,7 +248,7 @@ def chats_load():
         for expired in old_chats:
             if expired not in data["chats"]:
                 for msg in expired.get("messages", []):
-                    for file_key, cache in (("proof_file", PROOF_CACHE), ("voice_file", VOICE_CACHE)):
+                    for file_key, cache in (("proof_file", PROOF_CACHE), ("voice_file", VOICE_CACHE), ("attachment_file", ATTACHMENT_CACHE)):
                         private_file = msg.get(file_key)
                         if private_file:
                             gh_del(private_file, "Suppression d'un média arrivé à expiration")
@@ -543,7 +543,7 @@ def process_pending_requests():
                 c["erop_blacklist_until"] = now + 7 * 24 * 60 * 60
                 c["guarantee_fee_due"] = True
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 10 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "erop_expired" and (
                     not c.get("erop_client_notified") or not c.get("erop_vendor_notified")):
@@ -563,11 +563,11 @@ def process_pending_requests():
                     "guarantee_fee_due": True,
                     "created": now
                 }
-                c["eraf_blacklist_until"] = now + 7 * 24 * 60 * 60
+                c["eraf_blacklist_until"] = now + 10 * 24 * 60 * 60
                 c["guarantee_fee_due"] = True
                 c["erop_photo_sent"] = False
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                    "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 10 jours. Les frais de garantie sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "eraf_expired" and (
                     not c.get("eraf_client_notified") or not c.get("eraf_vendor_notified")):
@@ -593,7 +593,7 @@ def process_pending_requests():
             _, rid, client_id, vendor_id, price, client_done, vendor_done = action
             for field, recipient, message, already_sent in (
                 ("erop_client_notified", client_id,
-                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie sont signalés comme dus.",
+                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("erop_vendor_notified", vendor_id,
                  "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
@@ -620,7 +620,7 @@ def process_pending_requests():
             _, rid, client_id, vendor_id, client_done, vendor_done = action
             for field, recipient, message, already_sent in (
                 ("eraf_client_notified", client_id,
-                 "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie sont signalés comme dus.",
+                 "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie sont signalés comme dus.",
                  client_done),
                 ("eraf_vendor_notified", vendor_id,
                  "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie sont dus : contacte l’administration pour connaître le montant et confirmer le règlement.",
