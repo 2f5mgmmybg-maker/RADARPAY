@@ -523,6 +523,24 @@ def role(user, code=None):
         return None
     return load_roles().get(str(user["id"]))
 
+PIN_ITERATIONS = 310000
+APP_SESSION_SECONDS = 12 * 60 * 60
+
+def _pin_digest(pin, salt_hex):
+    return hashlib.pbkdf2_hmac("sha256", str(pin).encode("utf-8"), bytes.fromhex(salt_hex), PIN_ITERATIONS).hex()
+
+def _new_app_session(profile):
+    token = secrets.token_urlsafe(32)
+    profile["session_hash"] = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    profile["session_expires"] = int(time.time()) + APP_SESSION_SECONDS
+    return token
+
+def _has_valid_app_session(profile, token):
+    if not profile or not token or int(profile.get("session_expires", 0)) <= int(time.time()):
+        return False
+    supplied = hashlib.sha256(str(token).encode("utf-8")).hexdigest()
+    return hmac.compare_digest(str(profile.get("session_hash", "")), supplied)
+
 
 def owner_of(p):
     try:
