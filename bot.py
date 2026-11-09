@@ -701,7 +701,7 @@ def api(path, b):
         remaining = max(0, int(entry.get("until", 0)) - int(time.time()))
         return {"error": "Compte temporairement blacklisté jusqu’au " +
                 time.strftime("%d/%m/%Y à %H:%M", time.localtime(entry.get("until", 0))) +
-                ". Motif : délai EROP non respecté. Les frais de garantie sont signalés comme dus. " +
+                ". Motif : délai de sécurité non respecté. Les frais de garantie sont signalés comme dus. " +
                 "Contacte l’administration. Temps restant : " + str(remaining // 86400) + " jour(s)."}
     if not rate_allowed(uid, path):
         return {"error": "Trop de requêtes. Attends quelques secondes puis réessaie."}
@@ -709,7 +709,7 @@ def api(path, b):
         if uid == OWNER:
             return {"ok": True, "role": "owner"}
         if is_blacklisted(uid):
-            return {"error": "Ton compte est blacklisté pendant 7 jours après le non-respect du délai EROP. Les frais de garantie sont dus. Contacte l’administration."}
+            return {"error": "Ton compte est temporairement blacklisté pour non-respect d’un délai de sécurité. Les frais de garantie sont signalés comme dus. Contacte l’administration."}
         chosen = str(b.get("role", ""))
         pseudo = re.sub(r"\s+", " ", str(b.get("pseudo", "")).strip())
         if chosen not in ("lanceur", "spitta"):
