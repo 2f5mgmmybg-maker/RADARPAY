@@ -281,9 +281,9 @@ section.on{display:block;animation:in .4s ease both}
       <label class="spitta-field-label" for="spittaprice">Prix / conditions</label>
       <input class="inp spitta-field" id="spittaprice" placeholder="Ex. : 2 500 € — conditions à préciser">
       <label class="spitta-field-label" for="spittapercentage">Pourcentage souhaité (%)</label>
-      <input class="inp spitta-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
+      <input class="inp spitta-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" required inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
       <label class="spitta-field-label" for="spittacategory">Catégorie du produit</label>
-      <select class="inp spitta-field" id="spittacategory"><option value="">Choisir une catégorie</option><option value="2500">Produits à 2 500</option><option value="5000">Produits à 5 000</option><option value="9900">Produits à 9 900</option></select>
+      <select class="inp spitta-field" id="spittacategory" required><option value="">Choisir une catégorie</option><option value="2500">Produits à 2 500</option><option value="5000">Produits à 5 000</option><option value="9900">Produits à 9 900</option></select>
       <label class="spitta-field-label" for="spittacountry">Pays</label>
       <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
       <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du produit</span></button>
