@@ -191,17 +191,36 @@ section.on{display:block;animation:in .4s ease both}
 <div id="welcome">
   <div class="radar"><i></i><i></i><i></i></div>
   <h1>Bienvenue</h1>
-  <p>Choisis ton profil pour accéder au bon espace.</p>
-  <div id="signup-step-account" style="width:min(100%,360px);margin:0 auto 14px">
-    <h2 style="margin:0 0 10px">Créer ton compte</h2>
-    <p class="lead">Choisis ton pseudo pour commencer l’inscription.</p>
-    <input class="inp" id="signup-pseudo" maxlength="24" minlength="3" placeholder="Pseudo (3 à 24 caractères)" autocomplete="nickname" required>
-    <button class="btn" id="signup-next" type="button" style="width:100%;margin-top:8px">Suivant</button>
+  <p>Inscris-toi une seule fois, puis connecte-toi avec ton code à 4 chiffres.</p>
+  <div id="auth-choices" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <button class="btn" id="show-register">Inscription</button>
+    <button class="btn" id="show-login">Se connecter</button>
   </div>
-  <div id="signup-step-role" hidden style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-    <p class="lead" style="width:100%">Étape 2 : choisis ton profil.</p>
-    <button class="btn" id="choose-lanceur">Je suis Lanceur</button>
-    <button class="btn" id="choose-spitta">Je suis Spitta</button>
+  <div id="signup-panel" hidden style="width:min(100%,360px);margin:0 auto">
+    <h2 style="margin:0 0 8px">Créer ton compte</h2>
+    <div id="signup-step-account">
+      <input class="inp" id="signup-pseudo" maxlength="24" minlength="3" placeholder="Pseudo (3 à 24 caractères)" autocomplete="nickname">
+      <input class="inp" id="signup-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Crée ton code secret (4 chiffres)" autocomplete="new-password">
+      <input class="inp" id="signup-pin-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirme ton code secret" autocomplete="new-password">
+      <button class="btn" id="signup-next" type="button" style="width:100%">Suivant</button>
+    </div>
+    <div id="signup-step-role" hidden style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+      <p class="lead" style="width:100%">Étape 2 : choisis ton profil.</p>
+      <button class="btn" id="choose-lanceur" type="button">Je suis Lanceur</button>
+      <button class="btn" id="choose-spitta" type="button">Je suis Spitta</button>
+    </div>
+  </div>
+  <div id="login-panel" hidden style="width:min(100%,360px);margin:0 auto">
+    <h2 style="margin:0 0 8px">Se connecter</h2>
+    <input class="inp" id="login-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Ton code secret à 4 chiffres" autocomplete="current-password">
+    <button class="btn" id="login-submit" type="button" style="width:100%">Se connecter</button>
+  </div>
+  <div id="legacy-pin-panel" hidden style="width:min(100%,360px);margin:0 auto">
+    <h2 style="margin:0 0 8px">Sécurise ton compte</h2>
+    <p class="lead">Ton compte existe déjà. Crée ton code à 4 chiffres une seule fois pour les prochaines connexions.</p>
+    <input class="inp" id="legacy-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Nouveau code secret (4 chiffres)" autocomplete="new-password">
+    <input class="inp" id="legacy-pin-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirme ton code secret" autocomplete="new-password">
+    <button class="btn" id="legacy-pin-submit" type="button" style="width:100%">Enregistrer le code</button>
   </div>
   <p id="role-message" class="lead">L’inscription est obligatoire avant d’accéder à RADAR PAYMENT.</p>
 </div>
@@ -392,12 +411,12 @@ function setup(){
   }).catch(function(){});
 }
 var tgw=window.Telegram&&Telegram.WebApp;if(tgw){tgw.ready();tgw.expand()}
-var INIT=tgw?tgw.initData:"",API="https://radarpay-90js.onrender.com",CUR=null,ACTIVE_CHAT=null,LAST_CHAT_RENDER="";
+var INIT=tgw?tgw.initData:"",API="https://radarpay-90js.onrender.com",CUR=null,ACTIVE_CHAT=null,LAST_CHAT_RENDER="",SESSION_TOKEN="";
 function call(path,body){
   if(!API || !/^https?:\/\//i.test(API)){
     return Promise.reject(new Error("Adresse API absente de photos.json. Vérifie GITHUB_REPO et le démarrage Render."));
   }
-  body=body||{};body.initData=INIT;
+  body=body||{};body.initData=INIT;body.sessionToken=SESSION_TOKEN;
   var controller=(typeof AbortController!=="undefined")?new AbortController():null;
   var timer=controller?setTimeout(function(){controller.abort()},90000):null;
   return fetch(API.replace(/\/$/,"")+path,{
@@ -769,66 +788,110 @@ function arrangeTabs(){
   tabs.style.gridTemplateColumns="repeat("+buttons.length+",minmax(0,1fr))";
   tabs.querySelector(".pill").style.width="calc("+100/buttons.length+"% - 3.2px)";
 }
-function chooseRole(role){
-  var pseudo=$("signup-pseudo").value.trim();
-  // Le serveur reconnaît le propriétaire par son identifiant Telegram : aucun pseudo ne lui est demandé. Les autres comptes sont validés côté serveur.
-  $("role-message").textContent="Envoi de ta demande d’accès…";
-  call("/api/role",{role:role,pseudo:pseudo}).then(function(r){
-    if(!r.ok)throw new Error(r.error||"Impossible d’envoyer la demande.");
-    if(r.pending){
-      $("role-message").textContent="Demande envoyée. Ton accès sera activé après validation par l’administrateur. Reviens dans l’application après approbation.";
-      $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;return;
-    }
-    USER_ROLE=r.role;document.body.classList.add("authorized");renderServices();$("welcome").classList.add("gone");
-    $("role-message").textContent="";
-    if(USER_ROLE==="owner"){
-      $("admin-tab").hidden=false;showMe(r,false);
-      $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="c")});
-      var visibleAdminTabs=Array.prototype.filter.call($("tabs").querySelectorAll("button"),function(x){return !x.hidden});
-      $("tabs").querySelector(".pill").style.transform="translateX("+visibleAdminTabs.indexOf($("admin-tab"))*100+"%)";
-      document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c")});
-      arrangeTabs();loadAdminChats();return;
-    }
-    $("spitta-tab").hidden=USER_ROLE!=="spitta";
-    $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
-    if(USER_ROLE==="spitta"){
-      $("tabs").querySelector('[data-t="a"]').hidden=true;
-      $("tabs").querySelector('[data-t="d"]').hidden=true;
-      $("tabs").querySelector('[data-t="e"]').hidden=false;
-      $("spitta-tab").textContent="Mes publications";
-      loadSpittaItems();
-    }
-    if(USER_ROLE==="lanceur"){$("tabs").querySelector('[data-t="d"]').hidden=false}
-    arrangeTabs();loadChatList();
-    if(USER_ROLE==="spitta"){
-      $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b")});
-      $("tabs").querySelector(".pill").style.transform="translateX(0)";
-      document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b")});
-    }
-  }).catch(function(e){$("role-message").textContent=e.message||"Connexion impossible. Ouvre l’app depuis Telegram."});
+function setAuthView(view){
+  ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
 }
-$("signup-next").onclick=function(){
-  var pseudo=$("signup-pseudo").value.trim();
-  if(pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return}
-  $("signup-step-account").hidden=true;
-  $("signup-step-role").hidden=false;
-  $("role-message").textContent="Compte renseigné. Choisis maintenant ton profil, puis envoie ta demande.";
-};
-$("choose-lanceur").onclick=function(){chooseRole("lanceur")};
-$("choose-spitta").onclick=function(){chooseRole("spitta")};
-if(INIT){call("/api/me",{}).then(function(r){
-  if(r.role){
-    // Même un compte déjà approuvé doit passer par les deux étapes visibles avant l'ouverture de l'application.
-    USER_ROLE=r.role;
-    if(USER_ROLE==="lanceur")$("choose-spitta").disabled=true;
-    if(USER_ROLE==="spitta")$("choose-lanceur").disabled=true;
-    $("role-message").textContent="Compte déjà enregistré : confirme ton profil après avoir cliqué sur Suivant.";
-  }else if(r.pending){
-    $("role-message").textContent="Ta demande d’accès est en attente de validation par l’administrateur.";
-    $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
-    $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;
+function enterApp(response){
+  SESSION_TOKEN=response.session_token||"";
+  USER_ROLE=response.role;
+  document.body.classList.add("authorized");
+  renderServices();
+  $("welcome").classList.add("gone");
+  if(USER_ROLE==="owner"){
+    $("admin-tab").hidden=false;
+    showMe(response,false);
+    $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="c");});
+    var adminTabs=Array.prototype.filter.call($("tabs").querySelectorAll("button"),function(x){return !x.hidden;});
+    $("tabs").querySelector(".pill").style.transform="translateX("+adminTabs.indexOf($("admin-tab"))*100+"%)";
+    document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c");});
+    arrangeTabs();loadAdminChats();return;
   }
-}).catch(function(){})}
+  $("spitta-tab").hidden=USER_ROLE!=="spitta";
+  $("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";
+  $("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";
+  $("admin-tab").hidden=true;
+  if(USER_ROLE==="spitta"){
+    $("tabs").querySelector('[data-t="a"]').hidden=true;
+    $("tabs").querySelector('[data-t="d"]').hidden=true;
+    $("spitta-tab").textContent="Mes publications";
+    loadSpittaItems();
+  }
+  if(USER_ROLE==="lanceur")$("tabs").querySelector('[data-t="d"]').hidden=false;
+  arrangeTabs();loadChatList();
+  if(USER_ROLE==="spitta"){
+    $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b");});
+    $("tabs").querySelector(".pill").style.transform="translateX(0)";
+    document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b");});
+  }
+}
+function showPending(message){
+  setAuthView("auth-choices");
+  $("role-message").textContent=message||"Ton inscription attend la validation de l’administrateur. Tu n’as pas besoin de recommencer l’inscription.";
+  $("auth-choices").hidden=true;
+}
+function registerRole(role){
+  var pseudo=$("signup-pseudo").value.trim();
+  var pin=$("signup-pin").value;
+  if(!pseudo||pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return;}
+  if(!/^\\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
+  $("role-message").textContent="Envoi de ton inscription…";
+  $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;
+  call("/api/register",{role:role,pseudo:pseudo,pin:pin}).then(function(r){
+    if(r.pending){showPending("Inscription envoyée ! Ton accès sera disponible après validation par l’administrateur. Ton compte et ton code sont enregistrés : ne recommence pas l’inscription.");return;}
+    if(r.role==="owner"||r.ok)enterApp(r);
+    else throw new Error(r.error||"Inscription impossible.");
+  }).catch(function(e){$("role-message").textContent=e.message||"Inscription impossible.";$("choose-lanceur").disabled=false;$("choose-spitta").disabled=false;});
+}
+function doLogin(){
+  var pin=$("login-pin").value;
+  if(!/^\\d{4}$/.test(pin)){$("role-message").textContent="Entre ton code secret à 4 chiffres.";return;}
+  $("login-submit").disabled=true;$("role-message").textContent="Connexion…";
+  call("/api/login",{pin:pin}).then(function(r){
+    if(r.needs_pin){setAuthView("legacy-pin-panel");$("role-message").textContent="Ton compte est déjà enregistré. Crée simplement ton code secret pour les prochaines connexions.";return;}
+    if(r.pending){showPending(r.error);return;}
+    if(!r.ok)throw new Error(r.error||"Connexion impossible.");
+    enterApp(r);
+  }).catch(function(e){$("role-message").textContent=e.message||"Connexion impossible."}).finally(function(){$("login-submit").disabled=false;});
+}
+function setupLegacyPin(){
+  var pin=$("legacy-pin").value;
+  if(!/^\\d{4}$/.test(pin)||pin!==$("legacy-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
+  $("legacy-pin-submit").disabled=true;
+  call("/api/pin/setup",{pin:pin}).then(function(r){if(!r.ok)throw new Error(r.error||"Enregistrement impossible.");enterApp(r);})
+  .catch(function(e){$("role-message").textContent=e.message||"Enregistrement impossible."})
+  .finally(function(){$("legacy-pin-submit").disabled=false;});
+}
+$("show-register").onclick=function(){setAuthView("signup-panel");$("role-message").textContent="Étape 1 : renseigne ton pseudo et crée ton code secret.";};
+$("show-login").onclick=function(){setAuthView("login-panel");$("role-message").textContent="Entre le code secret créé lors de ton inscription.";};
+$("signup-next").onclick=function(){
+  var pseudo=$("signup-pseudo").value.trim(),pin=$("signup-pin").value;
+  if(pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return;}
+  if(!/^\\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Le code doit comporter 4 chiffres identiques dans les deux champs.";return;}
+  $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
+  $("role-message").textContent="Étape 2 : choisis ton profil."; 
+};
+$("choose-lanceur").onclick=function(){registerRole("lanceur");};
+$("choose-spitta").onclick=function(){registerRole("spitta");};
+$("login-submit").onclick=doLogin;
+$("legacy-pin-submit").onclick=setupLegacyPin;
+if(INIT){
+  call("/api/me",{}).then(function(r){
+    if(r.role==="owner"){enterApp(r);return;}
+    if(r.pending){showPending("Ton inscription est en attente de validation par l’administrateur. Une fois validée, utilise Se connecter avec ton code secret.");return;}
+    if(r.role){
+      if(r.has_pin){setAuthView("login-panel");$("role-message").textContent="Compte reconnu. Connecte-toi avec ton code secret à 4 chiffres.";}
+      else{setAuthView("legacy-pin-panel");$("role-message").textContent="Compte déjà enregistré : crée ton code secret une seule fois pour te connecter ensuite.";}
+      return;
+    }
+    setAuthView("auth-choices");
+  }).catch(function(e){
+    setAuthView("auth-choices");
+    $("role-message").textContent=(e&&e.message)||"Impossible de vérifier ton compte Telegram. Ouvre RADAR PAYMENT depuis Telegram.";
+  });
+}else{
+  setAuthView("auth-choices");
+  $("role-message").textContent="Ouvre RADAR PAYMENT depuis Telegram pour créer ton compte ou te connecter.";
+}
 </script>
 </body>
 </html>
