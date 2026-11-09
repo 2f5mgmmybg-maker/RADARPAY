@@ -243,7 +243,7 @@ section.on{display:block;animation:in .4s ease both}
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de l’annonce. Les conversations sont supprimées après 10 minutes.</p><div id="livechatitems"></div></section>
   <section id="g">
-    <p class="lead">Liste publique des comptes Spitta temporairement blacklistés après le non-respect d’une demande EROP. Les identifiants sont masqués. La durée de blocage est de 7 jours.</p>
+    <p class="lead">Liste publique des Spitta blacklistés : leur pseudo et le temps restant de leur blocage sont affichés. Après un délai ERAF dépassé, le blocage dure 10 jours.</p>
     <button class="btn s" id="blacklistrefresh">↻ Actualiser la liste</button>
     <p class="lead" id="blacklistmsg">Chargement de la liste…</p>
     <div id="blacklistitems"></div>
@@ -472,11 +472,26 @@ function loadBlacklist(){
       var title=document.createElement("b");title.textContent=entry.label;card.appendChild(title);
       var detail=document.createElement("small");
       detail.textContent="Fin du blocage : "+new Date(entry.until*1000).toLocaleString("fr-FR")+" · "+entry.reason+(entry.guarantee_fee_due?" · Frais de garantie signalés comme dus (validation admin)":"");
-      card.appendChild(detail);host.appendChild(card);
+      card.appendChild(detail);
+      var timer=document.createElement("b");timer.className="blacklist-timer";timer.dataset.until=String(entry.until);
+      timer.style.display="block";timer.style.marginTop="8px";timer.style.fontVariantNumeric="tabular-nums";
+      timer.style.color="#f59e0b";card.appendChild(timer);
+      host.appendChild(card);
     });
   }).catch(function(e){msg.textContent=e.message||"Impossible de charger la liste."});
 }
 $("blacklistrefresh").onclick=loadBlacklist;
+function tickBlacklistTimers(){
+  document.querySelectorAll(".blacklist-timer").forEach(function(el){
+    var seconds=Math.max(0,Number(el.dataset.until)-Math.floor(Date.now()/1000));
+    var days=Math.floor(seconds/86400);seconds%=86400;
+    var hours=Math.floor(seconds/3600);seconds%=3600;
+    var minutes=Math.floor(seconds/60);var secs=seconds%60;
+    el.textContent=seconds+days*86400>0?"⏱️ Temps restant : "+days+"j "+String(hours).padStart(2,"0")+":"+String(minutes).padStart(2,"0")+":"+String(secs).padStart(2,"0"):"⏱️ Blocage terminé — actualise la liste";
+  });
+}
+setInterval(tickBlacklistTimers,1000);
+
 function loadChatList(){
   call("/api/chat/list",{}).then(function(r){
     var host=$("adminchatitems");if(host){host.innerHTML="";}
