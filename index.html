@@ -987,8 +987,9 @@ function simplifyWorkspaceTabs(){
     var names={"a":"Explorer","f":"Mes échanges"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
+    moveSectionContents("b","e","Targets physiques",true);
     moveSectionContents("g","f","Liste noire");
-    var names={"b":"Targets","e":"Mes publications","f":"Messages & suivi"};
+    var names={"e":"Mes Targets","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
     moveSectionContents("b","a","Targets physiques");
