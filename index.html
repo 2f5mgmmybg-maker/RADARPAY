@@ -192,14 +192,18 @@ section.on{display:block;animation:in .4s ease both}
   <div class="radar"><i></i><i></i><i></i></div>
   <h1>Bienvenue</h1>
   <p>Choisis ton profil pour accéder au bon espace.</p>
-  <div style="max-width:360px;margin:0 auto 14px">
-    <input class="inp" id="signup-pseudo" maxlength="24" minlength="3" placeholder="Choisis ton pseudo (3 à 24 caractères)" autocomplete="nickname" required>
+  <div id="signup-step-account" style="width:min(100%,360px);margin:0 auto 14px">
+    <h2 style="margin:0 0 10px">Créer ton compte</h2>
+    <p class="lead">Choisis ton pseudo pour commencer l’inscription.</p>
+    <input class="inp" id="signup-pseudo" maxlength="24" minlength="3" placeholder="Pseudo (3 à 24 caractères)" autocomplete="nickname" required>
+    <button class="btn" id="signup-next" type="button" style="width:100%;margin-top:8px">Suivant</button>
   </div>
-  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+  <div id="signup-step-role" hidden style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <p class="lead" style="width:100%">Étape 2 : choisis ton profil.</p>
     <button class="btn" id="choose-lanceur">Je suis Lanceur</button>
     <button class="btn" id="choose-spitta">Je suis Spitta</button>
   </div>
-  <p id="role-message" class="lead">Lanceur : tu contactes directement un spitta. Spitta : tu reçois les demandes des lanceurs.</p>
+  <p id="role-message" class="lead">L’inscription est obligatoire avant d’accéder à RADAR PAYMENT.</p>
 </div>
 
 <main>
@@ -803,12 +807,25 @@ function chooseRole(role){
     }
   }).catch(function(e){$("role-message").textContent=e.message||"Connexion impossible. Ouvre l’app depuis Telegram."});
 }
+$("signup-next").onclick=function(){
+  var pseudo=$("signup-pseudo").value.trim();
+  if(pseudo.length<3||pseudo.length>24){$("role-message").textContent="Le pseudo doit contenir entre 3 et 24 caractères.";return}
+  $("signup-step-account").hidden=true;
+  $("signup-step-role").hidden=false;
+  $("role-message").textContent="Compte renseigné. Choisis maintenant ton profil, puis envoie ta demande.";
+};
 $("choose-lanceur").onclick=function(){chooseRole("lanceur")};
 $("choose-spitta").onclick=function(){chooseRole("spitta")};
 if(INIT){call("/api/me",{}).then(function(r){
-  if(r.role){USER_ROLE=r.role;document.body.classList.add("authorized");renderServices();$("welcome").classList.add("gone");$("spitta-tab").hidden=USER_ROLE!=="spitta";$("tabs").querySelector('[data-t="d"]').hidden=USER_ROLE!=="lanceur";$("tabs").querySelector('[data-t="e"]').hidden=USER_ROLE!=="spitta";$("admin-tab").hidden=USER_ROLE!=="owner";if(USER_ROLE==="spitta"){$("tabs").querySelector('[data-t="a"]').hidden=true;$("tabs").querySelector('[data-t="d"]').hidden=true;$("spitta-tab").textContent="Mes publications"}arrangeTabs();if(USER_ROLE==="spitta"){$("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b")});$("tabs").querySelector(".pill").style.transform="translateX(0)";document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b")})}if(USER_ROLE==="owner")showMe(r,false);loadChatList();if(USER_ROLE==="owner")loadAdminChats();if(USER_ROLE==="spitta")loadSpittaItems()}
-  else if(r.pending){
+  if(r.role){
+    // Même un compte déjà approuvé doit passer par les deux étapes visibles avant l'ouverture de l'application.
+    USER_ROLE=r.role;
+    if(USER_ROLE==="lanceur")$("choose-spitta").disabled=true;
+    if(USER_ROLE==="spitta")$("choose-lanceur").disabled=true;
+    $("role-message").textContent="Compte déjà enregistré : confirme ton profil après avoir cliqué sur Suivant.";
+  }else if(r.pending){
     $("role-message").textContent="Ta demande d’accès est en attente de validation par l’administrateur.";
+    $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
     $("choose-lanceur").disabled=true;$("choose-spitta").disabled=true;
   }
 }).catch(function(){})}
