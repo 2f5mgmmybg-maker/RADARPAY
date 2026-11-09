@@ -327,6 +327,7 @@ input::placeholder,textarea::placeholder{color:#bda9cb!important}
   <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
     <p class="lead" id="publications-intro">Espace Spitta : publie tes Targets avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
+    <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une Target</button>
     <div class="spitta-publish-card" id="spitta-publish-card">
       <h3>Publier une Target</h3>
       <p class="spitta-publish-help">Ajoute une photo nette, indique ton prix, le pourcentage que tu souhaites et choisis la catégorie du produit (2 500, 5 000 ou 9 900), puis sélectionne le pays concerné.</p>
@@ -583,7 +584,7 @@ function showMe(r,fromCode){
 function loadSpittaItems(){
   if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
   var isAdmin=USER_ROLE==="owner";
-  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications actuellement enregistrées sur RADAR PAYMENT.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;$("spitta-requests").hidden=true;}
+  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications actuellement enregistrées sur RADAR PAYMENT.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;$("admin-publish-toggle").hidden=false;$("admin-publish-toggle").textContent="＋ Publier une Target";$("admin-publish-toggle").setAttribute("aria-expanded","false");$("spitta-requests").hidden=true;}
   call("/api/me",{}).then(function(r){
     var host=$("spittamine");if(!host)return;host.innerHTML="";
     var mine=(r.mine||[]);
@@ -889,6 +890,7 @@ function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegr
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 $("addp").onclick=function(){$("pf").click()};
 $("spittaadd").onclick=function(){$("spittafile").click()};
+$("admin-publish-toggle").onclick=function(){var card=$("spitta-publish-card");var opening=card.hidden;card.hidden=!opening;$("admin-publish-toggle").setAttribute("aria-expanded",String(opening));$("admin-publish-toggle").textContent=opening?"− Fermer le formulaire":"＋ Publier une Target";if(opening)card.scrollIntoView({behavior:"smooth",block:"start"});};
 $("spittafile").onchange=function(){
   var f=this.files[0];this.value="";if(!f)return;$("spittamsg").textContent="Préparation de Target…";
   shrink(f,function(src){$("spittamsg").textContent="Publication…";call("/api/add",{image:src,prix:$("spittaprice").value,pourcentage:$("spittapercentage").value,categorie:$("spittacategory").value,pays:$("spittacountry").value}).then(function(r){
@@ -960,7 +962,7 @@ function enterApp(response){
     $("admin-tab").hidden=false;
     $("admin-tab").textContent="Administration";
     $("tabs").querySelectorAll("button").forEach(function(b){
-      b.hidden=b.dataset.t!=="e"&&b.dataset.t!=="c";
+      b.hidden=false;
       b.classList.toggle("on",b.dataset.t==="c");
     });
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c");});
