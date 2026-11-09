@@ -57,11 +57,10 @@ header{display:flex;align-items:center;gap:10px;margin-bottom:24px;flex-wrap:wra
 header h2{margin:0;font-size:1.15rem;font-weight:700}
 header span{margin-left:auto;color:var(--mute);font-size:.8rem}
 .refresh{background:#111110;border:1px solid #55534e;color:#eeeae2;border-radius:999px;padding:8px 11px;font:600 .72rem Inter,system-ui,sans-serif;cursor:pointer}
-.tabs{position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:22px}
-.tabs button{position:relative;z-index:1;background:none;border:0;color:var(--mute);font:600 .68rem Inter,system-ui,sans-serif;padding:12px 3px;cursor:pointer;transition:color .3s;white-space:nowrap}
-.tabs button.on{color:var(--bg)}
-.pill{position:absolute;top:4px;bottom:4px;left:4px;width:calc(16.6667% - 3.2px);border-radius:999px;background:var(--sweep);box-shadow:0 0 22px rgba(238,234,226,.4);transition:transform .35s cubic-bezier(.3,.9,.3,1)}
-.tabs.two .pill{transform:translateX(100%)}
+.tabs{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:9px;background:transparent;border:0;border-radius:0;padding:0;margin:0 0 24px}
+.tabs button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:54px;padding:12px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg2);color:var(--mute);font:600 .9rem Inter,system-ui,sans-serif;cursor:pointer;transition:background .2s,border-color .2s,color .2s;white-space:normal;text-align:center;line-height:1.25}
+.tabs button.on{color:var(--bg);background:var(--sweep);border-color:var(--sweep);box-shadow:0 5px 18px rgba(238,234,226,.12)}
+.tabs .pill{display:none}
 .lead{line-height:1.9;margin:0 0 22px}
 .row{margin-bottom:15px;padding:18px}
 section{padding-bottom:14px}
@@ -233,12 +232,12 @@ section.on{display:block;animation:in .4s ease both}
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
-    <button class="on" data-t="a">En ligne</button>
-    <button data-t="b">Physique</button>
-    <button data-t="d">Lanceur</button>
-    <button data-t="e" id="spitta-tab">Spitta</button>
-    <button data-t="f">Chat direct</button>
-    <button data-t="g">Spitta Blacklist</button>
+    <button class="on" data-t="a">Services en ligne</button>
+    <button data-t="b">Targets physiques</button>
+    <button data-t="d">Mes actions</button>
+    <button data-t="e" id="spitta-tab">Mes publications</button>
+    <button data-t="f">Messages</button>
+    <button data-t="g">Liste noire</button>
     <button data-t="c" id="admin-tab" hidden>Admin</button>
   </div>
 
@@ -295,7 +294,7 @@ section.on{display:block;animation:in .4s ease both}
     <div id="blacklistitems"></div>
   </section>
 </main>
-<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
+<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="erop-sender-proof" hidden style="margin:14px 0;padding:16px;border:1px solid var(--sweep);border-radius:16px;background:var(--bg2)"><b>Preuve d’envoi demandée par EROP</b><p class="lead" style="margin:8px 0 12px">Ajoute une photo de ta preuve d’envoi. Si tu ne peux pas envoyer de photo, utilise le bouton de déclaration ci-dessous.</p><button class="btn" id="erop-sender-photo" type="button" style="width:100%">📷 Joindre une photo de preuve</button><button class="btn s" id="erop-sender-unavailable" type="button" style="width:100%;margin-top:8px">Je ne peux pas envoyer de photo</button><input type="file" id="erop-sender-file" accept="image/*" hidden></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
