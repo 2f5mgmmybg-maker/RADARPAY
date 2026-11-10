@@ -1495,6 +1495,7 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
 }).catch(function(e){
   console.error("RADAR PAYMENT: impossible de charger photos.json",e);
   render();
+  $("stamp").textContent="Catalogue indisponible. Vérifie ta connexion puis touche Actualiser.";
 });
 
 // Actualisation automatique des disponibilités physiques.
@@ -1502,13 +1503,16 @@ setInterval(function(){
   fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Actualisation indisponible");return r.json()}).then(function(d){
     PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});
     ST.maj=new Date().toLocaleString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});render();if(USER_ROLE==="spitta")loadSpittaItems();
-  }).catch(function(e){console.warn("RADAR PAYMENT: actualisation automatique échouée",e)});
+  }).catch(function(e){
+    console.warn("RADAR PAYMENT: actualisation automatique échouée",e);
+    $("stamp").textContent=(ST.maj?"Mis à jour le "+ST.maj+" · ":"")+"Actualisation impossible. Les dernières données sont conservées.";
+  });
 },PHYSICAL_REFRESH_MS);
 
 var tabs=document.getElementById("tabs");
 $("refresh").onclick=function(){
   var button=$("refresh");button.disabled=true;button.textContent="↻ Actualisation…";
-  var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=new Date().toLocaleString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});render()})];
+  var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=new Date().toLocaleString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});render()}).catch(function(e){$("stamp").textContent="Actualisation impossible. Les dernières données sont conservées.";throw e})];
   if(USER_ROLE)tasks.push(loadChatList());
   if(ADMIN){tasks.push(loadRegistrations(),loadMonitor(),loadAdminPaymentReports(),loadAdminChats());var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
   Promise.all(tasks).then(function(){var msg=$("adminrefreshmsg");if(ADMIN&&msg)msg.textContent="Données actualisées.";}).catch(function(e){var msg=$("adminrefreshmsg");if(msg)msg.textContent=e.message||"Actualisation impossible.";}).finally(function(){button.disabled=false;button.textContent="↻ Actualiser"});
