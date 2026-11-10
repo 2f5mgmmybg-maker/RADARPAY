@@ -504,7 +504,7 @@ a{color:#7defff}
 
 @media(min-width:600px){#grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-</style>
+\n/* Présence en direct des CALLER et SPITTA */\n.presence-wrap{display:flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;white-space:nowrap}\n.presence-item{display:inline-flex;align-items:center;gap:5px!important;margin:0!important;padding:6px 8px;border:1px solid rgba(57,255,110,.24);border-radius:999px;background:rgba(20,110,55,.12);color:#d8ffe4!important;font-size:.68rem!important;line-height:1!important}\n.presence-item b{font-size:.65rem;font-weight:800;letter-spacing:.02em}\n.presence-item strong{font-size:.75rem;font-weight:800;color:#72ff9a;font-variant-numeric:tabular-nums}\n.presence-dot{display:inline-block;flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:#39f477;box-shadow:0 0 8px rgba(57,244,119,.9);animation:presenceBlink 1.15s ease-in-out infinite}\n@keyframes presenceBlink{0%,100%{opacity:1;box-shadow:0 0 8px rgba(57,244,119,.95)}50%{opacity:.25;box-shadow:0 0 1px rgba(57,244,119,.2)}}\n@media(max-width:420px){.presence-wrap{gap:5px}.presence-item{padding:6px 7px;font-size:.62rem!important}}\n</style>
 </head>
 <body>
 <div class="rings"></div>
@@ -590,7 +590,7 @@ a{color:#7defff}
 </div>
 
 <main>
-  <header class="brand-header"><img class="brand-logo" src="assets/radarpay-logo.svg" alt="Radar"><div class="dot"></div><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
+  <header class="brand-header"><img class="brand-logo" src="assets/radarpay-logo.svg" alt="Radar"><div class="presence-wrap" aria-live="polite"><span class="presence-item"><i class="presence-dot"></i><b>CALLER</b><strong id="caller-active-count">0</strong></span><span class="presence-item"><i class="presence-dot"></i><b>SPITTA</b><strong id="spitta-active-count">0</strong></span></div><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
@@ -1565,9 +1565,29 @@ function setAuthView(view){
   ["auth-choices","signup-panel","login-panel","legacy-pin-panel"].forEach(function(id){$(id).hidden=id!==view;});
   $("check-approval").hidden=true;
 }
+function renderPresence(counts){
+  counts=counts||{};
+  var caller=$("caller-active-count"),spitta=$("spitta-active-count");
+  if(caller)caller.textContent=String(Math.max(0,Number(counts.caller)||0));
+  if(spitta)spitta.textContent=String(Math.max(0,Number(counts.spitta)||0));
+}
+var PRESENCE_TIMER=null;
+function refreshPresence(){
+  if(!USER_ROLE||document.visibilityState!=="visible")return;
+  call("/api/me",{}).then(function(r){if(r&&r.active_counts)renderPresence(r.active_counts);}).catch(function(){});
+}
+function startPresence(){
+  if(PRESENCE_TIMER)clearInterval(PRESENCE_TIMER);
+  refreshPresence();
+  PRESENCE_TIMER=setInterval(refreshPresence,25000);
+}
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="visible")refreshPresence();
+});
 function enterApp(response){
   SESSION_TOKEN=response.session_token||"";
   USER_ROLE=response.role;
+  startPresence();
   simplifyWorkspaceTabs();
   document.body.classList.add("authorized");
   renderServices();
