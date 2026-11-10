@@ -262,14 +262,14 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
     <div id="signup-step-role" hidden>
       <p class="lead" style="width:100%">Étape 2 : choisis ton profil.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-        <button class="btn" id="choose-lanceur" type="button">Je suis Lanceur</button>
+        <button class="btn" id="choose-lanceur" type="button">Je suis CALLER</button>
         <button class="btn" id="choose-spitta" type="button">Je suis SPITTA</button>
       </div>
     </div>
     <div id="signup-step-rules" hidden style="width:100%;text-align:left">
       <h3 id="signup-rules-title">Règlement</h3>
       <div id="signup-rules-lanceur" hidden>
-        <p><b>Règlement du Lanceur</b></p>
+        <p><b>Règlement du CALLER</b></p>
         <ul>
           <li>Tu consultes les TARGETS publiées et contactes le SPITTA concerné uniquement si tu souhaites réellement poursuivre.</li>
           <li>Tu attends la réponse du SPITTA. Après sa confirmation et ton acceptation de la vente, le délai de la première capture est de <b>2 minutes</b>.</li>
@@ -283,9 +283,9 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
         <p><b>Règlement du SPITTA</b></p>
         <ul>
           <li>Tu publies des TARGETS exactes et loyales, avec les informations demandées et une photo correspondant à la TARGET.</li>
-          <li>Tu réponds à une demande du Lanceur dans un délai de <b>50 secondes</b>.</li>
-          <li>Après avoir confirmé la disponibilité et que le Lanceur a accepté la vente, tu disposes de <b>2 minutes</b> pour envoyer la première capture.</li>
-          <li>Si une procédure EROP est déclenchée, tu attends que le Lanceur ait envoyé sa preuve ou enregistré sa déclaration d’indisponibilité. À partir de cette étape, tu disposes de <b>3 min 30</b> pour envoyer volontairement la deuxième capture.</li>
+          <li>Tu réponds à une demande du CALLER dans un délai de <b>50 secondes</b>.</li>
+          <li>Après avoir confirmé la disponibilité et que le CALLER a accepté la vente, tu disposes de <b>2 minutes</b> pour envoyer la première capture.</li>
+          <li>Si une procédure EROP est déclenchée, tu attends que le CALLER ait envoyé sa preuve ou enregistré sa déclaration d’indisponibilité. À partir de cette étape, tu disposes de <b>3 min 30</b> pour envoyer volontairement la deuxième capture.</li>
           <li>Après l’envoi de la deuxième capture, tu disposes de <b>10 minutes</b> pour valider ERAF.</li>
           <li>Un dépassement du délai EROP entraîne un blocage de <b>7 jours</b> ; un dépassement du délai ERAF entraîne un blocage de <b>10 jours</b>. Les 3 SCREEN sont à envoyer par le SPITTA.</li>
           <li>Les frais de garantie représentent <b>50 % du montant de la TARGET</b>. En cas de manquement sanctionné, ce montant est signalé comme dû ; son règlement doit être confirmé par l’administration.</li>
@@ -352,9 +352,9 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
   </section>
-  <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
+  <section id="d"><p class="lead">Tes discussions en tant que CALLER. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
-    <p class="lead" id="publications-intro">Espace SPITTA : publie tes TARGETS avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
+    <p class="lead" id="publications-intro">Espace SPITTA : publie tes TARGETS avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un CALLER te contacte, tu le vois ici et dans Chat direct.</p>
     <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une TARGET</button>
     <div class="spitta-publish-card" id="spitta-publish-card">
       <h3>Publier une TARGET</h3>
@@ -477,7 +477,7 @@ function openLb(p){
         }).catch(function(e){m.textContent=e.message||"Modification impossible.";w.disabled=false});
         return;
       }
-      if(USER_ROLE!=="lanceur"){m.textContent="Seul le Lanceur peut faire une offre sur une publication qui ne lui appartient pas.";return}
+      if(USER_ROLE!=="lanceur"){m.textContent="Seul le CALLER peut faire une offre sur une publication qui ne lui appartient pas.";return}
       var offer=l.querySelector("#lb-offer").value.trim();
       if(!offer){m.textContent="Indique ta proposition de prix avant de contacter le SPITTA.";l.querySelector("#lb-offer").focus();return}
       w.disabled=true;m.textContent="Envoi de ta proposition…";
@@ -718,7 +718,7 @@ function loadChatList(){
     var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
     (r.chats||[]).forEach(function(c){
       var b=document.createElement("button");b.className="chatitem";
-      b.textContent=(c.client_name||"Lanceur")+" (Lanceur) ↔ SPITTA — "+(c.price||"sans prix")+" — "+(c.status||"en cours");
+      b.textContent=(c.client_name||"Lanceur")+" (CALLER) ↔ SPITTA — "+(c.price||"sans prix")+" — "+(c.status||"en cours");
       var small=document.createElement("small");small.textContent=(c.last||"Aucun message")+(c.guarantee_fee_due?" · Frais de garantie dus (50 %) : "+(c.guarantee_fee_amount?c.guarantee_fee_amount+(c.guarantee_fee_currency?" "+c.guarantee_fee_currency:""):"montant à vérifier"):"");b.appendChild(small);
       b.onclick=function(){openChat(c.id)};
       if(userhost&&me&&Number(c.client)===me)userhost.appendChild(b.cloneNode(true)),userhost.lastChild.onclick=function(){openChat(c.id)};
@@ -729,7 +729,7 @@ function loadChatList(){
     if(host&&ADMIN&&!host.children.length)host.textContent="Aucune discussion à superviser.";
     if(livehost&&!livehost.children.length)livehost.textContent="Aucune discussion en direct pour le moment.";
     loadSpittaItems();if(ADMIN)loadAdminChats();
-    if(userhost&&!userhost.children.length)userhost.textContent="Aucune discussion de lanceur en cours.";
+    if(userhost&&!userhost.children.length)userhost.textContent="Aucune discussion de CALLER en cours.";
     if(spittahost&&!spittahost.children.length)spittahost.textContent="Aucune demande reçue en tant que SPITTA.";
     
   }).catch(function(e){$("pm").textContent=(e&&e.message)||"Impossible de charger les discussions."});
@@ -745,8 +745,8 @@ function loadAdminChats(){
   if(!ADMIN)return;
   call("/api/adminchat/list",{}).then(function(r){
     var host=$("adminlaunchers");if(!host)return;host.innerHTML="";
-    (r.launchers||[]).forEach(function(x){var b=document.createElement("button");b.className="chatitem";b.textContent="Lanceur #"+x.id;var sm=document.createElement("small");sm.textContent=x.last||"Aucun message";b.appendChild(sm);b.onclick=function(){openAdminChat(x.id)};host.appendChild(b)});
-    if(!host.children.length)host.textContent="Aucun Lanceur enregistré.";
+    (r.launchers||[]).forEach(function(x){var b=document.createElement("button");b.className="chatitem";b.textContent="CALLER #"+x.id;var sm=document.createElement("small");sm.textContent=x.last||"Aucun message";b.appendChild(sm);b.onclick=function(){openAdminChat(x.id)};host.appendChild(b)});
+    if(!host.children.length)host.textContent="Aucun CALLER enregistré.";
   }).catch(function(e){console.warn("Chats admin:",e)});
 }
 $("openadminchat").onclick=function(){openAdminChat()};
@@ -765,14 +765,14 @@ function renderMessages(c){
   var signature=JSON.stringify([c.status,c.client_offer,c.proof_deadline,c.erop_deadline,c.erop_sender_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
-  $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le Lanceur #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le SPITTA — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
+  $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le CALLER #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le SPITTA — ":vendor?"Discussion avec le CALLER — ":"Supervision — ")+(c.price||"commande");
   var open=ADMIN_CHAT_MODE||c.status==="proof_received"||c.status==="expired";
   $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
   $("chatattach").disabled=ADMIN_CHAT_MODE||observer||!open;
   $("chattext").placeholder=observer&&!ADMIN_CHAT_MODE?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
-  var labels={pending:"demande en attente",vendor_confirmed:"SPITTA confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_sender_expired:"EROP — étape du Lanceur expirée",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
-  var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"EROP — preuve du Lanceur attendue (délai de 2 minutes)":labels[c.status]||c.status;
-  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+statusLabel+(c.client_offer?" · Proposition du Lanceur : "+c.client_offer:"");
+  var labels={pending:"demande en attente",vendor_confirmed:"SPITTA confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_sender_expired:"EROP — étape du CALLER expirée",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
+  var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"EROP — preuve du CALLER attendue (délai de 2 minutes)":labels[c.status]||c.status;
+  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+statusLabel+(c.client_offer?" · Proposition du CALLER : "+c.client_offer:"");
   var senderProof=$("erop-sender-proof");
   senderProof.hidden=ADMIN_CHAT_MODE||observer||!(client&&c.status==="erop_pending"&&!c.erop_sender_proof_submitted);
   var step=$("chatproofstep");
@@ -788,7 +788,7 @@ function renderMessages(c){
   var countdown=$("chatcountdown"),deadline=c.status==="proof_pending"?c.proof_deadline:c.status==="erop_pending"?(c.erop_sender_proof_submitted?c.erop_deadline:c.erop_sender_deadline):0;
   countdown.dataset.deadline=deadline||"";
   countdown.dataset.kind=c.status==="erop_pending"?"EROP":c.status==="proof_pending"?"Capture":"";
-  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_sender_expired"?"Délai de 2 minutes écoulé. Demande EROP clôturée.":c.status==="erop_pending"&&!c.erop_sender_proof_submitted?(client?"À toi : joins ta photo de preuve ou déclare que tu ne peux pas en fournir dans les 2 minutes.":"Le Lanceur doit joindre sa photo de preuve ou déclarer qu’il ne peut pas en fournir dans les 2 minutes.") :c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
+  countdown.textContent=deadline?(countdown.dataset.kind+" · temps restant : "+Math.max(0,Math.ceil(deadline-Date.now()/1000))+" secondes"):c.status==="erop_sender_expired"?"Délai de 2 minutes écoulé. Demande EROP clôturée.":c.status==="erop_pending"&&!c.erop_sender_proof_submitted?(client?"À toi : joins ta photo de preuve ou déclare que tu ne peux pas en fournir dans les 2 minutes.":"Le CALLER doit joindre sa photo de preuve ou déclarer qu’il ne peut pas en fournir dans les 2 minutes.") :c.status==="erop_expired"?"Délai écoulé. Discussion bloquée.":c.status==="proof_expired"?"Délai écoulé. Vente bloquée.":"";
   var host=$("chatmessages"),previousScrollHeight=host.scrollHeight,previousScrollTop=host.scrollTop;var stickToBottom=(previousScrollHeight-previousScrollTop-host.clientHeight)<90;host.innerHTML="";
   (c.messages||[]).forEach(function(m){
     var mine=m.from===me;
@@ -1061,8 +1061,8 @@ function selectSignupRole(role){
   SIGNUP_ROLE=role;
   $("signup-step-role").hidden=true;
   $("signup-step-rules").hidden=false;
-  $("signup-rules-title").textContent=role==="lanceur"?"Règlement du Lanceur":"Règlement du SPITTA";
-  $("signup-rules-lanceur").hidden=role!=="lanceur";
+  $("signup-rules-title").textContent=role==="lanceur"?"Règlement du CALLER":"Règlement du SPITTA";
+  $("signup-rules-CALLER").hidden=role!=="lanceur";
   $("signup-rules-SPITTA").hidden=role!=="spitta";
   $("signup-guarantee-word").value="";
   $("role-message").textContent="Étape 3 : lis le règlement correspondant à ton profil.";
@@ -1122,7 +1122,7 @@ $("signup-next").onclick=function(){
   $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
   $("role-message").textContent="Étape 2 : choisis ton profil."; 
 };
-$("choose-lanceur").onclick=function(){selectSignupRole("lanceur");};
+$("choose-CALLER").onclick=function(){selectSignupRole("lanceur");};
 $("choose-SPITTA").onclick=function(){selectSignupRole("spitta");};
 $("signup-accept-rules").onclick=function(){if(!SIGNUP_ROLE){$("role-message").textContent="Choisis d’abord ton profil.";return;}registerRole(SIGNUP_ROLE);};
 $("signup-back-role").onclick=function(){$("signup-step-rules").hidden=true;$("signup-step-role").hidden=false;SIGNUP_ROLE=null;$("signup-guarantee-word").value="";$("role-message").textContent="Étape 2 : choisis ton profil.";};
