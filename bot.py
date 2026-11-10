@@ -2069,7 +2069,7 @@ class Ping(BaseHTTPRequestHandler):
 
     def _s(self, obj):
         body = json.dumps(obj).encode()
-        status = 200 if obj.get("ok") or "role" in obj else (401 if "Ouvre l'app depuis Telegram." in obj.get("error", "") else 400)
+        status = 200 if obj.get("ok") or obj.get("pending") or "role" in obj else (401 if "Ouvre l'app depuis Telegram." in obj.get("error", "") else 400)
         self.send_response(status)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
