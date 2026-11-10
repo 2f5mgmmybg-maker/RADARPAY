@@ -40,7 +40,7 @@ class EropSenderProofTests(unittest.TestCase):
             patch.object(bot, "say"),
             patch.object(bot, "gh_put"),
             patch.object(bot, "gh_del"),
-            patch.object(bot, "decode_image_data_uri", return_value=b"image-bytes"),
+            patch.object(bot, "decode_jpeg_data_uri", return_value=b"\xff\xd8\xffimage-bytes"),
             patch.object(bot, "FERNET", SimpleNamespace(encrypt=lambda value: b"encrypted-image")),
         ]
         for item in self.patches:
@@ -110,10 +110,10 @@ class EropSenderProofTests(unittest.TestCase):
         bot.say.assert_any_call(self.client["id"], "⏰ Le délai de 2 minutes pour la capture est dépassé. La vente est bloquée.")
         bot.say.assert_any_call(self.vendor["id"], "⏰ Le délai de 2 minutes pour envoyer la capture est dépassé. La vente est bloquée.")
 
-    def test_sender_stage_timeout_closes_request_without_blacklisting_spitta(self):
+    def test_sender_stage_timeout_restores_chat_without_blacklisting_spitta(self):
         self.chat["erop_sender_deadline"] = int(time.time()) - 1
         bot.process_pending_requests()
-        self.assertEqual(self.chat["status"], "erop_sender_expired")
+        self.assertEqual(self.chat["status"], "proof_received")
         self.assertIn("Délai de 2 minutes dépassé", self.chat["messages"][-1]["text"])
         self.assertNotIn(str(self.vendor["id"]), self.private_state["blacklist"])
 
