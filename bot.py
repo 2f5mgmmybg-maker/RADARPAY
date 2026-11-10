@@ -592,6 +592,13 @@ def decode_image_data_uri(value, max_bytes=650000):
     return raw
 
 
+def decode_jpeg_data_uri(value, max_bytes=650000):
+    raw = decode_image_data_uri(value, max_bytes=max_bytes)
+    if not raw.startswith(b"\xff\xd8\xff"):
+        raise ValueError("La photo doit être préparée au format JPEG.")
+    return raw
+
+
 
 def decode_audio_data_uri(value, expected_mime, max_bytes=650000):
     if not isinstance(value, str) or len(value) > 900000:
@@ -1077,7 +1084,7 @@ def api(path, b):
                 chat.update({"status": "pending", "client_offer": client_offer, "request_deadline": now + 50,
                              "remind_at": now + 30, "reminded": False})
             else:
-                rid = f"{uid}-{int(time.time() * 1000)}"
+                rid = f"{uid}-{int(time.time() * 1000)}-{secrets.token_hex(4)}"
                 chat = {"id": rid, "client": uid, "vendor": vendor, "product": product_id,
                         "price": prix, "client_offer": client_offer, "client_name": who, "client_url": url, "created": now,
                         "status": "pending", "request_deadline": now + 50, "remind_at": now + 30,
@@ -1350,7 +1357,7 @@ def api(path, b):
         if not image.startswith("data:image/") or len(image) > 4_200_000:
             return {"error": "La capture d’écran de paiement est obligatoire."}
         try:
-            raw_image = decode_image_data_uri(image)
+            raw_image = decode_jpeg_data_uri(image)
         except Exception as e:
             print("validation preuve paiement:", repr(e))
             return {"error": "Capture de paiement invalide ou trop lourde."}
@@ -2044,11 +2051,11 @@ def api(path, b):
             return {"error": "Profil SPITTA invalide : ton pseudo d’inscription est introuvable. Contacte l’administration avant de publier."}
         display_name = signup_pseudo
         try:
-            raw = decode_image_data_uri(b.get("image", ""), max_bytes=3_000_000)
+            raw = decode_jpeg_data_uri(b.get("image", ""), max_bytes=3_000_000)
         except (ValueError, KeyError):
             return {"error": "Photo invalide ou trop lourde. Utilise une image JPEG, PNG, GIF ou WebP."}
-        pid = str(int(time.time() * 1000))
-        photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", "")).strip()[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "auteur": display_name, "o": enc(uid, pid)}
+        pid = str(int(time.time() * 1000)) + "-" + secrets.token_hex(4)
+        photo = {"id": pid, "created": int(time.time()), "image": pid + ".jpg", "prix": str(b.get("prix", "")).strip()[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "auteur": display_name, "o": enc(uid, pid)}
         allowed_prices = {"2500 €": "2500", "5000 €": "5000", "9900 €": "9900"}
         if photo["prix"] not in allowed_prices or photo["categorie"] != allowed_prices[photo["prix"]]:
             return {"error": "Choisis uniquement 2 500 €, 5 000 € ou 9 900 €."}
