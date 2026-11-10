@@ -1143,7 +1143,7 @@ def api(path, b):
     if path == "/api/payment/not-done":
         if r != "lanceur":
             return {"error": "Réservé aux comptes CALLER."}
-        reason = re.sub(r"\\s+", " ", str(b.get("reason", "")).strip())[:1000]
+        reason = re.sub(r"\s+", " ", str(b.get("reason", "")).strip())[:1000]
         if len(reason) < 12:
             return {"error": "Explique la raison en au moins 12 caractères."}
         now = int(time.time())
@@ -1156,10 +1156,17 @@ def api(path, b):
             if followup.get("status") not in ("awaiting", "overdue"):
                 return {"error": "Cette réponse a déjà été enregistrée."}
             late = now >= int(followup.get("deadline", 0))
-            report = {"id": secrets.token_hex(8), "launcher": uid, "site": click.get("site", ""),
-                "url": click.get("url", ""), "time": now, "status": "reason_pending",
-                "reason": reason, "article": "", "amount": "", "currency": "", "late": late}
-            pdata.setdefault("payment_reports", []).append(report)
+            reports = pdata.setdefault("payment_reports", [])
+            report = next((x for x in reversed(reports)
+                           if x.get("launcher") == uid and x.get("site") == click.get("site")
+                           and x.get("status") == "overdue"), None)
+            if report:
+                report.update({"status": "reason_pending", "reason": reason, "late": True, "time": now})
+            else:
+                report = {"id": secrets.token_hex(8), "launcher": uid, "site": click.get("site", ""),
+                    "url": click.get("url", ""), "time": now, "status": "reason_pending",
+                    "reason": reason, "article": "", "amount": "", "currency": "", "late": late}
+                reports.append(report)
             followup.update({"status": "submitted", "answer": "not_paid", "report_id": report["id"], "submitted_at": now})
             thread = pdata.setdefault("admin_chats", {}).setdefault(str(uid), [])
             thread.append({"from": uid, "name": user.get("first_name", "CALLER"),
@@ -1233,7 +1240,7 @@ def api(path, b):
             return {"error": "Seuls les Lanceurs peuvent déclarer un paiement."}
         amount = str(b.get("amount", "")).strip().replace(",", ".")
         currency = str(b.get("currency", "")).upper().strip()
-        article = re.sub(r"\\s+", " ", str(b.get("article", "")).strip())[:160]
+        article = re.sub(r"\s+", " ", str(b.get("article", "")).strip())[:160]
         site = str(b.get("site", "")).strip()[:100]
         image = str(b.get("image", ""))
         if not re.fullmatch(r"\d{1,9}(?:\.\d{1,2})?", amount) or float(amount) <= 0:
