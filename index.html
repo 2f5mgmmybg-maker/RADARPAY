@@ -437,7 +437,7 @@ function render(){
     var d=document.createElement("div");d.className="slot";
     var im=document.createElement("img");im.src=p.src;im.alt="";d.appendChild(im);
     if(ADMIN){
-      var details=document.createElement("div");details.className="photo-details";details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");d.appendChild(details);
+      var details=document.createElement("div");details.className="photo-details";details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé")+" · Auteur : "+(p.auteur||"Non renseigné");d.appendChild(details);
       var c=document.createElement("div");c.className="ctl";
       var x=document.createElement("button");x.type="button";x.title="Supprimer définitivement cette publication";x.textContent="✕";x.onclick=function(){if(!confirm("Supprimer définitivement cette publication ?"))return;x.disabled=true;call("/api/delete",{id:p.id}).then(function(r){if(!r.ok)throw new Error(r.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(item){return item.id!==p.id});render();if($("adminrefreshmsg"))$("adminrefreshmsg").textContent="Publication supprimée.";}).catch(function(e){x.disabled=false;if($("adminrefreshmsg"))$("adminrefreshmsg").textContent=e.message||"Suppression impossible."})};
       c.appendChild(x);d.appendChild(c);
