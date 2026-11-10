@@ -959,7 +959,7 @@ def api(path, b):
         return {"ok": True, "role": existing_role, "session_token": token}
     if path == "/api/admin/access":
         if uid != OWNER:
-            return {"error": "Accès réservé au compte propriétaire Telegram."}
+            return {"error": "Ce compte Telegram n’est pas reconnu comme propriétaire. Vérifie OWNER_ID dans le service Render de l’API RADARPAY."}
         configured_code = os.environ.get("ADMIN_ACCESS_CODE", "").strip().strip(chr(34)).strip(chr(39)).strip()
         supplied_code = str(b.get("code", "")).strip()
         if not configured_code:
