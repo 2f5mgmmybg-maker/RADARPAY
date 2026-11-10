@@ -1108,15 +1108,19 @@ def api(path, b):
             roles = dict(load_roles())
             pdata = private_load()
             items = []
-            for launcher, launcher_role in roles.items():
-                if launcher_role == "lanceur":
-                    msgs = list(pdata.setdefault("admin_chats", {}).get(str(launcher), []))
+            for account_id, account_role in roles.items():
+                if account_role in ("lanceur", "spitta"):
+                    msgs = list(pdata.setdefault("admin_chats", {}).get(str(account_id), []))
                     last = msgs[-1].get("text", "") if msgs else "Aucun message"
-                    items.append({"id": str(launcher), "last": last, "time": msgs[-1].get("time", 0) if msgs else 0})
-        return {"ok": True, "launchers": sorted(items, key=lambda x: x["time"], reverse=True)}
+                    profile = next((x for x in pdata.setdefault("registrations", []) if str(x.get("user_id")) == str(account_id)), {})
+                    label = profile.get("pseudo") or profile.get("first_name") or ("SPITTA" if account_role == "spitta" else "CALLER")
+                    items.append({"id": str(account_id), "role": account_role, "label": str(label)[:40],
+                                  "last": last, "time": msgs[-1].get("time", 0) if msgs else 0})
+        return {"ok": True, "launchers": sorted([x for x in items if x["role"] == "lanceur"], key=lambda x: x["time"], reverse=True),
+                "spittas": sorted([x for x in items if x["role"] == "spitta"], key=lambda x: x["time"], reverse=True)}
     if path == "/api/adminchat/messages":
         target = str(b.get("id", uid))
-        if r != "owner" and (r != "lanceur" or target != str(uid)):
+        if r != "owner" and (r not in ("lanceur", "spitta") or target != str(uid)):
             return {"error": "Accès refusé."}
         with LOCK:
             pdata = private_load()
@@ -1135,7 +1139,7 @@ def api(path, b):
     if path == "/api/adminchat/send":
         target = str(b.get("id", uid))
         msg = str(b.get("text", "")).strip()[:1500]
-        if r != "owner" and (r != "lanceur" or target != str(uid)):
+        if r != "owner" and (r not in ("lanceur", "spitta") or target != str(uid)):
             return {"error": "Accès refusé."}
         if not msg:
             return {"error": "Écris un message."}
