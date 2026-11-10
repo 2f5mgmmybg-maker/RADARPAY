@@ -2013,9 +2013,10 @@ def api(path, b):
                 data["photos"].insert(0, photo)
                 save(data, sha)
         except Exception as e:
-            print("enregistrement TARGET impossible:", repr(e))
-            gh_del(f"photos/{pid}.jpg", "Nettoyage d'une TARGET non enregistrée")
-            return {"error": "La photo a été envoyée mais la publication n’a pas pu être enregistrée. Réessaie."}
+            # En cas de délai réseau ambigu, le commit photos.json peut déjà être passé.
+            # Conserver l'image évite de casser une publication qui aurait été enregistrée.
+            print("enregistrement TARGET non confirmé:", repr(e))
+            return {"error": "Enregistrement non confirmé. Actualise la galerie avant de réessayer pour éviter un doublon."}
         monitor_event("publication", "Nouvelle TARGET publiée", "SPITTA : " + display_name + " · Prix : " + photo["prix"] + " · Pays : " + (photo["pays"] or "Non précisé"), "info", False)
         notification = True
         try:
