@@ -17,6 +17,7 @@ LINK = os.environ.get("MINIAPP_LINK") or SITE
 # si RENDER_EXTERNAL_URL n'est pas disponible.
 API_URL = (os.environ.get("API_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
 LOCK = threading.Lock()
+ACTIVE_PRESENCE = {}
 FAILS = {}
 RATE_LOCK = threading.Lock()
 RATE_LIMITS = {}
@@ -1540,27 +1541,37 @@ def api(path, b):
             profile = next((x for x in state.setdefault("registrations", [])
                             if str(x.get("user_id")) == str(uid)), None)
             if r in ("lanceur", "spitta"):
+                changed = False
                 if not profile:
                     profile = {"user_id": str(uid), "role": r, "status": "approved",
                                "pseudo": str(user.get("first_name") or "Utilisateur")[:24],
                                "created": int(time.time())}
                     state["registrations"].append(profile)
-                profile["telegram_username"] = str(user.get("username") or profile.get("telegram_username") or "")
-                profile["first_name"] = str(user.get("first_name") or profile.get("first_name") or "")
-                profile["last_seen"] = int(time.time())
-                private_save()
+                    changed = True
+                telegram_username = str(user.get("username") or profile.get("telegram_username") or "")
+                first_name = str(user.get("first_name") or profile.get("first_name") or "")
+                if profile.get("telegram_username") != telegram_username:
+                    profile["telegram_username"] = telegram_username
+                    changed = True
+                if profile.get("first_name") != first_name:
+                    profile["first_name"] = first_name
+                    changed = True
+                if changed:
+                    private_save()
+                ACTIVE_PRESENCE[str(uid)] = {"role": r, "seen": int(time.time())}
             pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
             has_pin = bool(profile and profile.get("pin_hash"))
             active_cutoff = int(time.time()) - 75
             active_counts = {"caller": 0, "spitta": 0}
-            approved_roles = state.setdefault("roles", {})
-            for candidate in state.setdefault("registrations", []):
-                candidate_id = str(candidate.get("user_id", ""))
-                candidate_role = approved_roles.get(candidate_id)
-                if (candidate_role in ("lanceur", "spitta") and
-                        candidate.get("status", "approved") != "pending" and
-                        int(candidate.get("last_seen", 0) or 0) >= active_cutoff):
-                    active_counts["caller" if candidate_role == "lanceur" else "spitta"] += 1
+            for active_id, presence in list(ACTIVE_PRESENCE.items()):
+                if int(presence.get("seen", 0)) < active_cutoff:
+                    ACTIVE_PRESENCE.pop(active_id, None)
+                    continue
+                active_role = presence.get("role")
+                if active_role == "lanceur":
+                    active_counts["caller"] += 1
+                elif active_role == "spitta":
+                    active_counts["spitta"] += 1
         return {"role": r, "mine": mine, "pending": pending,
                 "has_pin": has_pin, "active_counts": active_counts,
                 "telegram_username": str(user.get("username") or ""),
