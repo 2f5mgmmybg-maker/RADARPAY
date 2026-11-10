@@ -891,16 +891,7 @@ function loadAdminChats(){
   }).catch(function(e){console.warn("Chats admin:",e)});
 }
 $("openadminchat").onclick=function(){openAdminChat()};
-$("paymentreport").onclick=function(){
-  var amount=$("paymentamount").value.trim(),currency=$("paymentcurrency").value,file=$("paymentproof").files[0];
-  if(!amount||!file){$("paymentmsg").textContent="Le montant et la capture d’écran sont obligatoires.";return}
-  $("paymentreport").disabled=true;$("paymentmsg").textContent="Préparation de la capture…";
-  shrink(file,function(src){call("/api/payment/report",{amount:amount,currency:currency,image:src}).then(function(r){
-    if(!r.ok)throw new Error(r.error||"Déclaration impossible.");
-    $("paymentamount").value="";$("paymentproof").value="";$("paymentmsg").textContent="Déclaration et capture envoyées à l’administrateur. Paiement non vérifié automatiquement.";
-    openAdminChat();
-  }).catch(function(e){$("paymentmsg").textContent=e.message||"Envoi impossible."}).finally(function(){$("paymentreport").disabled=false})},function(e){$("paymentmsg").textContent=(e&&e.message)||"Impossible de préparer la capture. Essaie une autre image.";$("paymentreport").disabled=false});
-};
+
 var PAYMENT_FOLLOWUP=null,PAYMENT_TIMER=null,PAYMENT_POLL_BUSY=false;
 function populatePaymentSites(selected){
   var select=$("payment-site");if(!select)return;select.innerHTML="";
