@@ -1,16 +1,5 @@
 {
   "api": "https://radarpay-90js.onrender.com",
   "maj": "10 novembre",
-  "photos": [
-    {
-      "id": "1794336923473",
-      "image": "1794336923473.jpg",
-      "prix": "5000 €",
-      "pays": "Belgique",
-      "pourcentage": "55",
-      "categorie": "5000",
-      "auteur": "Kyroo",
-      "o": "RCnciqcYqlQ="
-    }
-  ]
+  "photos": []
 }
