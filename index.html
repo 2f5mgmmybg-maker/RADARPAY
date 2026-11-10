@@ -504,7 +504,14 @@ a{color:#7defff}
 
 @media(min-width:600px){#grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-\n/* Présence en direct des CALLER et SPITTA */\n.presence-wrap{display:flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;white-space:nowrap}\n.presence-item{display:inline-flex;align-items:center;gap:5px!important;margin:0!important;padding:6px 8px;border:1px solid rgba(57,255,110,.24);border-radius:999px;background:rgba(20,110,55,.12);color:#d8ffe4!important;font-size:.68rem!important;line-height:1!important}\n.presence-item b{font-size:.65rem;font-weight:800;letter-spacing:.02em}\n.presence-item strong{font-size:.75rem;font-weight:800;color:#72ff9a;font-variant-numeric:tabular-nums}\n.presence-dot{display:inline-block;flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:#39f477;box-shadow:0 0 8px rgba(57,244,119,.9);animation:presenceBlink 1.15s ease-in-out infinite}\n@keyframes presenceBlink{0%,100%{opacity:1;box-shadow:0 0 8px rgba(57,244,119,.95)}50%{opacity:.25;box-shadow:0 0 1px rgba(57,244,119,.2)}}\n@media(max-width:420px){.presence-wrap{gap:5px}.presence-item{padding:6px 7px;font-size:.62rem!important}}\n</style>
+\n/* Compteur vivant CALLER / SPITTA */
+.presence-wrap{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:0;max-width:100%;padding:7px 11px;border:1px solid rgba(57,244,119,.28);border-radius:999px;background:linear-gradient(100deg,rgba(24,120,62,.18),rgba(15,70,40,.08));color:#8bffad;font-size:clamp(.62rem,2.3vw,.76rem);font-weight:800;letter-spacing:.015em;white-space:nowrap;text-shadow:0 0 10px rgba(57,244,119,.28);animation:presenceGlow 2.8s ease-in-out infinite}
+#presence-live-text{font-variant-numeric:tabular-nums}
+.presence-dot{display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#39f477;box-shadow:0 0 9px rgba(57,244,119,.95);animation:presenceBlink 1.15s ease-in-out infinite}
+@keyframes presenceBlink{0%,100%{opacity:1;box-shadow:0 0 9px rgba(57,244,119,.95);transform:scale(1)}50%{opacity:.3;box-shadow:0 0 2px rgba(57,244,119,.2);transform:scale(.78)}}
+@keyframes presenceGlow{0%,100%{border-color:rgba(57,244,119,.22);box-shadow:0 0 8px rgba(57,244,119,.05)}50%{border-color:rgba(57,244,119,.62);box-shadow:0 0 17px rgba(57,244,119,.16)}}
+@media(max-width:420px){.brand-header{gap:7px}.presence-wrap{padding:6px 8px;gap:6px;font-size:.59rem}.brand-header .refresh{padding:7px 9px}}
+</style>
 </head>
 <body>
 <div class="rings"></div>
@@ -590,7 +597,7 @@ a{color:#7defff}
 </div>
 
 <main>
-  <header class="brand-header"><img class="brand-logo" src="assets/radarpay-logo.svg" alt="Radar"><div class="presence-wrap" aria-live="polite"><span class="presence-item"><i class="presence-dot"></i><b>CALLER</b><strong id="caller-active-count">0</strong></span><span class="presence-item"><i class="presence-dot"></i><b>SPITTA</b><strong id="spitta-active-count">0</strong></span></div><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
+  <header class="brand-header"><img class="brand-logo" src="assets/radarpay-logo.svg" alt="Radar"><div class="presence-wrap" aria-live="polite"><i class="presence-dot" aria-hidden="true"></i><span id="presence-live-text">0 CALLER actifs · 0 SPITTA actifs</span></div><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
@@ -1567,14 +1574,14 @@ function setAuthView(view){
 }
 function renderPresence(counts){
   counts=counts||{};
-  var caller=$("caller-active-count"),spitta=$("spitta-active-count");
-  if(caller)caller.textContent=String(Math.max(0,Number(counts.caller)||0));
-  if(spitta)spitta.textContent=String(Math.max(0,Number(counts.spitta)||0));
+  var caller=Math.max(0,Number(counts.caller)||0),spitta=Math.max(0,Number(counts.spitta)||0);
+  var line=$("presence-live-text");
+  if(line)line.textContent=caller+" CALLER actifs · "+spitta+" SPITTA actifs";
 }
 var PRESENCE_TIMER=null;
 function refreshPresence(){
   if(!USER_ROLE||document.visibilityState!=="visible")return;
-  call("/api/me",{}).then(function(r){if(r&&r.active_counts)renderPresence(r.active_counts);}).catch(function(){});
+  call("/api/presence",{}).then(function(r){if(r&&r.active_counts)renderPresence(r.active_counts);}).catch(function(){});
 }
 function startPresence(){
   if(PRESENCE_TIMER)clearInterval(PRESENCE_TIMER);
