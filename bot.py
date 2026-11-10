@@ -1136,7 +1136,7 @@ def api(path, b):
                 })
                 private_save()
                 monitor_event("payment_deadline", "Délai de réponse LINK dépassé",
-                    "Site : " + str(click.get("site", "")) + " · CALLER : " + str(uid), "warning", True)
+                    "Site : " + str(click.get("site", "")) + " · CALLER : " + str(uid), "warning", False, lock_held=True)
             return {"ok": True, "active": True, "site": click.get("site"),
                     "deadline": followup.get("deadline", 0), "status": followup.get("status", "not_started"),
                     "decision": followup.get("decision", "")}
