@@ -932,7 +932,7 @@ function resumePaymentFollowup(){
   call("/api/payment/status",{start:true}).then(function(r){
     if(!r.ok||!r.active)return;
     if(r.status==="decided"){
-      $("payment-followup").hidden=true;PAYMENT_FOLLOWUP=null;
+      $("payment-followup").hidden=true;PAYMENT_FOLLOWUP=null;$("chatui").hidden=true;ACTIVE_CHAT=null;ADMIN_CHAT_MODE=false;
       alert("L’administration a répondu : "+(r.decision==="valid"?"raison valable":"raison non valable")+". Retour à l’accueil pour un nouvel achat.");
       document.querySelectorAll("#tabs button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="a")});
       document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="a")});
