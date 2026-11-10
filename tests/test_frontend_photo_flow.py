@@ -17,6 +17,12 @@ class FrontendPhotoFlowTests(unittest.TestCase):
         self.assertIn('grid.addEventListener("click",function(e){activatePhoto(e.target)},true)', HTML)
         self.assertIn('grid.innerHTML=""', HTML)
 
+    def test_admin_can_open_target_cards_without_transaction_rights(self):
+        self.assertIn('if(p.id!==undefined && p.id!==null)d.dataset.photoId=String(p.id);', HTML)
+        self.assertIn('if(!target||typeof target.closest!=="function")return;', HTML)
+        self.assertNotIn('if(ADMIN||!target||typeof target.closest!=="function")return;', HTML)
+        self.assertIn('var canOffer=USER_ROLE==="lanceur"&&!isMine;', HTML)
+
     def test_lightbox_can_close_and_reopen_without_stale_image_state(self):
         self.assertIn('function closeLb()', HTML)
         self.assertIn('CUR=null', HTML)
