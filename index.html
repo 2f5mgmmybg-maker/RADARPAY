@@ -1011,7 +1011,7 @@ $("resetregistrations").onclick=function(){
 
 
 function loadChatList(){
-  call("/api/chat/list",{}).then(function(r){
+  return call("/api/chat/list",{}).then(function(r){
     var host=$("adminchatitems");if(host){host.innerHTML="";}
     var userhost=$("userchatitems");if(userhost){userhost.innerHTML="";}
     var spittahost=$("spittachatitems");if(spittahost){spittahost.innerHTML="";}
@@ -1042,8 +1042,8 @@ function openAdminChat(id){
   .catch(function(e){$("chaterror").textContent=e.message||"Impossible d’ouvrir le chat admin."});
 }
 function loadAdminChats(){
-  if(!ADMIN)return;
-  call("/api/adminchat/list",{}).then(function(r){
+  if(!ADMIN)return Promise.resolve();
+  return call("/api/adminchat/list",{}).then(function(r){
     var host=$("adminlaunchers");if(!host)return;host.innerHTML="";
     (r.launchers||[]).forEach(function(x){var b=document.createElement("button");b.className="chatitem";b.textContent="CALLER #"+x.id;var sm=document.createElement("small");sm.textContent=x.last||"Aucun message";b.appendChild(sm);b.onclick=function(){openAdminChat(x.id)};host.appendChild(b)});
     if(!host.children.length)host.textContent="Aucun CALLER enregistré.";
