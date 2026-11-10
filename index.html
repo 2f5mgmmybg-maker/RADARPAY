@@ -1010,7 +1010,7 @@ function moveSectionContents(sourceId,targetId,headingText,prepend){
 function simplifyWorkspaceTabs(){
   if(USER_ROLE==="lanceur"){
     moveSectionContents("d","f","Mes actions et paiements",true);
-    var names={"a":"Explorer","b":"TARGET DISPONIBLE","f":"Mes échanges"};
+    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"Mes échanges"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
     moveSectionContents("b","e","TARGET DISPONIBLE",true);
