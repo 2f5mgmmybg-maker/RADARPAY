@@ -65,17 +65,17 @@ class PublicationOwnershipTests(unittest.TestCase):
         self.assertEqual(self.photos["photos"][0]["id"], "target-1")
         bot.say.assert_called_once()
 
-    def test_publication_stores_verified_telegram_author_and_notifies_admin(self):
+    def test_publication_stores_signup_pseudo_and_notifies_admin(self):
         result = self.call_as(self.spitta_id, "spitta", "/api/add",
                               image="data:image/jpeg;base64,dGVzdA==",
                               prix="2500 €", categorie="2500", pourcentage="10",
                               pays="Belgique")
         self.assertTrue(result["ok"])
         saved_photo = self.photos["photos"][0]
-        self.assertEqual(saved_photo["auteur"], "@client_test")
-        self.assertEqual(result["photo"]["auteur"], "@client_test")
+        self.assertEqual(saved_photo["auteur"], "Vendeur Test")
+        self.assertEqual(result["photo"]["auteur"], "Vendeur Test")
         bot.say.assert_called_once()
-        self.assertIn("@client_test", bot.say.call_args.args[1])
+        self.assertIn("Vendeur Test", bot.say.call_args.args[1])
         self.assertIn(str(self.spitta_id), bot.say.call_args.args[1])
 
     def test_spitta_cannot_change_another_users_price(self):
@@ -109,7 +109,7 @@ class PublicationOwnershipTests(unittest.TestCase):
         result = self.call_as(self.lanceur_id, "lanceur", "/api/add",
                               image="data:image/jpeg;base64,dGVzdA==",
                               prix="2500 €", categorie="2500", pourcentage="10", pays="Belgique")
-        self.assertIn("Seuls les comptes Spitta", result["error"])
+        self.assertIn("Seuls les comptes SPITTA", result["error"])
         bot.gh_put.assert_not_called()
         bot.save.assert_not_called()
 
@@ -117,7 +117,7 @@ class PublicationOwnershipTests(unittest.TestCase):
         self.user = {"id": bot.OWNER, "first_name": "Admin"}
         result = bot.api("/api/add", {"initData": "test-init", "image": "data:image/jpeg;base64,dGVzdA==",
                                       "prix": "2500 €", "categorie": "2500", "pourcentage": "10"})
-        self.assertIn("Seuls les comptes Spitta", result["error"])
+        self.assertIn("Seuls les comptes SPITTA", result["error"])
         bot.gh_put.assert_not_called()
         bot.save.assert_not_called()
 
