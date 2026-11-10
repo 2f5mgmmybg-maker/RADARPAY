@@ -1062,7 +1062,7 @@ function selectSignupRole(role){
   $("signup-step-role").hidden=true;
   $("signup-step-rules").hidden=false;
   $("signup-rules-title").textContent=role==="lanceur"?"Règlement du CALLER":"Règlement du SPITTA";
-  $("signup-rules-CALLER").hidden=role!=="lanceur";
+  $("signup-rules-lanceur").hidden=role!=="lanceur";
   $("signup-rules-SPITTA").hidden=role!=="spitta";
   $("signup-guarantee-word").value="";
   $("role-message").textContent="Étape 3 : lis le règlement correspondant à ton profil.";
@@ -1122,7 +1122,7 @@ $("signup-next").onclick=function(){
   $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
   $("role-message").textContent="Étape 2 : choisis ton profil."; 
 };
-$("choose-CALLER").onclick=function(){selectSignupRole("lanceur");};
+$("choose-lanceur").onclick=function(){selectSignupRole("lanceur");};
 $("choose-SPITTA").onclick=function(){selectSignupRole("spitta");};
 $("signup-accept-rules").onclick=function(){if(!SIGNUP_ROLE){$("role-message").textContent="Choisis d’abord ton profil.";return;}registerRole(SIGNUP_ROLE);};
 $("signup-back-role").onclick=function(){$("signup-step-rules").hidden=true;$("signup-step-role").hidden=false;SIGNUP_ROLE=null;$("signup-guarantee-word").value="";$("role-message").textContent="Étape 2 : choisis ton profil.";};
