@@ -90,6 +90,21 @@ class PublicationOwnershipTests(unittest.TestCase):
         result = bot.api("/api/update", {"initData": "test-init", "id": "target-1", "prix": "123 €"})
         self.assertIn("Choisis uniquement", result["error"])
 
+    def test_publisher_can_change_only_own_price_and_category_updates(self):
+        result = self.call_as(self.spitta_id, "spitta", "/api/update",
+                              id="target-1", prix="5000 €")
+        self.assertTrue(result["ok"])
+        self.assertEqual(self.photos["photos"][0]["prix"], "5000 €")
+        self.assertEqual(self.photos["photos"][0]["categorie"], "5000")
+
+    def test_app_access_refreshes_verified_telegram_identity_and_last_seen(self):
+        result = self.call_as(self.spitta_id, "spitta", "/api/me")
+        self.assertEqual(result["telegram_username"], "client_test")
+        profile = next(x for x in self.private["registrations"]
+                       if x["user_id"] == str(self.spitta_id))
+        self.assertTrue(profile["last_seen"])
+        self.assertEqual(profile["telegram_username"], "client_test")
+
 
 if __name__ == "__main__":
     unittest.main()
