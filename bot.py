@@ -29,6 +29,7 @@ CATALOG_SITES = {
     "Farfetch": "https://www.farfetch.com",
     "Zeitauktion": "https://www.zeitauktion.com/fr",
     "Watchdeluxe.it": "https://www.watchdeluxe.it",
+    "Chrono24": "https://www.chrono24.fr",
     "Paysafe Card": "https://www.paysafecard.com",
 }
 
