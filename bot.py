@@ -49,8 +49,8 @@ MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
 
 AIDE = (
     "Panneau admin RADAR PAYMENT 💡\n\n"
-    "📸 Envoie une photo avec le prix en légende (ex : 120 €) : elle est ajoutée.\n"
-    "/liste : voir les photos et les prix\n"
+    "Les TARGETS sont publiées par les comptes SPITTA depuis la mini-app.\n"
+    "/liste : voir les publications et les prix\n"
     "/prix 2 150 € : changer le prix de la photo n°2\n"
     "/supprimer 2 : enlever la photo n°2\n"
     "/vider oui : tout enlever\n"
@@ -1095,7 +1095,7 @@ def api(path, b):
         notified = True
         try:
             who = user.get("username") and ("@" + user["username"]) or user.get("first_name", "CALLER")
-            say(OWNER, "🌐 CLIC SUR UN SITE — RADAR PAYMENT\\nLanceur : " + who + " (ID " + str(uid) + ")\\nSite : " + site + "\\nLien : " + url + "\\nHeure : " + datetime.fromtimestamp(now, ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y à %H:%M:%S") + "\\nUne discussion privée a été ouverte dans l’espace Admin.")
+            say(OWNER, "🌐 CLIC SUR UN SITE — RADAR PAYMENT\\nCALLER : " + who + " (ID " + str(uid) + ")\\nSite : " + site + "\\nLien : " + url + "\\nHeure : " + datetime.fromtimestamp(now, ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y à %H:%M:%S") + "\\nUne discussion privée a été ouverte dans l’espace Admin.")
         except Exception as e:
             notified = False
             print("notification clic site admin:", repr(e))
@@ -1359,7 +1359,7 @@ def api(path, b):
             return {"error": str(e) if isinstance(e, ValueError) else "Impossible d’enregistrer la déclaration."}
         monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click_snapshot["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
         try:
-            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
+            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nCALLER : " + str(uid) +
                 "\nSite : " + click_snapshot["site"] + "\nMontant : " + amount + " " + currency +
                 "\nCapture jointe dans le chat admin de la mini-app.")
         except Exception as e:
