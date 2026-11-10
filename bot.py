@@ -665,7 +665,8 @@ def role(user, code=None):
         return "owner"
     if is_blacklisted(user["id"]):
         return None
-    return load_roles().get(str(user["id"]))
+    with LOCK:
+        return private_load().setdefault("roles", {}).get(str(user["id"]))
 
 PIN_ITERATIONS = 310000
 APP_SESSION_SECONDS = 12 * 60 * 60
