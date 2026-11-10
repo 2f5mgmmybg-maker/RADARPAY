@@ -637,7 +637,13 @@ a{color:#7defff}
       </details>
       <details class="admin-rubric">
         <summary>💬 Chats privés avec les CALLER</summary>
+        <p class="lead">Une conversation individuelle et confidentielle avec chaque CALLER.</p>
         <div id="adminlaunchers"></div>
+      </details>
+      <details class="admin-rubric">
+        <summary>🛡️ Chats privés avec les SPITTA</summary>
+        <p class="lead">Une conversation individuelle avec chaque SPITTA. Seuls le SPITTA concerné et l’administration peuvent lire les messages.</p>
+        <div id="adminspittas"></div>
       </details></div></div>
   </section>
 
@@ -651,6 +657,10 @@ a{color:#7defff}
   <section id="d"><p class="lead">Tes discussions en tant que CALLER. Les déclarations de paiement et les raisons de non-paiement sont suivies dans cet espace.</p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
     <p class="lead" id="publications-intro">Espace SPITTA : publie tes TARGETS avec une grande photo et leurs informations. Les CALLER pourront ensuite te contacter directement. Quand un CALLER te contacte, tu le vois ici et dans Chat direct.</p>
+    <details class="admin-rubric" style="margin:12px 0"><summary>💬 Chat privé avec l’administration</summary>
+      <p class="lead">Écris directement à l’administration. Tes messages restent privés entre toi et l’administrateur.</p>
+      <button class="btn s" id="open-spitta-admin-chat" type="button">Ouvrir mon chat privé</button>
+    </details>
     <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une TARGET</button>
     <div class="spitta-publish-card" id="spitta-publish-card">
       <h3>Publier une TARGET</h3>
@@ -1085,11 +1095,17 @@ function loadAdminChats(){
   if(!ADMIN)return Promise.resolve();
   return call("/api/adminchat/list",{}).then(function(r){
     var host=$("adminlaunchers");if(!host)return;host.innerHTML="";
-    (r.launchers||[]).forEach(function(x){var b=document.createElement("button");b.className="chatitem";b.textContent="CALLER #"+x.id;var sm=document.createElement("small");sm.textContent=x.last||"Aucun message";b.appendChild(sm);b.onclick=function(){openAdminChat(x.id)};host.appendChild(b)});
+    (r.launchers||[]).forEach(function(x){var b=document.createElement("button");b.className="chatitem";b.textContent=(x.label||"CALLER")+" · #"+x.id;var sm=document.createElement("small");sm.textContent=x.last||"Aucun message";b.appendChild(sm);b.onclick=function(){openAdminChat(x.id)};host.appendChild(b)});
     if(!host.children.length)host.textContent="Aucun CALLER enregistré.";
+    var spittahost=$("adminspittas");if(spittahost){spittahost.innerHTML="";
+      (r.spittas||[]).forEach(function(x){var b=document.createElement("button");b.className="chatitem";b.textContent=(x.label||"SPITTA")+" · #"+x.id;var sm=document.createElement("small");sm.textContent=x.last||"Aucun message";b.appendChild(sm);b.onclick=function(){openAdminChat(x.id)};spittahost.appendChild(b)});
+      if(!spittahost.children.length)spittahost.textContent="Aucun SPITTA enregistré.";
+    }
   }).catch(function(e){console.warn("Chats admin:",e)});
 }
 $("openadminchat").onclick=function(){openAdminChat()};
+var spittaAdminChatButton=$("open-spitta-admin-chat");
+if(spittaAdminChatButton)spittaAdminChatButton.onclick=function(){openAdminChat()};
 
 var PAYMENT_FOLLOWUP=null,PAYMENT_TIMER=null,PAYMENT_POLL_BUSY=false;
 function populatePaymentSites(selected){
