@@ -1298,7 +1298,7 @@ tabs.addEventListener("click",function(e){
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c"){adminOpen();loadAdminPaymentReports();}
-  if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
+  if(["d","e","f"].indexOf(b.dataset.t)>-1||(USER_ROLE==="spitta"&&b.dataset.t==="b"))loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
 });
@@ -1320,8 +1320,8 @@ function simplifyWorkspaceTabs(){
     var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"CHAT EN DIRECT AVEC SPITTA"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
-    moveSectionContents("b","e","TARGET DISPONIBLE",true);
-    var names={"e":"TARGET DISPONIBLE","f":"Messages"};
+    moveSectionContents("e","b","Espace SPITTA",false);
+    var names={"b":"TARGET DISPONIBLE","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
     var spittaTab=$("spitta-tab");if(spittaTab)spittaTab.hidden=true;
