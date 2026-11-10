@@ -1106,16 +1106,142 @@ def api(path, b):
             admin_messages = [dict(item) for item in pdata.setdefault("admin_chats", {}).get(target, [])]
         return {"ok": True, "chat": {"id": target, "client": int(target), "vendor": OWNER,
                                       "status": "proof_received", "messages": admin_messages}}
+    if path == "/api/payment/status":
+        if r != "lanceur":
+            return {"error": "Réservé aux comptes CALLER."}
+        now = int(time.time())
+        with LOCK:
+            pdata = private_load()
+            click = pdata.setdefault("site_clicks", {}).get(str(uid))
+            if not click:
+                return {"ok": True, "active": False}
+            followup = click.get("followup") or {}
+            if b.get("start") and not followup.get("started_at") and followup.get("status") not in ("submitted", "decided"):
+                followup = {"started_at": now, "deadline": now + 180, "status": "awaiting"}
+                click["followup"] = followup
+                pdata["site_clicks"][str(uid)] = click
+                thread = pdata.setdefault("admin_chats", {}).setdefault(str(uid), [])
+                thread.append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⏱️ Retour du CALLER sur RADARPAY : réponse attendue sous 3 minutes pour le site " + str(click.get("site", "")) + ".",
+                    "time": now})
+                private_save()
+            if followup.get("status") == "awaiting" and now >= int(followup.get("deadline", 0)):
+                followup["status"] = "overdue"
+                followup["overdue_at"] = now
+                pdata["site_clicks"][str(uid)] = click
+                pdata.setdefault("payment_reports", []).append({
+                    "id": secrets.token_hex(8), "launcher": uid, "site": click.get("site", ""),
+                    "url": click.get("url", ""), "time": now, "status": "overdue",
+                    "reason": "", "article": "", "amount": "", "currency": ""
+                })
+                private_save()
+                monitor_event("payment_deadline", "Délai de réponse LINK dépassé",
+                    "Site : " + str(click.get("site", "")) + " · CALLER : " + str(uid), "warning", True)
+            return {"ok": True, "active": True, "site": click.get("site"),
+                    "deadline": followup.get("deadline", 0), "status": followup.get("status", "not_started"),
+                    "decision": followup.get("decision", "")}
+    if path == "/api/payment/not-done":
+        if r != "lanceur":
+            return {"error": "Réservé aux comptes CALLER."}
+        reason = re.sub(r"\\s+", " ", str(b.get("reason", "")).strip())[:1000]
+        if len(reason) < 12:
+            return {"error": "Explique la raison en au moins 12 caractères."}
+        now = int(time.time())
+        with LOCK:
+            pdata = private_load()
+            click = pdata.setdefault("site_clicks", {}).get(str(uid))
+            if not click or not click.get("followup", {}).get("started_at"):
+                return {"error": "Aucun retour de site n’attend ta réponse."}
+            followup = click["followup"]
+            if followup.get("status") not in ("awaiting", "overdue"):
+                return {"error": "Cette réponse a déjà été enregistrée."}
+            late = now >= int(followup.get("deadline", 0))
+            report = {"id": secrets.token_hex(8), "launcher": uid, "site": click.get("site", ""),
+                "url": click.get("url", ""), "time": now, "status": "reason_pending",
+                "reason": reason, "article": "", "amount": "", "currency": "", "late": late}
+            pdata.setdefault("payment_reports", []).append(report)
+            followup.update({"status": "submitted", "answer": "not_paid", "report_id": report["id"], "submitted_at": now})
+            thread = pdata.setdefault("admin_chats", {}).setdefault(str(uid), [])
+            thread.append({"from": uid, "name": user.get("first_name", "CALLER"),
+                "text": "❌ PAIEMENT NON EFFECTUÉ — Site : " + str(click.get("site", "")) +
+                        "\\nRaison : " + reason + ("\\nRéponse hors délai." if late else ""),
+                "time": now})
+            private_save()
+        monitor_event("payment_not_done", "Paiement non effectué — raison à examiner",
+            "Site : " + str(click.get("site", "")) + " · CALLER : " + str(uid) + (" · Hors délai" if late else ""),
+            "warning", True)
+        try:
+            say(OWNER, "❌ PAIEMENT NON EFFECTUÉ — raison à examiner\\nCALLER : " + str(uid) +
+                "\\nSite : " + str(click.get("site", "")) + "\\nRaison : " + reason +
+                ("\\nRéponse hors délai." if late else "") + "\\nOuvre Administration > Suivi des paiements.")
+        except Exception as e:
+            print("notification raison paiement:", repr(e))
+        return {"ok": True, "late": late}
+    if path == "/api/admin/payment-reports":
+        if uid != OWNER or r != "owner":
+            return {"error": "Accès réservé à l’administrateur."}
+        with LOCK:
+            pdata = private_load()
+            reports = [dict(x) for x in pdata.setdefault("payment_reports", [])]
+        reports.sort(key=lambda x: int(x.get("time", 0)), reverse=True)
+        for report in reports:
+            proof_file = report.get("proof_file")
+            if proof_file:
+                try:
+                    if proof_file not in PROOF_CACHE:
+                        encrypted = base64.b64decode(gh_get(proof_file).get("content", ""))
+                        PROOF_CACHE[proof_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+                    report["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
+                except Exception as e:
+                    print("lecture preuve paiement admin:", repr(e))
+        return {"ok": True, "reports": reports[:100]}
+    if path == "/api/admin/payment-decision":
+        if uid != OWNER or r != "owner":
+            return {"error": "Accès réservé à l’administrateur."}
+        report_id = str(b.get("id", ""))[:40]
+        decision = str(b.get("decision", ""))
+        if decision not in ("valid", "invalid"):
+            return {"error": "Choisis une décision valide."}
+        now = int(time.time())
+        with LOCK:
+            pdata = private_load()
+            report = next((x for x in pdata.setdefault("payment_reports", []) if x.get("id") == report_id), None)
+            if not report or report.get("status") in ("approved", "rejected"):
+                return {"error": "Déclaration introuvable ou déjà traitée."}
+            report["status"] = "approved" if decision == "valid" else "rejected"
+            report["decision"] = decision
+            report["decided_at"] = now
+            launcher = str(report.get("launcher", ""))
+            click = pdata.setdefault("site_clicks", {}).get(launcher)
+            if click and click.get("followup", {}).get("report_id") == report_id:
+                click["followup"].update({"status": "decided", "decision": decision, "decided_at": now})
+            pdata.setdefault("admin_chats", {}).setdefault(launcher, []).append({
+                "from": OWNER, "name": "RADAR PAYMENT",
+                "text": "Décision de l’administration : " + ("RAISON VALABLE" if decision == "valid" else "RAISON NON VALABLE") +
+                        " — retour à l’accueil pour effectuer un nouvel achat.",
+                "time": now})
+            private_save()
+        try:
+            say(int(launcher), "L’administration a répondu : " +
+                ("raison valable" if decision == "valid" else "raison non valable") +
+                ". Tu peux retourner à l’accueil de RADARPAY pour effectuer un nouvel achat.")
+        except Exception as e:
+            print("notification décision paiement:", repr(e))
+        return {"ok": True}
     if path == "/api/payment/report":
         if r != "lanceur":
             return {"error": "Seuls les Lanceurs peuvent déclarer un paiement."}
         amount = str(b.get("amount", "")).strip().replace(",", ".")
         currency = str(b.get("currency", "")).upper().strip()
+        article = re.sub(r"\\s+", " ", str(b.get("article", "")).strip())[:160]
+        site = str(b.get("site", "")).strip()[:100]
         image = str(b.get("image", ""))
         if not re.fullmatch(r"\d{1,9}(?:\.\d{1,2})?", amount) or float(amount) <= 0:
             return {"error": "Indique un montant valide."}
         if currency not in ("EUR", "USD", "GBP", "CHF"):
             return {"error": "Choisis une devise valide."}
+        if not article:
+            return {"error": "Indique l’article acheté."}
         if not image.startswith("data:image/") or len(image) > 4_200_000:
             return {"error": "La capture d’écran de paiement est obligatoire."}
         try:
@@ -1128,8 +1254,13 @@ def api(path, b):
         with LOCK:
             pdata = private_load()
             click = pdata.setdefault("site_clicks", {}).get(str(uid))
-            if not click:
-                return {"error": "Aucun site n’a été enregistré. Retourne cliquer sur le site concerné."}
+            if not click or click.get("site") != site:
+                return {"error": "Sélectionne le site partenaire qui a été ouvert."}
+            followup = click.get("followup") or {}
+            if followup.get("status") not in ("awaiting", "overdue") or not followup.get("started_at"):
+                return {"error": "Aucune réponse de paiement n’attend actuellement."}
+            if int(time.time()) > int(followup.get("deadline", 0)):
+                return {"error": "Le délai est dépassé. Envoie plutôt une raison expliquant pourquoi le paiement n’a pas été effectué."}
             click = dict(click)
             try:
                 gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
@@ -1140,18 +1271,20 @@ def api(path, b):
                     "proof_file": proof_file, "time": now
                 })
                 pdata.setdefault("payment_reports", []).append({
-                    "launcher": uid, "site": click["site"], "url": click["url"],
-                    "amount": amount, "currency": currency, "proof_file": proof_file,
+                    "id": secrets.token_hex(8), "launcher": uid, "site": click["site"], "url": click["url"],
+                    "article": article, "amount": amount, "currency": currency, "proof_file": proof_file,
                     "time": now, "status": "declared_unverified"
                 })
-                pdata.setdefault("site_clicks", {}).pop(str(uid), None)
+                pdata.setdefault("site_clicks", {})[str(uid)]["followup"] = {
+                    "status": "submitted", "answer": "paid", "report_id": pdata["payment_reports"][-1]["id"],
+                    "submitted_at": now, "deadline": followup.get("deadline", 0), "started_at": followup.get("started_at", 0)}
                 private_save()
             except Exception as e:
                 print("sauvegarde preuve paiement:", repr(e))
                 gh_del(proof_file, "Nettoyage d'une preuve de paiement non enregistrée")
                 PROOF_CACHE.pop(proof_file, None)
                 return {"error": "Impossible de sauvegarder la capture."}
-        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click["site"] + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
+        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
         try:
             say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
                 "\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency +
