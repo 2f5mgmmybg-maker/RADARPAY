@@ -1422,7 +1422,7 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   return r.json();
 }).then(function(d){
   PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});
-  ST.maj=d.maj||"";
+  ST.maj=new Date().toLocaleString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
   
   API=(d.api||"").trim().replace(/\/$/,"");
   render();if(USER_ROLE==="spitta"||USER_ROLE==="owner")loadSpittaItems();
@@ -1434,18 +1434,18 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   render();
 });
 
-// Actualisation automatique des disponibilités physiques toutes les 25 minutes.
+// Actualisation automatique des disponibilités physiques.
 setInterval(function(){
   fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Actualisation indisponible");return r.json()}).then(function(d){
     PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});
-    ST.maj=d.maj||"";render();if(USER_ROLE==="spitta")loadSpittaItems();
+    ST.maj=new Date().toLocaleString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});render();if(USER_ROLE==="spitta")loadSpittaItems();
   }).catch(function(e){console.warn("RADAR PAYMENT: actualisation automatique échouée",e)});
 },PHYSICAL_REFRESH_MS);
 
 var tabs=document.getElementById("tabs");
 $("refresh").onclick=function(){
   var button=$("refresh");button.disabled=true;button.textContent="↻ Actualisation…";
-  var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=d.maj||"";render()})];
+  var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=new Date().toLocaleString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});render()})];
   if(USER_ROLE)tasks.push(loadChatList());
   if(ADMIN){tasks.push(loadRegistrations(),loadMonitor(),loadAdminPaymentReports(),loadAdminChats());var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
   Promise.all(tasks).then(function(){var msg=$("adminrefreshmsg");if(ADMIN&&msg)msg.textContent="Données actualisées.";}).catch(function(e){var msg=$("adminrefreshmsg");if(msg)msg.textContent=e.message||"Actualisation impossible.";}).finally(function(){button.disabled=false;button.textContent="↻ Actualiser"});
