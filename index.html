@@ -684,7 +684,7 @@ function loadRegistrations(){
       var card=document.createElement("div");card.className="chatitem";
       var title=document.createElement("b");title.textContent=x.pseudo+" · "+(x.role==="lanceur"?"Lanceur":"Spitta");card.appendChild(title);
       var detail=document.createElement("small");
-      detail.textContent=(x.status==="approved"?"Accès autorisé":"En attente d’autorisation")+" · "+new Date(x.created*1000).toLocaleString("fr-FR")+(x.telegram_username?" · @"+x.telegram_username:"")+(x.first_name?" · "+x.first_name:"");
+      detail.textContent=(x.status==="approved"?"Accès autorisé":"En attente d’autorisation")+" · "+new Date(x.created*1000).toLocaleString("fr-FR")+(x.telegram_username?" · @"+x.telegram_username:"")+(x.first_name?" · "+x.first_name:"")+(x.last_seen?" · Dernière connexion : "+new Date(x.last_seen*1000).toLocaleString("fr-FR"):"");
       card.appendChild(detail);
       if(x.status!=="approved"){
         var approve=document.createElement("button");approve.className="btn s";approve.type="button";approve.textContent="Autoriser l’accès";
