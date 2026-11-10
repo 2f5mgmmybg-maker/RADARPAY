@@ -161,6 +161,7 @@ PRIVATE_CACHE = None
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 DB_POOL = None
+DB_INIT_LOCK = threading.Lock()
 
 
 def ensure_db():
@@ -168,17 +169,23 @@ def ensure_db():
     global DB_POOL
     if not DATABASE_URL:
         return None
-    if DB_POOL is None:
-        from psycopg_pool import ConnectionPool
-        DB_POOL = ConnectionPool(DATABASE_URL, min_size=1, max_size=8, timeout=10)
-        with DB_POOL.connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS radarpay_private_state (
-                    id SMALLINT PRIMARY KEY CHECK (id = 1),
-                    payload BYTEA NOT NULL,
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-            """)
+    with DB_INIT_LOCK:
+        if DB_POOL is None:
+            from psycopg_pool import ConnectionPool
+            pool = ConnectionPool(DATABASE_URL, min_size=1, max_size=8, timeout=10)
+            try:
+                with pool.connection() as conn:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS radarpay_private_state (
+                            id SMALLINT PRIMARY KEY CHECK (id = 1),
+                            payload BYTEA NOT NULL,
+                            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                        )
+                    """)
+            except Exception:
+                pool.close()
+                raise
+            DB_POOL = pool
     return DB_POOL
 
 
