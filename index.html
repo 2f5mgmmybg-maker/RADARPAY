@@ -540,6 +540,9 @@ button:disabled,.btn:disabled{opacity:.55;filter:saturate(.65);box-shadow:none}
       <div id="monitorevents" aria-live="polite"></div>
       <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
       <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
+      <p class="lead">Remise à zéro : supprime les profils, rôles, demandes, validations et blocages des comptes. Les publications, TARGETs, discussions et historiques de paiement sont conservés.</p>
+      <button class="btn s" id="resetregistrations" type="button">Réinitialiser toutes les inscriptions</button>
+      <p class="lead" id="resetregistrationsmsg" aria-live="polite"></p>
       <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
       <h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Suivi des paiements LINK</h3><p class="lead">Déclarations de paiement, justificatifs, retards et raisons de non-paiement. Choisis si la raison est valable ou non valable.</p><button class="btn s" id="refreshpaymentreports" type="button">↻ Actualiser les suivis</button><div id="adminpaymentreports"></div><h3>Chats privés avec les CALLER</h3><div id="adminlaunchers"></div></div></div>
   </section>
@@ -928,6 +931,23 @@ function loadRegistrations(){
   }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."});
 }
 $("refreshregistrations").onclick=loadRegistrations;
+$("resetregistrations").onclick=function(){
+  var msg=$("resetregistrationsmsg");
+  if(!ADMIN){msg.textContent="Action réservée à l’administrateur.";return}
+  if(!window.confirm("ATTENTION : tous les profils, rôles, demandes, validations et blocages seront supprimés. Les publications et discussions seront conservées. Continuer ?"))return;
+  var code=window.prompt("Entre le code administrateur à 6 chiffres pour confirmer :");
+  if(code===null)return;
+  var phrase=window.prompt('Tape exactement REINITIALISER RADARPAY pour confirmer :');
+  if(phrase===null)return;
+  if(phrase!=="REINITIALISER RADARPAY"){msg.textContent="Confirmation incorrecte. Aucune donnée supprimée.";return}
+  var button=$("resetregistrations");button.disabled=true;msg.textContent="Réinitialisation en cours…";
+  call("/api/admin/reset-registrations",{admin_code:code,confirmation:phrase}).then(function(r){
+    if(!r.ok)throw new Error(r.error||"Réinitialisation impossible.");
+    msg.textContent="Réinitialisation terminée : "+r.deleted.registrations+" profil(s), "+r.deleted.roles+" rôle(s) et "+r.deleted.blacklist+" blocage(s) supprimé(s). Les utilisateurs peuvent se réinscrire.";
+    loadRegistrations();
+  }).catch(function(e){msg.textContent=e.message||"Erreur pendant la réinitialisation."})
+    .finally(function(){button.disabled=false});
+};
 $("adminrefreshall").onclick=function(){
   var button=$("adminrefreshall"),msg=$("adminrefreshmsg");
   button.disabled=true;msg.textContent="Actualisation du catalogue, des publications, des discussions et des listes…";
