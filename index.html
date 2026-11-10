@@ -726,7 +726,12 @@ function openLb(p){
     l.innerHTML='<div class="box"><img alt=""></div><b id="lbp"></b><small id="lb-author"></small><label id="lb-action-label" for="lb-offer">Ta proposition de prix au SPITTA</label><input class="inp" id="lb-offer" type="text" maxlength="40" placeholder="Ex. : 2 300 €"><select class="inp" id="lb-price-edit"><option value="2500 €">2 500 €</option><option value="5000 €">5 000 €</option><option value="9900 €">9 900 €</option></select><button class="btn s" id="lbw">Envoyer ma proposition</button><button class="btn s" id="lbx">Fermer</button><small id="lbm"></small>';
     document.body.appendChild(l);
     var i0=l.querySelector("img");i0.onclick=function(){i0.classList.toggle("z")};
-    l.querySelector("#lbx").onclick=function(){l.classList.remove("on")};
+    l.querySelector("#lbx").onclick=function(){
+      i0.classList.remove("z");
+      l.querySelector(".box").scrollTop=0;
+      l.classList.remove("on");
+      l.setAttribute("aria-hidden","true");
+    };
     var w=l.querySelector("#lbw"),m=l.querySelector("#lbm");
     w.onclick=function(){
       var isMine=USER_ROLE==="spitta"&&MY_PHOTO_IDS.indexOf(CUR&&CUR.id)>-1;
@@ -752,7 +757,13 @@ function openLb(p){
       }).catch(function(e){m.textContent=(e&&e.message)||"Le serveur ne répond pas. Réessaie.";w.disabled=false;w.textContent="Réessayer"});
     };
   }
-  var im=l.querySelector("img");im.classList.remove("z");im.src=p.src;
+  var im=l.querySelector("img");
+  im.classList.remove("z");
+  l.querySelector(".box").scrollTop=0;
+  im.src=p.src;
+  l.classList.remove("on");
+  l.setAttribute("aria-hidden","false");
+  void l.offsetWidth;
   l.querySelector("#lbp").textContent=p.prix||"";
   l.querySelector("#lb-author").textContent=p.auteur?"Publié par : "+p.auteur:"Auteur non renseigné";
   CUR=p;
@@ -763,7 +774,8 @@ function openLb(p){
   if(isMine){label.textContent="Modifier le prix de ta publication";editor.value=["2500 €","5000 €","9900 €"].indexOf(p.prix)>-1?p.prix:"2500 €";button.textContent="Enregistrer le nouveau prix";l.querySelector("#lbm").textContent="Seul ton compte peut modifier le prix de cette publication.";}
   else if(canOffer){label.textContent="Ta proposition de prix au SPITTA";offer.value="";button.textContent="Envoyer ma proposition";l.querySelector("#lbm").textContent="Le SPITTA recevra ton offre avant le début de la discussion.";}
   else{l.querySelector("#lbm").textContent="Cette publication n’est pas modifiable depuis ton compte.";button.hidden=true;label.hidden=true;offer.hidden=true;editor.hidden=true;}
-  button.disabled=false;l.classList.add("on");
+  button.disabled=false;
+  l.classList.add("on");
 }
 function shrink(file,cb,onError){
   var objectUrl="",finished=false,loadTimer=null;
