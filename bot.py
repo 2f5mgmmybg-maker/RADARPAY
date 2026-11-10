@@ -193,6 +193,13 @@ def ensure_db():
                             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                         )
                     """)
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS radarpay_presence (
+                            user_id BIGINT PRIMARY KEY,
+                            role TEXT NOT NULL CHECK (role IN ('lanceur', 'spitta')),
+                            last_seen BIGINT NOT NULL
+                        )
+                    """)
             except Exception:
                 pool.close()
                 raise
@@ -926,6 +933,43 @@ def api(path, b):
         if uid == OWNER:
             return {"ok": True, "role": "owner"}
         return {"error": "Mise à jour requise. Utilise Inscription ou Se connecter."}
+    if path == "/api/presence":
+        current_role = role(user)
+        if uid == OWNER:
+            current_role = "owner"
+        if current_role not in ("owner", "lanceur", "spitta"):
+            return {"error": "Connecte-toi pour afficher la présence."}
+        now = int(time.time())
+        cutoff = now - 3600
+        pool = ensure_db()
+        if pool is not None and current_role in ("lanceur", "spitta"):
+            with pool.connection() as conn:
+                conn.execute("""
+                    INSERT INTO radarpay_presence (user_id, role, last_seen)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (user_id) DO UPDATE
+                    SET role = EXCLUDED.role, last_seen = EXCLUDED.last_seen
+                """, (uid, current_role, now))
+                rows = conn.execute("""
+                    SELECT role, COUNT(*) FROM radarpay_presence
+                    WHERE last_seen >= %s GROUP BY role
+                """, (cutoff,)).fetchall()
+            active_counts = {"caller": 0, "spitta": 0}
+            for active_role, total in rows:
+                active_counts["caller" if active_role == "lanceur" else "spitta"] = int(total)
+        else:
+            if current_role in ("lanceur", "spitta"):
+                ACTIVE_PRESENCE[str(uid)] = {"role": current_role, "seen": now}
+            active_counts = {"caller": 0, "spitta": 0}
+            for active_id, presence in list(ACTIVE_PRESENCE.items()):
+                if int(presence.get("seen", 0)) < cutoff:
+                    ACTIVE_PRESENCE.pop(active_id, None)
+                    continue
+                if presence.get("role") == "lanceur":
+                    active_counts["caller"] += 1
+                elif presence.get("role") == "spitta":
+                    active_counts["spitta"] += 1
+        return {"ok": True, "active_counts": active_counts}
     if path == "/api/register":
         if uid == OWNER:
             return {"ok": True, "role": "owner"}
