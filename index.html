@@ -1128,8 +1128,8 @@ function showPaymentFollowup(data){
   PAYMENT_FOLLOWUP=data;populatePaymentSites(data.site);
   $("payment-followup-site").textContent="Site ouvert : "+(data.site||"Partenaire");
   $("payment-followup").hidden=false;
-  $("payment-followup-msg").textContent=data.status==="overdue"?"Le délai de 3 minutes est dépassé. Explique maintenant pourquoi le paiement n’a pas été effectué.": "Merci de répondre rapidement.";
-  $("payment-paid-form").hidden=data.status==="overdue";
+  $("payment-followup-msg").textContent=data.status==="overdue"?"⏰ Délai de 3 minutes dépassé. Tu peux encore déclarer un paiement (il sera signalé comme tardif) ou expliquer pourquoi tu n’as pas payé.": "Merci de répondre rapidement.";
+  $("payment-paid-form").hidden=false;
   $("payment-unpaid-form").hidden=data.status==="submitted"||data.status==="decided";
   updatePaymentTimer();
 }
@@ -1138,8 +1138,8 @@ function updatePaymentTimer(){
   var m=Math.floor(left/60),sec=left%60;
   $("payment-timer").textContent=String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
   if(left===0&&PAYMENT_FOLLOWUP&&PAYMENT_FOLLOWUP.status==="awaiting"){
-    $("payment-followup-msg").textContent="⏰ Délai dépassé. Tu dois maintenant expliquer pourquoi tu n’as pas effectué le paiement.";
-    $("payment-paid-form").hidden=true;
+    $("payment-followup-msg").textContent="⏰ Délai dépassé. Toute déclaration de paiement sera marquée tardive et devra être vérifiée par l’administration. Tu peux aussi expliquer pourquoi tu n’as pas payé.";
+    $("payment-paid-form").hidden=false;
     $("payment-unpaid-form").hidden=false;
   }
 }
@@ -1184,7 +1184,7 @@ function loadAdminPaymentReports(){
     var host=$("adminpaymentreports");if(!host)return;host.innerHTML="";
     (r.reports||[]).forEach(function(x){
       var card=document.createElement("div");card.className="chatitem";
-      var title=document.createElement("b");title.textContent=(x.status==="overdue"?"⏰ Délai dépassé":x.status==="declared_unverified"?"💳 Paiement déclaré":"❌ Paiement non effectué")+" · "+(x.site||"LINK");card.appendChild(title);
+      var title=document.createElement("b");title.textContent=(x.status==="overdue"?"⏰ Délai dépassé":x.status==="declared_unverified"?(x.late?"💳 Paiement déclaré — TARDIF":"💳 Paiement déclaré"):"❌ Paiement non effectué")+" · "+(x.site||"LINK");card.appendChild(title);
       var detail=document.createElement("p");detail.className="lead";detail.textContent="CALLER #"+x.launcher+" · "+(x.article?"Article : "+x.article+" · ":"")+(x.amount?"Montant : "+x.amount+" "+(x.currency||"")+" · ":"")+"Date : "+new Date((x.time||0)*1000).toLocaleString("fr-FR")+(x.late?" · Réponse hors délai":"");card.appendChild(detail);
       if(x.reason){var reason=document.createElement("p");reason.className="lead";reason.textContent="Raison : "+x.reason;card.appendChild(reason)}
       if(x.image){var img=document.createElement("img");img.src=x.image;img.alt="Justificatif de paiement";img.style.cssText="display:block;max-width:100%;max-height:240px;border-radius:12px;margin:8px 0";card.appendChild(img)}
