@@ -584,20 +584,20 @@ a{color:#7defff}
     <div id="panel" hidden><p class="lead">Catalogue complet des TARGETS : tu peux vérifier les publications, modifier leur prix ou leur pays, et les supprimer si nécessaire.</p>
       <p class="lead" id="pm"></p><div class="grid" id="mine"></div>
       <div id="adminchatlist" hidden>
-      <h3>Vue complète de RADARPAY</h3><p class="lead">Depuis cet espace, tu peux consulter toutes les publications de tous les SPITTA, les TARGETS physiques, les inscriptions, les discussions des CALLER et des SPITTA, ainsi que la liste noire. Le catalogue est dans l’onglet Catalogue.</p><button class="btn s" id="adminrefreshall" type="button">↻ Actualiser toutes les données</button><p class="lead" id="adminrefreshmsg" aria-live="polite"></p>
+      <h3>Vue complète de RADARPAY</h3><p class="lead">Depuis cet espace, tu peux consulter toutes les publications de tous les SPITTA, les TARGETS physiques, les inscriptions, les discussions des CALLER et des SPITTA, ainsi que la liste noire. Le catalogue est dans l’onglet Catalogue.</p><p class="lead" id="adminrefreshmsg" aria-live="polite"></p>
       <h3>Supervision en direct</h3>
-      <p class="lead">Journal sécurisé des événements RADARPAY, actualisé toutes les 5 secondes. Les contenus des messages privés ne sont pas copiés dans ce journal.</p>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0"><button class="btn s" id="monitorrefresh" type="button">↻ Actualiser</button><span class="lead" id="monitorstatus" aria-live="polite">Chargement…</span></div>
+      <p class="lead">Journal sécurisé des événements RADARPAY. Les contenus des messages privés ne sont pas copiés dans ce journal.</p>
+      <div class="lead" id="monitorstatus" aria-live="polite">Les événements se chargent à l’ouverture de l’administration ou avec le bouton Actualiser en haut.</div>
       <div class="lead" id="monitorstats"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><select class="inp" id="monitorfilter" style="width:auto;min-width:150px;margin:0"><option value="all">Tous les événements</option><option value="critical">Alertes critiques</option><option value="warning">Avertissements</option><option value="info">Informations</option></select><input class="inp" id="monitorsearch" placeholder="Rechercher dans le journal" style="width:auto;flex:1;min-width:180px;margin:0"></div>
       <div id="monitorevents" aria-live="polite"></div>
       <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
-      <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
+      
       <p class="lead">Remise à zéro : supprime les profils, rôles, demandes, validations et blocages des comptes. Les publications, TARGETs, discussions et historiques de paiement sont conservés.</p>
       <button class="btn s" id="resetregistrations" type="button">Réinitialiser toutes les inscriptions</button>
       <p class="lead" id="resetregistrationsmsg" aria-live="polite"></p>
       <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
-      <h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Suivi des paiements LINK</h3><p class="lead">Déclarations de paiement, justificatifs, retards et raisons de non-paiement. Choisis si la raison est valable ou non valable.</p><button class="btn s" id="refreshpaymentreports" type="button">↻ Actualiser les suivis</button><div id="adminpaymentreports"></div><h3>Chats privés avec les CALLER</h3><div id="adminlaunchers"></div></div></div>
+      <h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Suivi des paiements LINK</h3><p class="lead">Déclarations de paiement, justificatifs, retards et raisons de non-paiement. Choisis si la raison est valable ou non valable.</p><div id="adminpaymentreports"></div><h3>Chats privés avec les CALLER</h3><div id="adminlaunchers"></div></div></div>
   </section>
 
   <section id="b">
@@ -1009,18 +1009,7 @@ $("resetregistrations").onclick=function(){
   }).catch(function(e){msg.textContent=e.message||"Erreur pendant la réinitialisation."})
     .finally(function(){button.disabled=false});
 };
-$("adminrefreshall").onclick=function(){
-  var button=$("adminrefreshall"),msg=$("adminrefreshmsg");
-  button.disabled=true;msg.textContent="Actualisation du catalogue, des publications, des discussions et des listes…";
-  fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){
-    PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});
-    ST.maj=d.maj||"";render();
-    loadSpittaItems();loadChatList();loadAdminChats();loadRegistrations();
-    msg.textContent="Actualisation lancée. Les différentes listes se rechargent.";
-  }).catch(function(e){msg.textContent=e.message||"Actualisation impossible."})
-    .finally(function(){button.disabled=false;});
-};
-setInterval(function(){if(ADMIN&&$("c").classList.contains("on"))loadRegistrations()},20000);
+
 
 function loadChatList(){
   call("/api/chat/list",{}).then(function(r){
@@ -1144,10 +1133,9 @@ function loadAdminPaymentReports(){
     if(!host.children.length)host.textContent="Aucune déclaration de paiement pour le moment.";
   }).catch(function(e){console.warn("Suivi admin paiements:",e)});
 }
-$("refreshpaymentreports").onclick=loadAdminPaymentReports;
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")resumePaymentFollowup()});
 window.addEventListener("focus",resumePaymentFollowup);
-setInterval(function(){if(PAYMENT_FOLLOWUP&&!$("payment-followup").hidden)updatePaymentTimer();if(USER_ROLE==="lanceur"&&document.visibilityState==="visible")resumePaymentFollowup();if(ADMIN&&$("c").classList.contains("on"))loadAdminPaymentReports()},4000);
+setInterval(function(){if(PAYMENT_FOLLOWUP&&!$("payment-followup").hidden)updatePaymentTimer();if(USER_ROLE==="lanceur"&&document.visibilityState==="visible")resumePaymentFollowup()},1000);
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 var CHAT_FILE_CACHE={},CHAT_FILE_CACHE_KEYS=[];
 function loadChatFile(chatId,fileId){
@@ -1330,8 +1318,7 @@ setInterval(function(){
     .catch(function(){})
     .finally(function(){CHAT_POLL_BUSY=false});
 },3000);
- setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},10000);
-setInterval(function(){if(document.visibilityState==="visible"&&ADMIN&&$("c").classList.contains("on"))loadMonitor()},5000);
+ setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE&&!ADMIN)loadChatList()},10000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 
@@ -1390,9 +1377,11 @@ setInterval(function(){
 
 var tabs=document.getElementById("tabs");
 $("refresh").onclick=function(){
-  $("refresh").textContent="↻ Actualisation…";
-  Promise.all([fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=d.maj||"";render()}),loadChatList()]);
-  setTimeout(function(){$("refresh").textContent="↻ Actualiser"},1200);
+  var button=$("refresh");button.disabled=true;button.textContent="↻ Actualisation…";
+  var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=d.maj||"";render()})];
+  if(USER_ROLE)tasks.push(loadChatList());
+  if(ADMIN){loadRegistrations();loadMonitor();loadAdminPaymentReports();loadAdminChats();var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
+  Promise.all(tasks).then(function(){var msg=$("adminrefreshmsg");if(ADMIN&&msg)msg.textContent="Données actualisées.";}).catch(function(e){var msg=$("adminrefreshmsg");if(msg)msg.textContent=e.message||"Actualisation impossible.";}).finally(function(){button.disabled=false;button.textContent="↻ Actualiser"});
 };
 $("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
 tabs.addEventListener("click",function(e){
