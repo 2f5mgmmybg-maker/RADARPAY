@@ -1132,7 +1132,7 @@ def api(path, b):
                 gh_del(proof_file, "Nettoyage d'une preuve de paiement non enregistrée")
                 PROOF_CACHE.pop(proof_file, None)
                 return {"error": "Impossible de sauvegarder la capture."}
-        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click["site"] + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", True)
+        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click["site"] + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
         try:
             say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
                 "\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency +
@@ -1737,7 +1737,7 @@ def api(path, b):
             data, sha = load()
             data["photos"].insert(0, photo)
             save(data, sha)
-        monitor_event("publication", "Nouvelle TARGET publiée", "SPITTA : " + display_name + " · Prix : " + photo["prix"] + " · Pays : " + (photo["pays"] or "Non précisé"), "info", True)
+        monitor_event("publication", "Nouvelle TARGET publiée", "SPITTA : " + display_name + " · Prix : " + photo["prix"] + " · Pays : " + (photo["pays"] or "Non précisé"), "info", False)
         notification = True
         try:
             who = display_name + " (ID Telegram " + str(uid) + ")"
