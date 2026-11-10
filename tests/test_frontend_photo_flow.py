@@ -26,8 +26,9 @@ class FrontendPhotoFlowTests(unittest.TestCase):
 
     def test_image_loading_has_retry_and_visible_failure_recovery(self):
         self.assertIn('function loadPhotoImage(img,src,onFailure)', HTML)
-        self.assertIn('if(attempts<3)', HTML)
+        self.assertIn('if(retries<3)', HTML)
         self.assertIn('radar_retry=', HTML)
+        self.assertIn('https://raw.githubusercontent.com/2f5mgmmybg-maker/RADARPAY/main/', HTML)
         self.assertIn('photo-unavailable', HTML)
         self.assertIn('Photo indisponible pour le moment', HTML)
 
