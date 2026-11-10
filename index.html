@@ -1460,7 +1460,7 @@ setInterval(function(){
     .catch(function(){})
     .finally(function(){CHAT_POLL_BUSY=false});
 },3000);
- setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE&&!ADMIN)loadChatList()},10000);
+ setInterval(function(){var messagesTab=$("f");if(document.visibilityState==="visible"&&USER_ROLE&&!ADMIN&&messagesTab&&messagesTab.classList.contains("on")&&!ACTIVE_CHAT)loadChatList()},10000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 
