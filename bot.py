@@ -2088,7 +2088,7 @@ class Ping(BaseHTTPRequestHandler):
 
     def _s(self, obj):
         body = json.dumps(obj).encode()
-        status = 200 if obj.get("ok") or obj.get("pending") or "role" in obj else (401 if "Ouvre l'app depuis Telegram." in obj.get("error", "") else 400)
+        status = 503 if obj.get("unhealthy") else (200 if obj.get("ok") or obj.get("pending") or "role" in obj else (401 if "Ouvre l'app depuis Telegram." in obj.get("error", "") else 400))
         self.send_response(status)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
@@ -2100,6 +2100,21 @@ class Ping(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path in ("/health", "/healthz"):
+            health = {"ok": True, "service": "RADARPAY"}
+            if DATABASE_URL:
+                try:
+                    pool = ensure_db()
+                    with pool.connection() as conn:
+                        conn.execute("SELECT 1").fetchone()
+                    health["storage"] = "PostgreSQL"
+                except Exception as e:
+                    print("health check PostgreSQL:", repr(e))
+                    health = {"ok": False, "unhealthy": True, "service": "RADARPAY",
+                              "storage": "PostgreSQL indisponible"}
+            else:
+                health["storage"] = "GitHub (mode dégradé)"
+            return self._s(health)
         self._s({"ok": True})
 
     def do_OPTIONS(self):
