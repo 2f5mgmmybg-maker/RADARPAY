@@ -655,13 +655,15 @@ function renderServices(){
     a.addEventListener("click",function(e){
       if(USER_ROLE!=="lanceur")return;
       e.preventDefault();
+      var accepted=window.confirm("INFORMATION — RADARPAY\n\nEn continuant, ton clic sur « "+s.n+" » sera enregistré et l’administrateur en sera informé.\n\nVeux-tu continuer vers ce site ?");
+      if(!accepted)return;
       var win=window.open("about:blank","_blank");
       call("/api/catalog/click",{site:s.n,url:s.u}).then(function(r){
         if(!r.ok)throw new Error(r.error||"Enregistrement impossible.");
         if(win)win.location=s.u;else location.href=s.u;
-        // Le site s'ouvre dans un nouvel onglet et le chat privé admin reste ouvert dans la mini-app.
+        // Le site s'ouvre après l'enregistrement du clic et la tentative de notification admin.
         openAdminChat();
-        if(r.notification===false){$("chaterror").textContent="Chat ouvert et clic enregistré, mais Telegram n’a pas pu prévenir l’Admin. Vérifie que l’Admin a envoyé /start au bot.";}
+        if(r.notification===false){$("chaterror").textContent="Clic enregistré, mais Telegram n’a pas pu prévenir l’Admin. Vérifie que l’Admin a envoyé /start au bot.";}
       }).catch(function(){
         if(win)win.close();
         alert("Le site n’a pas pu être enregistré. Réessaie.");
