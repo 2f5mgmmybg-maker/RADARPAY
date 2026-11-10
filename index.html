@@ -488,6 +488,16 @@ a{color:#7defff}
 .admin-publication-details{margin-top:10px;line-height:1.6;font-size:.9rem}
 .admin-publication-controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
 .admin-publication-controls .btn{flex:1;min-width:90px}
+.admin-rubric{margin:12px 0;border:1px solid var(--line);border-radius:16px;background:var(--bg2);overflow:hidden}
+.admin-rubric>summary{display:flex;align-items:center;min-height:52px;padding:14px 16px;cursor:pointer;list-style:none;font-weight:750;color:var(--sweep)}
+.admin-rubric>summary::-webkit-details-marker{display:none}
+.admin-rubric>summary::after{content:"＋";margin-left:auto;font-size:1.1rem}
+.admin-rubric[open]>summary::after{content:"−"}
+.admin-rubric[open]>summary{border-bottom:1px solid var(--line)}
+.admin-rubric>*:not(summary){margin-left:14px;margin-right:14px}
+.admin-rubric>summary+*{margin-top:14px}
+.admin-rubric>div:last-child,.admin-rubric>p:last-child{margin-bottom:14px}
+
 @media(min-width:600px){#grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 </style>
@@ -599,19 +609,36 @@ a{color:#7defff}
       <p class="lead" id="pm"></p><div class="grid" id="mine"></div>
       <div id="adminchatlist" hidden>
       <h3>Vue complète de RADARPAY</h3><p class="lead">Depuis cet espace, tu peux consulter toutes les publications de tous les SPITTA, les TARGETS physiques, les inscriptions, les discussions des CALLER et des SPITTA, ainsi que la liste noire. Le catalogue est dans l’onglet Catalogue.</p><p class="lead" id="adminrefreshmsg" aria-live="polite"></p>
-      <h3>Supervision en direct</h3>
-      <p class="lead">Journal sécurisé des événements RADARPAY. Les contenus des messages privés ne sont pas copiés dans ce journal.</p>
-      <div class="lead" id="monitorstatus" aria-live="polite">Les événements se chargent à l’ouverture de l’administration ou avec le bouton Actualiser en haut.</div>
-      <div class="lead" id="monitorstats"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><select class="inp" id="monitorfilter" style="width:auto;min-width:150px;margin:0"><option value="all">Tous les événements</option><option value="critical">Alertes critiques</option><option value="warning">Avertissements</option><option value="info">Informations</option></select><input class="inp" id="monitorsearch" placeholder="Rechercher dans le journal" style="width:auto;flex:1;min-width:180px;margin:0"></div>
-      <div id="monitorevents" aria-live="polite"></div>
-      <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
-      
-      <p class="lead">Remise à zéro : supprime les profils, rôles, demandes, validations et blocages des comptes. Les publications, TARGETs, discussions et historiques de paiement sont conservés.</p>
-      <button class="btn s" id="resetregistrations" type="button">Réinitialiser toutes les inscriptions</button>
-      <p class="lead" id="resetregistrationsmsg" aria-live="polite"></p>
-      <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
-      <h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Suivi des paiements LINK</h3><p class="lead">Déclarations de paiement, justificatifs, retards et raisons de non-paiement. Choisis si la raison est valable ou non valable.</p><div id="adminpaymentreports"></div><h3>Chats privés avec les CALLER</h3><div id="adminlaunchers"></div></div></div>
+      <details class="admin-rubric" open>
+        <summary>📡 Supervision en direct</summary>
+        <p class="lead">Journal sécurisé des événements RADARPAY. Les contenus des messages privés ne sont pas copiés dans ce journal.</p>
+        <div class="lead" id="monitorstatus" aria-live="polite">Les événements se chargent à l’ouverture de l’administration ou avec le bouton Actualiser en haut.</div>
+        <div class="lead" id="monitorstats"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><select class="inp" id="monitorfilter" style="width:auto;min-width:150px;margin:0"><option value="all">Tous les événements</option><option value="critical">Alertes critiques</option><option value="warning">Avertissements</option><option value="info">Informations</option></select><input class="inp" id="monitorsearch" placeholder="Rechercher dans le journal" style="width:auto;flex:1;min-width:180px;margin:0"></div>
+        <div id="monitorevents" aria-live="polite"></div>
+      </details>
+      <details class="admin-rubric">
+        <summary>👤 Inscriptions et comptes</summary>
+        <p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
+        <div class="lead" id="registrationsmsg"></div><div id="registrationslist"></div>
+        <p class="lead">Remise à zéro : supprime les profils, rôles, demandes, validations et blocages des comptes. Les publications, TARGETs, discussions et historiques de paiement sont conservés.</p>
+        <button class="btn s" id="resetregistrations" type="button">Réinitialiser toutes les inscriptions</button>
+        <p class="lead" id="resetregistrationsmsg" aria-live="polite"></p>
+      </details>
+      <details class="admin-rubric">
+        <summary>🔒 Supervision des conversations privées</summary>
+        <p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p>
+        <div id="adminchatitems"></div>
+      </details>
+      <details class="admin-rubric">
+        <summary>💳 Paiements LINK</summary>
+        <p class="lead">Déclarations de paiement, justificatifs, retards et raisons de non-paiement. Choisis si la raison est valable ou non valable.</p>
+        <div id="adminpaymentreports"></div>
+      </details>
+      <details class="admin-rubric">
+        <summary>💬 Chats privés avec les CALLER</summary>
+        <div id="adminlaunchers"></div>
+      </details></div></div>
   </section>
 
   <section id="b">
