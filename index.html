@@ -887,7 +887,7 @@ function showMe(r,fromCode){
   if(!ok){$("msg").textContent=r.error||"Accès administrateur réservé au propriétaire.";return}
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
-  loadChatList();loadRegistrations();loadMonitor();
+  loadChatList();loadAdminChats();loadRegistrations();loadMonitor();
   var publications=PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1});
   if(!publications.length){var empty=document.createElement("p");empty.className="lead";empty.textContent="Aucune publication enregistrée pour le moment.";m.appendChild(empty);return}
   publications.forEach(function(p){
@@ -1436,8 +1436,7 @@ function enterApp(response){
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="c");});
     arrangeTabs();
     showMe(response,false);
-    loadSpittaItems();
-    loadAdminChats();return;
+    loadSpittaItems();return;
   }
   if(USER_ROLE==="spitta")loadSpittaItems();
   arrangeTabs();loadChatList();
