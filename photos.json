@@ -1,5 +1,17 @@
 {
   "api": "https://radarpay-90js.onrender.com",
   "maj": "10 novembre",
-  "photos": []
+  "photos": [
+    {
+      "id": "1794342366864-d0fa96e3",
+      "created": 1794342366,
+      "image": "1794342366864-d0fa96e3.jpg",
+      "prix": "5000 €",
+      "pays": "Belgique",
+      "pourcentage": "50",
+      "categorie": "5000",
+      "auteur": "Azerty UHQ",
+      "o": "648NE52p3DM="
+    }
+  ]
 }
