@@ -402,6 +402,27 @@ button.primary,.btn-primary,.active{
 }
 a{color:#ffb36a}
 
+/* Accueil compact + boutons rouge flamme */
+#auth-choices[hidden],#admin-access-panel[hidden]{display:none!important}
+#auth-choices{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;width:min(100%,350px);margin:8px auto 0}
+#auth-choices .btn{width:100%;min-height:48px;padding:10px 12px;border-radius:13px;font-size:.94rem;font-weight:700;letter-spacing:0}
+#auth-choices #show-admin-access{grid-column:1/-1;min-height:42px;max-width:100%;font-size:.88rem}
+#admin-access-panel{width:min(100%,350px)!important;padding:8px 0 12px}
+#admin-access-panel .btn{width:100%;min-height:46px;padding:11px 16px;border-radius:13px}
+.btn,button:not(#tabs button),.refresh,.countryfilters button,.filter button,.ctl button{
+  background:linear-gradient(135deg,#a80f18 0%,#ed2929 48%,#ff642e 100%)!important;
+  border:1px solid #ff7952!important;color:#fff!important;
+  box-shadow:0 5px 16px rgba(220,35,35,.22);
+  transition:transform .18s ease,filter .18s ease,box-shadow .18s ease;
+}
+.btn{min-height:46px;padding:11px 18px;border-radius:13px;font-weight:700}
+button:not(#tabs button):hover,.btn:hover,.refresh:hover{filter:brightness(1.12);box-shadow:0 7px 22px rgba(255,55,35,.32)}
+button:not(#tabs button):active,.btn:active,.refresh:active{transform:translateY(1px) scale(.98)}
+button:disabled,.btn:disabled{opacity:.55;filter:saturate(.65);box-shadow:none}
+#tabs button{background:transparent!important;box-shadow:none!important}
+#tabs button.on{color:#ff6548!important}
+#tabs button.on::after{background:linear-gradient(90deg,#e51b2b,#ff7336)!important}
+@media(max-width:600px){#auth-choices{gap:9px!important}#auth-choices .btn{min-height:46px;font-size:.9rem;padding:9px 8px}}
 </style>
 </head>
 <body>
