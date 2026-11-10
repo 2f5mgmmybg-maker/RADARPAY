@@ -632,14 +632,16 @@ def save_roles():
     private_save()
 
 def is_blacklisted(user_id):
-    entry = private_load().setdefault("blacklist", {}).get(str(user_id))
-    if not entry:
-        return False
-    if int(time.time()) >= int(entry.get("until", 0)):
-        private_load()["blacklist"].pop(str(user_id), None)
-        private_save()
-        return False
-    return True
+    with LOCK:
+        blacklist = private_load().setdefault("blacklist", {})
+        entry = blacklist.get(str(user_id))
+        if not entry:
+            return False
+        if int(time.time()) >= int(entry.get("until", 0)):
+            blacklist.pop(str(user_id), None)
+            private_save()
+            return False
+        return True
 
 
 def role(user, code=None):
@@ -1405,7 +1407,8 @@ def api(path, b):
     if path == "/api/admin/monitor":
         if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
-        events = [dict(item) for item in private_load().setdefault("monitor_events", [])]
+        with LOCK:
+            events = [dict(item) for item in private_load().setdefault("monitor_events", [])]
         events.sort(key=lambda item: int(item.get("time", 0)), reverse=True)
         storage = "PostgreSQL" if DATABASE_URL else "GitHub (lent)"
         service_status = "ok" if DATABASE_URL else "degraded"
@@ -1454,10 +1457,12 @@ def api(path, b):
     if path == "/api/admin/registrations":
         if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
-        state = private_load()
-        roles = state.setdefault("roles", {})
+        with LOCK:
+            state = private_load()
+            roles = dict(state.setdefault("roles", {}))
+            source_registrations = [dict(item) for item in state.setdefault("registrations", [])]
         registrations = []
-        for item in state.setdefault("registrations", []):
+        for item in source_registrations:
             profile = dict(item)
             role_is_approved = roles.get(str(profile.get("user_id"))) == profile.get("role")
             profile["status"] = "approved" if role_is_approved else (profile.get("status") or "pending")
@@ -1494,24 +1499,26 @@ def api(path, b):
         return {"ok": True, "user_id": target, "role": chosen}
     if path == "/api/me":
         data, _ = load()
-        state = private_load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
-        profile = next((x for x in state.setdefault("registrations", [])
-                        if str(x.get("user_id")) == str(uid)), None)
-        if r in ("lanceur", "spitta"):
-            if not profile:
-                profile = {"user_id": str(uid), "role": r, "status": "approved",
-                           "pseudo": str(user.get("first_name") or "Utilisateur")[:24],
-                           "created": int(time.time())}
-                state["registrations"].append(profile)
-            profile["telegram_username"] = str(user.get("username") or profile.get("telegram_username") or "")
-            profile["first_name"] = str(user.get("first_name") or profile.get("first_name") or "")
-            profile["last_seen"] = int(time.time())
-            private_save()
-        pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
+        with LOCK:
+            state = private_load()
+            profile = next((x for x in state.setdefault("registrations", [])
+                            if str(x.get("user_id")) == str(uid)), None)
+            if r in ("lanceur", "spitta"):
+                if not profile:
+                    profile = {"user_id": str(uid), "role": r, "status": "approved",
+                               "pseudo": str(user.get("first_name") or "Utilisateur")[:24],
+                               "created": int(time.time())}
+                    state["registrations"].append(profile)
+                profile["telegram_username"] = str(user.get("username") or profile.get("telegram_username") or "")
+                profile["first_name"] = str(user.get("first_name") or profile.get("first_name") or "")
+                profile["last_seen"] = int(time.time())
+                private_save()
+            pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
+            has_pin = bool(profile and profile.get("pin_hash"))
         return {"role": r, "mine": mine, "pending": pending,
-                "has_pin": bool(profile and profile.get("pin_hash")),
+                "has_pin": has_pin,
                 "telegram_username": str(user.get("username") or ""),
                 "first_name": str(user.get("first_name") or "")}
     if path == "/api/blacklist":
@@ -1521,30 +1528,33 @@ def api(path, b):
             return {"error": "Ton accès à RADARPAY est en attente d’autorisation par l’administrateur."}
         now = int(time.time())
         entries = []
-        blacklist = private_load().setdefault("blacklist", {})
-        changed = False
-        for blocked_id, entry in list(blacklist.items()):
-            until = int(entry.get("until", 0))
-            if until <= now:
-                blacklist.pop(blocked_id, None)
-                changed = True
-                continue
-            # Le pseudo d'inscription est affiché publiquement; aucun identifiant Telegram n'est exposé.
-            profile = next((x for x in private_load().get("registrations", [])
-                            if str(x.get("user_id")) == str(blocked_id)), {})
-            display_name = ((("@" + str(profile.get("telegram_username")).lstrip("@")) if profile.get("telegram_username") else None)
-                            or profile.get("pseudo") or profile.get("first_name") or "SPITTA")
-            entries.append({
-                "label": str(display_name)[:40],
-                "until": until,
-                "reason": entry.get("reason") or "Non-respect du délai EROP",
-                "guarantee_fee_due": bool(entry.get("guarantee_fee_due")),
-                "guarantee_fee_rate": entry.get("guarantee_fee_rate"),
-                "guarantee_fee_amount": entry.get("guarantee_fee_amount"),
-                "guarantee_fee_currency": entry.get("guarantee_fee_currency")
-            })
-        if changed:
-            private_save()
+        with LOCK:
+            state = private_load()
+            blacklist = state.setdefault("blacklist", {})
+            registrations = state.setdefault("registrations", [])
+            changed = False
+            for blocked_id, entry in list(blacklist.items()):
+                until = int(entry.get("until", 0))
+                if until <= now:
+                    blacklist.pop(blocked_id, None)
+                    changed = True
+                    continue
+                # Le pseudo d'inscription est affiché publiquement; aucun identifiant Telegram n'est exposé.
+                profile = next((x for x in registrations
+                                if str(x.get("user_id")) == str(blocked_id)), {})
+                display_name = ((("@" + str(profile.get("telegram_username")).lstrip("@")) if profile.get("telegram_username") else None)
+                                or profile.get("pseudo") or profile.get("first_name") or "SPITTA")
+                entries.append({
+                    "label": str(display_name)[:40],
+                    "until": until,
+                    "reason": entry.get("reason") or "Non-respect du délai EROP",
+                    "guarantee_fee_due": bool(entry.get("guarantee_fee_due")),
+                    "guarantee_fee_rate": entry.get("guarantee_fee_rate"),
+                    "guarantee_fee_amount": entry.get("guarantee_fee_amount"),
+                    "guarantee_fee_currency": entry.get("guarantee_fee_currency")
+                })
+            if changed:
+                private_save()
         entries.sort(key=lambda x: x["until"], reverse=True)
         return {"ok": True, "entries": entries}
     if not r:
