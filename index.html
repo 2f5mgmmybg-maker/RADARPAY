@@ -102,6 +102,7 @@ section.on{display:block;animation:in .4s ease both}
 .photo-details{display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 12px;color:var(--ink);font-size:.88rem;font-weight:650;line-height:1.45;background:var(--bg2);border-top:1px solid var(--line)}
 .photo-details span{overflow-wrap:anywhere}
 .photo-details .photo-price{color:var(--blip);font-weight:800}
+.photo-details .photo-percentage{display:inline-flex;align-items:center;padding:3px 9px;border:1px solid var(--sweep);border-radius:999px;background:rgba(57,255,20,.10);color:var(--sweep);font-weight:850;white-space:nowrap}
 .stamp:empty{display:none}
 #lb{position:fixed;inset:0;z-index:30;background:rgba(3,13,18,.97);display:none;flex-direction:column;align-items:center;gap:14px;padding:16px}
 #lb.on{display:flex;animation:in .25s ease both}
@@ -709,7 +710,7 @@ function render(){
     var im=document.createElement("img");im.src=p.src;im.alt="";d.appendChild(im);
     var details=document.createElement("div");details.className="photo-details";
     var price=document.createElement("span");price.className="photo-price";price.textContent="Prix : "+(p.prix||"Non précisé");details.appendChild(price);
-    var pct=document.createElement("span");pct.textContent="Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé");details.appendChild(pct);
+    var pct=document.createElement("span");pct.className="photo-percentage";pct.textContent=(p.pourcentage!==""&&p.pourcentage!==null&&p.pourcentage!==undefined)?"+"+p.pourcentage+" %":"Pourcentage non précisé";details.appendChild(pct);
     var country=document.createElement("span");country.textContent="Pays : "+(p.pays||"Non précisé");details.appendChild(country);
     var author=document.createElement("span");author.textContent="Publié par : "+(p.auteur||"Auteur non renseigné");details.appendChild(author);
     d.appendChild(details);
