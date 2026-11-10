@@ -340,6 +340,15 @@ def record_guarantee_fee(chat, blacklist_entry, now):
     return amount, currency
 
 
+def payment_report_followup_valid(followup, started_at):
+    return bool(started_at and followup.get("status") in ("awaiting", "overdue")
+                and followup.get("started_at") == started_at)
+
+
+def payment_report_is_late(followup, now):
+    return int(now) >= int(followup.get("deadline", 0))
+
+
 def eraf_validation_pending(chat):
     return bool(chat.get("erop_photo_sent") and not chat.get("erop_confirmed"))
 
@@ -1354,9 +1363,9 @@ def api(path, b):
             if not click or click.get("site") != site:
                 return {"error": "Sélectionne le site partenaire qui a été ouvert."}
             followup = dict(click.get("followup") or {})
-            if followup.get("status") not in ("awaiting", "overdue") or not followup.get("started_at"):
+            if not payment_report_followup_valid(followup, followup.get("started_at")):
                 return {"error": "Aucune réponse de paiement n’attend actuellement."}
-            late = now >= int(followup.get("deadline", 0))
+            late = payment_report_is_late(followup, now)
             started_at = followup.get("started_at")
             click_snapshot = dict(click)
         try:
@@ -1373,9 +1382,9 @@ def api(path, b):
                 current_followup = (current_click or {}).get("followup") or {}
                 if (not current_click or current_click.get("site") != site
                         or current_followup.get("status") not in ("awaiting", "overdue")
-                        or current_followup.get("started_at") != started_at):
+                        or not payment_report_followup_valid(current_followup, started_at)):
                     raise ValueError("Cette déclaration a déjà été enregistrée ou le suivi a changé.")
-                late = late or int(time.time()) >= int(current_followup.get("deadline", 0))
+                late = late or payment_report_is_late(current_followup, int(time.time()))
                 text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ" + (" — DÉCLARATION TARDIVE" if late else "") + "\nSite : " + click_snapshot["site"] + "\nArticle : " + article + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
                 pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
                     "from": uid, "name": user.get("first_name", "CALLER"), "text": text_report,
