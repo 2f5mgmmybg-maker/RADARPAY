@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100" role="img" aria-label="RADAR PAY">
+<defs>
+ <radialGradient id="bg"><stop stop-color="#10243a"/><stop offset=".68" stop-color="#030914"/><stop offset="1" stop-color="#010308"/></radialGradient>
+ <linearGradient id="hood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#314d70"/><stop offset=".35" stop-color="#0b1424"/><stop offset="1" stop-color="#02050b"/></linearGradient>
+ <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c4ff3d"/><stop offset=".45" stop-color="#39ff14"/><stop offset="1" stop-color="#008b27"/></linearGradient>
+ <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset=".48" stop-color="#9eb2c6"/><stop offset="1" stop-color="#f8ffff"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="900" height="1100" rx="42" fill="url(#bg)"/>
+<g fill="none" stroke="#08b9e8" opacity=".28" stroke-width="3"><path d="M0 150H180l90 90h120M900 170H720l-90 90H510M0 820h160l70-70h110M900 840H730l-80-80H520"/></g>
+<g fill="none" stroke="url(#green)" filter="url(#glow)" opacity=".95"><circle cx="450" cy="385" r="285" stroke-width="7"/><circle cx="450" cy="385" r="230" stroke-width="3"/><circle cx="450" cy="385" r="170" stroke-width="3"/><path d="M165 385H735M450 100V670M450 385L650 190" stroke-width="3"/></g>
+<path d="M245 390 335 95 450 24 565 95 655 390 600 480H300Z" fill="url(#hood)" stroke="#65caff" stroke-width="8"/>
+<path d="M305 340 365 260 450 245 535 260 595 340 550 425H350Z" fill="#02050b"/>
+<path d="M355 340 425 365 390 385Z M545 340 475 365 510 385Z" fill="#2ce8ff" filter="url(#glow)"/>
+<path d="M170 450Q260 400 320 470L355 545 275 610 170 570Z M730 450Q640 400 580 470L545 545 625 610 730 570Z" fill="url(#hood)" stroke="#3d9bc8" stroke-width="7"/>
+<g fill="#39ff14" filter="url(#glow)"><circle cx="220" cy="385" r="9"/><circle cx="680" cy="385" r="9"/><circle cx="450" cy="100" r="9"/><circle cx="450" cy="670" r="9"/></g>
+<path d="M55 705Q450 650 845 705L800 755Q450 720 100 755Z" fill="#02060c" stroke="#39ff14" stroke-width="5"/>
+<text x="450" y="790" fill="url(#metal)" stroke="#06101b" stroke-width="3" paint-order="stroke" font-family="Arial,Helvetica,sans-serif" font-size="128" font-weight="900" text-anchor="middle" letter-spacing="-7">RADAR</text>
+<text x="450" y="920" fill="url(#green)" stroke="#07120a" stroke-width="5" paint-order="stroke" font-family="Arial,Helvetica,sans-serif" font-size="150" font-weight="900" font-style="italic" text-anchor="middle" letter-spacing="8">PAY</text>
+<path d="M390 970H510L450 1040Z" fill="#06121a" stroke="#39ff14" stroke-width="7"/><path d="M430 995v-10a20 20 0 0 1 40 0v10m-48 0h56v38h-56z" fill="none" stroke="#dfffe2" stroke-width="7"/>
+</svg>
