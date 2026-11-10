@@ -1224,7 +1224,7 @@ def api(path, b):
             private_save()
         monitor_event("payment_not_done", "Paiement non effectué — raison à examiner",
             "Site : " + str(click.get("site", "")) + " · CALLER : " + str(uid) + (" · Hors délai" if late else ""),
-            "warning", True)
+            "warning", False)
         try:
             say(OWNER, "❌ PAIEMENT NON EFFECTUÉ — raison à examiner\\nCALLER : " + str(uid) +
                 "\\nSite : " + str(click.get("site", "")) + "\\nRaison : " + reason +
