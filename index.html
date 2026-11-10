@@ -1036,7 +1036,6 @@ function loadChatList(){
     });
     if(host&&ADMIN&&!host.children.length)host.textContent="Aucune discussion à superviser.";
     if(livehost&&!livehost.children.length)livehost.textContent="Aucune discussion en direct pour le moment.";
-    loadSpittaItems();if(ADMIN)loadAdminChats();
     if(userhost&&!userhost.children.length)userhost.textContent="Aucune discussion de CALLER en cours.";
     if(spittahost&&!spittahost.children.length)spittahost.textContent="Aucune demande reçue en tant que SPITTA.";
     
@@ -1445,8 +1444,7 @@ function enterApp(response){
     arrangeTabs();
     showMe(response,false);
     loadSpittaItems();
-    loadAdminChats();
-    loadChatList();return;
+    loadAdminChats();return;
   }
   if(USER_ROLE==="spitta")loadSpittaItems();
   arrangeTabs();loadChatList();
