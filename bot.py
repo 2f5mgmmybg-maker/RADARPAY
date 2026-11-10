@@ -671,6 +671,12 @@ def process_pending_requests():
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai de 2 minutes dépassé : le CALLER n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au SPITTA pour cette étape qui dépend du CALLER.", "time": now})
                 changed = True
+            if c.get("status") == "proof_pending" and int(c.get("proof_deadline", 0)) > 0 and now >= int(c.get("proof_deadline", 0)):
+                c["status"] = "proof_expired"
+                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                    "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": now})
+                actions.append(("proof_expired", c.get("client"), c.get("vendor")))
+                changed = True
             if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and now >= int(c.get("erop_deadline", 0)):
                 c["status"] = "erop_expired"
                 monitor_actions.append(("erop", c.get("id"), c.get("vendor"), c.get("price")))
@@ -788,6 +794,14 @@ def process_pending_requests():
                             chats_save(chats_data, None)
                 except Exception as e:
                     print("confirmation notification ERAF non sauvegardée:", repr(e))
+            continue
+        if kind == "proof_expired":
+            _, client_id, vendor_id = action
+            try:
+                say(client_id, "⏰ Le délai de 2 minutes pour la capture est dépassé. La vente est bloquée.")
+                say(vendor_id, "⏰ Le délai de 2 minutes pour envoyer la capture est dépassé. La vente est bloquée.")
+            except Exception as e:
+                print("notification expiration capture:", repr(e))
             continue
         try:
             if kind == "remind":
@@ -1314,7 +1328,7 @@ def api(path, b):
                 if (not current_click or current_click.get("site") != site
                         or current_followup.get("status") not in ("awaiting", "overdue")
                         or current_followup.get("started_at") != started_at
-                        or int(time.time()) > int(current_followup.get("deadline", 0))):
+                        or int(time.time()) >= int(current_followup.get("deadline", 0))):
                     raise ValueError("Le délai est dépassé ou cette déclaration a déjà été enregistrée.")
                 text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click_snapshot["site"] + "\nArticle : " + article + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
                 pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
@@ -1531,7 +1545,7 @@ def api(path, b):
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
                     "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le SPITTA est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                 changed = True
-            if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
+            if c.get("status") == "proof_pending" and time.time() >= c.get("proof_deadline", 0):
                 c["status"] = "proof_expired"
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT", "text": "⏰ Délai de 2 minutes dépassé. La vente est bloquée.", "time": int(time.time())})
                 changed = True
@@ -1774,7 +1788,7 @@ def api(path, b):
                 return {"error": "Envoie d’abord la deuxième capture EROP avant de valider ERAF."}
             if c.get("erop_confirmed"):
                 return {"error": "ERAF a déjà été validé pour cette demande."}
-            if int(time.time()) > int(c.get("eraf_deadline", 0)):
+            if int(time.time()) >= int(c.get("eraf_deadline", 0)):
                 return {"error": "Le délai de 10 minutes pour valider ERAF est dépassé."}
             c["erop_confirmed"] = True
             c["erop_photo_sent"] = False
@@ -1821,7 +1835,7 @@ def api(path, b):
                     chats_save(chats_data, None)
                     return {"error": "Le délai EROP est dépassé. La discussion est bloquée et le compte du SPITTA est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus."}
                 is_erop = True
-            elif c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
+            elif c.get("status") == "proof_pending" and time.time() < c.get("proof_deadline", 0):
                 is_erop = False
             else:
                 if c.get("status") == "proof_pending":
@@ -1853,7 +1867,7 @@ def api(path, b):
                     c["eraf_deadline"] = int(time.time()) + 600
                     message_text = "📸 Deuxième capture EROP envoyée — en attente de validation ERAF par le SPITTA."
                     accepted = True
-                elif not is_erop and c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
+                elif not is_erop and c.get("status") == "proof_pending" and time.time() < c.get("proof_deadline", 0):
                     c["status"] = "proof_received"
                     message_text = "📸 Capture d’écran envoyée — preuve reçue."
                     accepted = True
