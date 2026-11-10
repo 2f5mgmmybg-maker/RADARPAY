@@ -1228,7 +1228,7 @@ setInterval(function(){
     .then(function(r){if(r.ok&&ACTIVE_CHAT===pollChat&&ADMIN_CHAT_MODE===pollAdmin)renderMessages(r.chat)})
     .catch(function(){})
     .finally(function(){CHAT_POLL_BUSY=false});
-},2000);
+},3000);
  setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},10000);
 setInterval(function(){if(document.visibilityState==="visible"&&ADMIN&&$("c").classList.contains("on"))loadMonitor()},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
