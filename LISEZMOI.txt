@@ -1,47 +1,12 @@
-BOT ADMIN RADAR PAYMENT
-=======================
-Ce bot te laisse ajouter tes photos et tes prix depuis Telegram.
-Toi seul peux le faire. Les autres voient seulement le bouton.
+DOCUMENT OBSOLÈTE — NE PAS UTILISER POUR CONFIGURER RADARPAY
 
-Il met a jour ton site (le depot GitHub du site), donc le site doit etre
-sur GitHub Pages.
+Ces anciennes instructions décrivent une architecture différente et ne correspondent plus au déploiement actuel.
 
-ETAPE 1 - Un nouveau bot
-- Dans Telegram, ouvre @BotFather, ecris /newbot, choisis un nom.
-- Garde le token pour l'etape 4. Ne le montre a personne.
+Pour toute installation, configuration ou dépannage, utilise exclusivement :
+README-RENDER.txt
 
-ETAPE 2 - Ton numero Telegram
-- Ecris a @userinfobot : il te donne un "Id" (des chiffres). Garde-le.
-
-ETAPE 3 - Une cle GitHub
-- GitHub > ta photo > Settings > Developer settings > Personal access tokens
-  > Fine-grained tokens > Generate new token.
-- Repository access : "Only select repositories" > choisis le depot du SITE.
-- Permissions > Repository permissions > Contents : "Read and write".
-- Genere et garde la cle pour l'etape 4.
-
-ETAPE 4 - Mettre le bot en ligne sur Render
-- Cree un NOUVEAU depot GitHub (ex : radar-bot) avec ces fichiers :
-  bot.py et requirements.txt.
-- Sur Render : New > Web Service > choisis ce depot.
-  Build Command : pip install -r requirements.txt
-  Start Command : python bot.py
-- Dans "Environment", ajoute ces 5 lignes :
-  BOT_TOKEN      = le token de BotFather
-  OWNER_ID       = ton Id (etape 2)
-  GITHUB_TOKEN   = la cle GitHub (etape 3)
-  GITHUB_REPO    = ton-nom-github/nom-du-depot-du-site
-  SITE_URL       = l'adresse de ton site GitHub Pages
-- Lance. Dans Telegram, ecris /start a ton bot : le menu admin apparait.
-
-ETAPE 5 - Le bouton dans ton groupe
-- Ajoute le bot a ton groupe.
-- Dans le groupe, ecris /menu : le bot affiche le bouton "Ouvrir RADAR PAYMENT".
-- Option (plus joli) : dans @BotFather ecris /newapp, choisis ton bot,
-  mets l'adresse du site. Tu obtiens un lien t.me/... :
-  ajoute-le dans Render : MINIAPP_LINK = ce lien.
-
-UTILISATION (en prive avec le bot)
-- Envoie une photo avec le prix en legende (ex : 120 EUR).
-- /liste, /prix 2 150, /supprimer 2, /vider oui
-- La photo apparait sur le site en 1 a 2 minutes.
+Rappels importants :
+- Le dépôt RADARPAY contient à la fois la mini-app et le serveur bot/API.
+- Render doit exécuter le service Web avec : python bot.py
+- Ne publie jamais BOT_TOKEN, GITHUB_TOKEN ou DATA_ENCRYPTION_KEY.
+- Ne remplace pas photos.json par une ancienne copie.
