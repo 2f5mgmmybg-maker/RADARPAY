@@ -960,12 +960,14 @@ def api(path, b):
     if path == "/api/admin/access":
         if uid != OWNER:
             return {"error": "Accès réservé au compte propriétaire Telegram."}
-        configured_code = os.environ.get("ADMIN_ACCESS_CODE", "").strip()
+        configured_code = os.environ.get("ADMIN_ACCESS_CODE", "").strip().strip(chr(34)).strip(chr(39)).strip()
         supplied_code = str(b.get("code", "")).strip()
         if not configured_code:
-            return {"error": "Le code administrateur n’est pas configuré sur le serveur."}
+            return {"error": "ADMIN_ACCESS_CODE est absent dans Render. Ajoute cette variable puis redémarre le service."}
+        if not re.fullmatch(r"\d{6}", configured_code):
+            return {"error": "La variable ADMIN_ACCESS_CODE dans Render doit contenir exactement 6 chiffres, sans espace ni guillemets."}
         if not re.fullmatch(r"\d{6}", supplied_code) or not hmac.compare_digest(supplied_code, configured_code):
-            return {"error": "Code administrateur incorrect."}
+            return {"error": "Code incorrect. Vérifie la valeur de ADMIN_ACCESS_CODE dans le service Render qui héberge l’API RADARPAY."}
         return {"ok": True, "role": "owner"}
 
     # Toutes les routes de l’application exigent une session ouverte par PIN.
