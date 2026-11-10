@@ -442,6 +442,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <p class="lead" id="pm"></p><div class="grid" id="mine"></div>
       <div id="adminchatlist" hidden>
       <h3>Vue complète de RADARPAY</h3><p class="lead">Depuis cet espace, tu peux consulter toutes les publications de tous les SPITTA, les TARGETS physiques, les inscriptions, les discussions des Lanceurs et des SPITTA, ainsi que la liste noire. Le catalogue est dans l’onglet Catalogue.</p><button class="btn s" id="adminrefreshall" type="button">↻ Actualiser toutes les données</button><p class="lead" id="adminrefreshmsg" aria-live="polite"></p>
+      <h3>Supervision en direct</h3>
+      <p class="lead">Journal sécurisé des événements RADARPAY, actualisé toutes les 5 secondes. Les contenus des messages privés ne sont pas copiés dans ce journal.</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0"><button class="btn s" id="monitorrefresh" type="button">↻ Actualiser</button><span class="lead" id="monitorstatus" aria-live="polite">Chargement…</span></div>
+      <div class="lead" id="monitorstats"></div><div id="monitorevents" aria-live="polite"></div>
       <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
       <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
       <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
@@ -725,7 +729,7 @@ function showMe(r,fromCode){
   if(!ok){$("msg").textContent=r.error||"Accès administrateur réservé au propriétaire.";return}
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
-  loadChatList();loadRegistrations();
+  loadChatList();loadRegistrations();loadMonitor();
   PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1}).forEach(function(p){
     var d=document.createElement("div");d.className="slot";
     var im=document.createElement("img");im.src=p.src;d.appendChild(im);
@@ -742,6 +746,27 @@ function showMe(r,fromCode){
     x.onclick=function(){x.disabled=true;call("/api/delete",{id:p.id}).then(function(r){if(!r.ok)throw new Error(r.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});render();adminOpen()}).catch(function(e){$("pm").textContent=e.message||"Suppression impossible.";x.disabled=false})};
     d.appendChild(x);m.appendChild(d)});
 }
+function loadMonitor(){
+  if(!ADMIN||!$("monitorevents"))return Promise.resolve();
+  return call("/api/admin/monitor",{}).then(function(r){
+    if(!r.ok)throw new Error(r.error||"Journal indisponible.");
+    var host=$("monitorevents");host.innerHTML="";var stats=r.counts||{};
+    $("monitorstats").textContent="Événements conservés : "+(stats.total||0)+" · "+(stats.critical||0)+" critiques · "+(stats.warning||0)+" avertissements";
+    var events=r.events||[];
+    if(!events.length){host.textContent="Aucun événement enregistré pour le moment.";return;}
+    events.forEach(function(ev){
+      var item=document.createElement("div");item.style.cssText="padding:12px 14px;margin:8px 0;border:1px solid var(--line);border-radius:14px;background:var(--bg2)";
+      var head=document.createElement("div");head.style.cssText="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap";
+      var title=document.createElement("b");title.textContent=(ev.level==="critical"?"🚨 ":ev.level==="warning"?"⚠️ ":"• ")+(ev.title||"Événement");
+      var when=document.createElement("small");when.style.color="var(--mute)";when.textContent=new Date(Number(ev.time||0)*1000).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"medium"});
+      head.appendChild(title);head.appendChild(when);item.appendChild(head);
+      if(ev.detail){var detail=document.createElement("div");detail.style.cssText="color:var(--mute);font-size:.86rem;margin-top:5px;overflow-wrap:anywhere";detail.textContent=ev.detail;item.appendChild(detail);}
+      host.appendChild(item);
+    });
+    $("monitorstatus").textContent="Mis à jour à "+new Date(Number(r.server_time||0)*1000).toLocaleTimeString("fr-FR");
+  }).catch(function(e){$("monitorstatus").textContent=e.message||"Erreur de supervision.";});
+}
+$("monitorrefresh").onclick=loadMonitor;
 function loadSpittaItems(){
   if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
   var isAdmin=USER_ROLE==="owner";
@@ -1025,7 +1050,8 @@ setInterval(function(){
     .catch(function(){})
     .finally(function(){CHAT_POLL_BUSY=false});
 },2000);
- setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},10000);
+ setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN){loadAdminChats();loadMonitor()}}},10000);
+setInterval(function(){if(document.visibilityState==="visible"&&ADMIN&&$("c").classList.contains("on"))loadMonitor()},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
 
