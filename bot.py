@@ -200,6 +200,10 @@ def ensure_db():
                             last_seen BIGINT NOT NULL
                         )
                     """)
+                    conn.execute("""
+                        CREATE INDEX IF NOT EXISTS radarpay_presence_last_seen_idx
+                        ON radarpay_presence (last_seen, role)
+                    """)
             except Exception:
                 pool.close()
                 raise
