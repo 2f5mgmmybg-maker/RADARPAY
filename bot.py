@@ -70,18 +70,26 @@ def say(chat, text, **k):
     tg("sendMessage", chat_id=chat, text=text, **k)
 
 
-def monitor_event(kind, title, detail="", level="info", notify=False):
+PROCESS_STARTED_AT = int(time.time())
+
+
+def monitor_event(kind, title, detail="", level="info", notify=False, lock_held=False):
     now = int(time.time())
     event = {"id": secrets.token_hex(8), "time": now, "kind": str(kind)[:40],
              "title": str(title)[:120], "detail": str(detail)[:240],
              "level": level if level in ("info", "warning", "critical") else "info"}
     try:
-        with LOCK:
+        def persist_event():
             state = private_load()
             events = state.setdefault("monitor_events", [])
             events.append(event)
-            del events[:-300]
+            del events[:-500]
             private_save()
+        if lock_held:
+            persist_event()
+        else:
+            with LOCK:
+                persist_event()
     except Exception as e:
         print("journal supervision:", repr(e))
     if notify:
@@ -639,6 +647,7 @@ def owner_of(p):
 
 def process_pending_requests():
     actions = []
+    monitor_actions = []
     with LOCK:
         data, _ = chats_load()
         changed = False
@@ -653,6 +662,7 @@ def process_pending_requests():
                 changed = True
             if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and now >= int(c.get("erop_deadline", 0)):
                 c["status"] = "erop_expired"
+                monitor_actions.append(("erop", c.get("id"), c.get("vendor"), c.get("price")))
                 vendor_id = str(c.get("vendor"))
                 blacklist = private_load().setdefault("blacklist", {})
                 blacklist[vendor_id] = {
@@ -674,6 +684,7 @@ def process_pending_requests():
                     and c.get("eraf_deadline") and now >= int(c.get("eraf_deadline", 0))
                     and c.get("status") != "eraf_expired"):
                 c["status"] = "eraf_expired"
+                monitor_actions.append(("eraf", c.get("id"), c.get("vendor"), c.get("price")))
                 vendor_id = str(c.get("vendor"))
                 blacklist = private_load().setdefault("blacklist", {})
                 blacklist[vendor_id] = {
@@ -705,6 +716,12 @@ def process_pending_requests():
                 changed = True
         if changed:
             chats_save(data, None)
+    for item in monitor_actions:
+        stage, rid, vendor_id, price = item
+        if stage == "erop":
+            monitor_event("security_deadline", "Délai EROP dépassé — intervention automatique", "Discussion : " + str(rid) + " · SPITTA : " + str(vendor_id) + " · TARGET : " + str(price), "critical", True)
+        else:
+            monitor_event("security_deadline", "Délai ERAF dépassé — intervention automatique", "Discussion : " + str(rid) + " · SPITTA : " + str(vendor_id), "critical", True)
     for action in actions:
         kind = action[0]
         if kind == "erop_expired":
@@ -907,6 +924,7 @@ def api(path, b):
                 if len(failures) >= 5:
                     profile["pin_locked_until"] = now + 900
                     profile["pin_failures"] = []
+                    monitor_event("security_login", "Compte verrouillé après 5 codes PIN incorrects", "Compte Telegram : " + uid_key, "critical", False, lock_held=True)
                 private_save()
                 return {"error": "Code secret incorrect."}
             profile["pin_failures"] = []
@@ -1033,6 +1051,7 @@ def api(path, b):
         except Exception as e:
             notified = False
             print("notification clic site admin:", repr(e))
+        monitor_event("catalog_click", "Ouverture d’un LINK partenaire", "Site : " + site + " · Compte Telegram : " + str(uid), "info", False)
         return {"ok": True, "notification": notified}
     if path == "/api/adminchat/list":
         if r != "owner":
@@ -1145,9 +1164,11 @@ def api(path, b):
             return {"error": "Accès réservé à l’administrateur."}
         events = [dict(item) for item in private_load().setdefault("monitor_events", [])]
         events.sort(key=lambda item: int(item.get("time", 0)), reverse=True)
-        return {"ok": True, "events": events[:150], "server_time": int(time.time()),
+        return {"ok": True, "events": events[:200], "server_time": int(time.time()),
+                "service": {"status": "ok", "uptime_seconds": max(0, int(time.time()) - PROCESS_STARTED_AT)},
                 "counts": {"total": len(events), "critical": sum(1 for x in events if x.get("level") == "critical"),
-                           "warning": sum(1 for x in events if x.get("level") == "warning")}}
+                           "warning": sum(1 for x in events if x.get("level") == "warning"),
+                           "info": sum(1 for x in events if x.get("level") == "info")}}
     if path == "/api/admin/registrations":
         if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
