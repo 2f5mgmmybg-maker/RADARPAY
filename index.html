@@ -320,7 +320,7 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
-    <button class="on" data-t="a">LINK DISPONIBLE POUR LE SERVICE EN LIGNE</button>
+    <button class="on" data-t="a">DISPONIBILITÉ DE LINK</button>
     <button data-t="b">TARGET DISPONIBLE</button>
     <button data-t="e" id="spitta-tab">TARGET DISPONIBLE</button>
     <button data-t="f">Messages</button>
@@ -1017,7 +1017,7 @@ function simplifyWorkspaceTabs(){
     var names={"e":"TARGET DISPONIBLE","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
-    var names={"a":"LINK DISPONIBLE POUR LE SERVICE EN LIGNE","b":"TARGET DISPONIBLE","f":"Messages","c":"Administration"};
+    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"Messages","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
 }
