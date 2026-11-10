@@ -2344,9 +2344,9 @@ def startup():
             if data.get("api") != API_URL:
                 data["api"] = API_URL
                 save(data, sha)
-            print("API publiée dans photos.json.")
-        else:
-            print("API déjà correctement publiée dans photos.json.")
+                print("API publiée dans photos.json.")
+            else:
+                print("API déjà correctement publiée dans photos.json.")
     except Exception as e:
         print("ERREUR startup/GitHub:", repr(e))
 
