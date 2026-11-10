@@ -626,6 +626,7 @@ function loadSpittaItems(){
         var info=document.createElement("div");info.className="spitta-product-info";
         var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
         if(p.pourcentage){var pct=document.createElement("div");pct.className="spitta-product-hint";pct.textContent="Pourcentage souhaité : "+p.pourcentage+" %";info.appendChild(pct);}
+        var country=document.createElement("div");country.className="spitta-product-hint";country.textContent="Pays : "+(p.pays||"Non précisé");info.appendChild(country);
         var actions=document.createElement("div");actions.className="spitta-product-actions";
         var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent=isAdmin?"Publication visible dans l’espace administrateur.":"Target est publié sur ton espace.";actions.appendChild(hint);
         if(!isAdmin){
