@@ -1028,7 +1028,7 @@ def api(path, b):
                         "reminded": False, "messages": []}
                 data_ch.setdefault("chats", []).append(chat)
             chats_save(data_ch, None)
-        monitor_event("offer", "Nouvelle offre envoyée", "Produit : " + prix + " · Proposition : " + client_offer, "warning", True)
+        monitor_event("offer", "Nouvelle offre envoyée", "Produit : " + prix + " · Proposition : " + client_offer, "warning", False)
         try:
             markup = {"inline_keyboard": [
                 [{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
@@ -1431,8 +1431,8 @@ def api(path, b):
             # Le pseudo d'inscription est affiché publiquement; aucun identifiant Telegram n'est exposé.
             profile = next((x for x in private_load().get("registrations", [])
                             if str(x.get("user_id")) == str(blocked_id)), {})
-            display_name = (profile.get("pseudo") or profile.get("first_name")
-                            or (("@" + profile.get("telegram_username")) if profile.get("telegram_username") else "SPITTA"))
+            display_name = ((("@" + str(profile.get("telegram_username")).lstrip("@")) if profile.get("telegram_username") else None)
+                            or profile.get("pseudo") or profile.get("first_name") or "SPITTA")
             entries.append({
                 "label": str(display_name)[:40],
                 "until": until,
