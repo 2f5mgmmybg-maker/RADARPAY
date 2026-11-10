@@ -98,6 +98,9 @@ section.on{display:block;animation:in .4s ease both}
 @keyframes photoMotion{from{transform:scale(1.02) translateX(-.6%)}to{transform:scale(1.09) translateX(.6%)}}
 @keyframes activePulse{0%,100%{opacity:.78;box-shadow:0 0 8px rgba(238,234,226,.16)}50%{opacity:1;box-shadow:0 0 18px rgba(238,234,226,.48)}}
 .slot.empty{border-style:dashed;cursor:default}
+.slot.photo-unavailable::before{content:"Photo momentanément indisponible · touche pour réessayer";position:absolute;z-index:3;inset:auto 8px 42% 8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(5,7,12,.9);color:var(--ink);font-size:.78rem;line-height:1.4;text-align:center;pointer-events:none}
+.slot.photo-unavailable img{opacity:.12}
+#lb-photo-status{min-height:1.2em;color:var(--mute);font-size:.78rem;text-align:center}
 .price{display:none}
 .photo-details{display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 12px;color:var(--ink);font-size:.88rem;font-weight:650;line-height:1.45;background:var(--bg2);border-top:1px solid var(--line)}
 .photo-details span{overflow-wrap:anywhere}
@@ -725,6 +728,40 @@ function renderServices(){
 }
 renderServices();
 
+function loadPhotoImage(img,src,onFailure){
+  if(!img||!src){if(typeof onFailure==="function")onFailure();return}
+  if(img._radarRetryTimer){clearTimeout(img._radarRetryTimer);img._radarRetryTimer=null}
+  var token=(img._radarLoadToken||0)+1;img._radarLoadToken=token;
+  var attempts=0;
+  function attempt(){
+    if(img._radarLoadToken!==token)return;
+    var target=String(src);
+    if(!/^data:/i.test(target)){
+      var separator=target.indexOf("?")>-1?"&":"?";
+      target+=separator+"radar_retry="+Date.now()+"_"+attempts;
+    }
+    img.onload=function(){
+      if(img._radarLoadToken!==token)return;
+      if(img._radarRetryTimer){clearTimeout(img._radarRetryTimer);img._radarRetryTimer=null}
+      img.dataset.loadFailed="0";
+      if(img.classList.contains("slot-photo"))img.closest(".slot")?.classList.remove("photo-unavailable");
+      if(typeof img._radarOnLoad==="function")img._radarOnLoad();
+    };
+    img.onerror=function(){
+      if(img._radarLoadToken!==token)return;
+      if(attempts<3){
+        attempts++;
+        img._radarRetryTimer=setTimeout(attempt,attempts*1000);
+        return;
+      }
+      img.dataset.loadFailed="1";
+      if(typeof onFailure==="function")onFailure();
+    };
+    img.src=target;
+  }
+  img._radarOnLoad=null;
+  attempt();
+}
 var grid=document.getElementById("grid");
 var PHYSICAL_REFRESH_MS=25*60*1000;
 function render(){
@@ -734,7 +771,8 @@ function render(){
   PHOTOS.forEach(function(p,i){
     if(COUNTRY!=="Tous" && (COUNTRY==="À classer"?!!p.pays:(p.pays||"")!==COUNTRY))return;
     var d=document.createElement("div");d.className="slot";
-    var im=document.createElement("img");im.src=p.src;im.alt="";d.appendChild(im);
+    var im=document.createElement("img");im.className="slot-photo";im.alt="Photo TARGET";im.loading="lazy";im.decoding="async";loadPhotoImage(im,p.src,function(){d.classList.add("photo-unavailable")});d.appendChild(im);
+    d.setAttribute("role","button");d.setAttribute("tabindex","0");d.setAttribute("aria-label","Ouvrir la photo TARGET");
     var details=document.createElement("div");details.className="photo-details";
     var price=document.createElement("span");price.className="photo-price";price.textContent="Prix : "+(p.prix||"Non précisé");details.appendChild(price);
     var pct=document.createElement("span");pct.className="photo-percentage";pct.textContent=(p.pourcentage!==""&&p.pourcentage!==null&&p.pourcentage!==undefined)?"+"+p.pourcentage+" %":"Pourcentage non précisé";details.appendChild(pct);
@@ -746,40 +784,60 @@ function render(){
   });
   document.getElementById("stamp").textContent=ST.maj?"Mis à jour le "+ST.maj:"";
 }
-// Gestion centralisée des clics : elle reste active même lorsque render() reconstruit les cartes après actualisation.
+// Gestion centralisée des clics : capture les clics même si la galerie est reconstruite.
 if(!grid.dataset.photoClickBound){
   grid.dataset.photoClickBound="1";
-  grid.addEventListener("click",function(e){
-    if(ADMIN)return;
-    var card=e.target.closest(".slot[data-photo-id]");
-    if(!card || !grid.contains(card))return;
+  function activatePhoto(target){
+    if(ADMIN||!target||typeof target.closest!=="function")return;
+    var card=target.closest(".slot[data-photo-id]");
+    if(!card||!grid.contains(card))return;
     var photo=PHOTOS.find(function(item){return String(item.id)===card.dataset.photoId;});
     if(photo)openLb(photo);
-  });
+  }
+  grid.addEventListener("click",function(e){activatePhoto(e.target)},true);
+  grid.addEventListener("keydown",function(e){
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    var card=e.target&&e.target.closest?e.target.closest(".slot[data-photo-id]"):null;
+    if(!card)return;
+    e.preventDefault();activatePhoto(card);
+  },true);
+}
+function closeLb(){
+  var l=document.getElementById("lb");if(!l)return;
+  var im=l.querySelector("img");
+  if(im){
+    im.classList.remove("z");
+    im._radarLoadToken=(im._radarLoadToken||0)+1;
+    if(im._radarRetryTimer){clearTimeout(im._radarRetryTimer);im._radarRetryTimer=null}
+    im.removeAttribute("src");
+  }
+  var box=l.querySelector(".box");if(box)box.scrollTop=0;
+  var status=l.querySelector("#lb-photo-status");if(status)status.textContent="";
+  l.classList.remove("on");l.setAttribute("aria-hidden","true");CUR=null;
 }
 function openLb(p){
   var l=document.getElementById("lb");
   if(!l){
     l=document.createElement("div");l.id="lb";
-    l.innerHTML='<div class="box"><img alt=""></div><b id="lbp"></b><small id="lb-author"></small><label id="lb-action-label" for="lb-offer">Ta proposition de prix au SPITTA</label><input class="inp" id="lb-offer" type="text" maxlength="40" placeholder="Ex. : 2 300 €"><select class="inp" id="lb-price-edit"><option value="2500 €">2 500 €</option><option value="5000 €">5 000 €</option><option value="9900 €">9 900 €</option></select><button class="btn s" id="lbw">Envoyer ma proposition</button><button class="btn s" id="lbx">Fermer</button><small id="lbm"></small>';
+    l.innerHTML='<div class="box"><img alt="Photo TARGET"></div><small id="lb-photo-status" aria-live="polite">Chargement de la photo…</small><b id="lbp"></b><small id="lb-author"></small><label id="lb-action-label" for="lb-offer">Ta proposition de prix au SPITTA</label><input class="inp" id="lb-offer" type="text" maxlength="40" placeholder="Ex. : 2 300 €"><select class="inp" id="lb-price-edit"><option value="2500 €">2 500 €</option><option value="5000 €">5 000 €</option><option value="9900 €">9 900 €</option></select><button class="btn s" id="lbw">Envoyer ma proposition</button><button class="btn s" id="lbx">Fermer</button><small id="lbm"></small>';
     document.body.appendChild(l);
     var i0=l.querySelector("img");i0.onclick=function(){i0.classList.toggle("z")};
-    l.querySelector("#lbx").onclick=function(){
-      i0.classList.remove("z");
-      l.querySelector(".box").scrollTop=0;
-      l.classList.remove("on");
-      l.setAttribute("aria-hidden","true");
-    };
+    l.querySelector("#lbx").onclick=closeLb;
+    l.addEventListener("click",function(e){if(e.target===l)closeLb()});
     var w=l.querySelector("#lbw"),m=l.querySelector("#lbm");
     w.onclick=function(){
-      var isMine=USER_ROLE==="spitta"&&MY_PHOTO_IDS.indexOf(CUR&&CUR.id)>-1;
+      var current=CUR;
+      if(!current||!current.id){m.textContent="Cette publication n’est plus disponible. Ferme puis rouvre la photo.";return}
+      var targetId=current.id;
+      var isMine=USER_ROLE==="spitta"&&MY_PHOTO_IDS.indexOf(targetId)>-1;
       if(isMine){
         var nextPrice=l.querySelector("#lb-price-edit").value;
         w.disabled=true;m.textContent="Enregistrement du nouveau prix…";
-        call("/api/update",{id:CUR.id,prix:nextPrice}).then(function(r){
+        call("/api/update",{id:targetId,prix:nextPrice}).then(function(r){
           if(!r.ok)throw new Error(r.error||"Modification impossible.");
-          CUR.prix=nextPrice;CUR.categorie=({"2500 €":"2500","5000 €":"5000","9900 €":"9900"})[nextPrice];
-          PHOTOS.forEach(function(item){if(item.id===CUR.id){item.prix=CUR.prix;item.categorie=CUR.categorie;}});
+          var nextCategory=({"2500 €":"2500","5000 €":"5000","9900 €":"9900"})[nextPrice];
+          if(CUR&&CUR.id===targetId){CUR.prix=nextPrice;CUR.categorie=nextCategory;}
+          PHOTOS.forEach(function(item){if(item.id===targetId){item.prix=nextPrice;item.categorie=nextCategory;}});
           m.textContent="Prix de ta publication modifié.";w.textContent="Enregistré";render();loadSpittaItems();
         }).catch(function(e){m.textContent=e.message||"Modification impossible.";w.disabled=false});
         return;
@@ -788,17 +846,19 @@ function openLb(p){
       var offer=l.querySelector("#lb-offer").value.trim();
       if(!offer){m.textContent="Indique ta proposition de prix avant de contacter le SPITTA.";l.querySelector("#lb-offer").focus();return}
       w.disabled=true;m.textContent="Envoi de ta proposition…";
-      ask().then(function(){return call("/api/want",{id:CUR.id,client_offer:offer})}).then(function(r){
+      ask().then(function(){return call("/api/want",{id:targetId,client_offer:offer})}).then(function(r){
         m.textContent=r.ok?(r.notification===false?(r.error||"Notification non confirmée. Réessaie."):"Le SPITTA est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");
         if(r.notification===false||!r.ok){w.disabled=false;w.textContent="Réessayer"}else{w.textContent="Envoyé"}
         if(r.chat)openChat(r.chat);
       }).catch(function(e){m.textContent=(e&&e.message)||"Le serveur ne répond pas. Réessaie.";w.disabled=false;w.textContent="Réessayer"});
     };
   }
+  if(!p||!p.id||!p.src)return;
   var im=l.querySelector("img");
   im.classList.remove("z");
   l.querySelector(".box").scrollTop=0;
-  im.src=p.src;
+  l.querySelector("#lb-photo-status").textContent="Chargement de la photo…";
+  loadPhotoImage(im,p.src,function(){l.querySelector("#lb-photo-status").textContent="Photo indisponible pour le moment. Réessaie dans quelques secondes ou actualise la galerie."});
   l.classList.remove("on");
   l.setAttribute("aria-hidden","false");
   void l.offsetWidth;
@@ -815,6 +875,7 @@ function openLb(p){
   button.disabled=false;
   l.classList.add("on");
 }
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeLb()});
 function shrink(file,cb,onError){
   var objectUrl="",finished=false,loadTimer=null;
   function cleanup(){
