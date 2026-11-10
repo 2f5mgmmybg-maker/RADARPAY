@@ -1264,16 +1264,30 @@ def api(path, b):
         reports.sort(key=lambda x: int(x.get("time", 0)), reverse=True)
         reports = reports[:100]
         for report in reports:
-            proof_file = report.get("proof_file")
-            if proof_file:
-                try:
-                    if proof_file not in PROOF_CACHE:
-                        encrypted = base64.b64decode(gh_get(proof_file).get("content", ""))
-                        PROOF_CACHE[proof_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
-                    report["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
-                except Exception as e:
-                    print("lecture preuve paiement admin:", repr(e))
+            report.pop("proof_file", None)
         return {"ok": True, "reports": reports}
+    if path == "/api/admin/payment-file":
+        if uid != OWNER or r != "owner":
+            return {"error": "Accès réservé à l’administrateur."}
+        report_id = str(b.get("id", ""))[:40]
+        with LOCK:
+            report = next((dict(x) for x in private_load().setdefault("payment_reports", [])
+                           if x.get("id") == report_id), None)
+        if not report:
+            return {"error": "Déclaration introuvable."}
+        proof_file = str(report.get("proof_file", ""))
+        expected_prefix = "private_payment_proofs/" + str(report.get("launcher", "")) + "/"
+        if not proof_file.startswith(expected_prefix):
+            return {"error": "Justificatif introuvable ou accès refusé."}
+        try:
+            if proof_file not in PROOF_CACHE:
+                encrypted = base64.b64decode(gh_get(proof_file).get("content", ""))
+                PROOF_CACHE[proof_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+            return {"ok": True, "data": "data:image/jpeg;base64," + PROOF_CACHE[proof_file],
+                    "name": "Justificatif de paiement", "mime": "image/jpeg"}
+        except Exception as e:
+            print("lecture preuve paiement admin:", repr(e))
+            return {"error": "Impossible de charger ce justificatif."}
     if path == "/api/admin/payment-decision":
         if uid != OWNER or r != "owner":
             return {"error": "Accès réservé à l’administrateur."}
