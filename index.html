@@ -439,7 +439,7 @@ function render(){
     if(ADMIN){
       var details=document.createElement("div");details.className="photo-details";details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");d.appendChild(details);
       var c=document.createElement("div");c.className="ctl";
-      var x=document.createElement("button");x.textContent="✕";x.onclick=function(){PHOTOS.splice(i,1);render()};
+      var x=document.createElement("button");x.type="button";x.title="Supprimer définitivement cette publication";x.textContent="✕";x.onclick=function(){if(!confirm("Supprimer définitivement cette publication ?"))return;x.disabled=true;call("/api/delete",{id:p.id}).then(function(r){if(!r.ok)throw new Error(r.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(item){return item.id!==p.id});render();if($("adminrefreshmsg"))$("adminrefreshmsg").textContent="Publication supprimée.";}).catch(function(e){x.disabled=false;if($("adminrefreshmsg"))$("adminrefreshmsg").textContent=e.message||"Suppression impossible."})};
       c.appendChild(x);d.appendChild(c);
     }else{
       var details=document.createElement("div");details.className="photo-details";
@@ -725,7 +725,7 @@ $("paymentreport").onclick=function(){
     if(!r.ok)throw new Error(r.error||"Déclaration impossible.");
     $("paymentamount").value="";$("paymentproof").value="";$("paymentmsg").textContent="Déclaration et capture envoyées à l’administrateur. Paiement non vérifié automatiquement.";
     openAdminChat();
-  }).catch(function(e){$("paymentmsg").textContent=e.message||"Envoi impossible."}).finally(function(){$("paymentreport").disabled=false})});
+  }).catch(function(e){$("paymentmsg").textContent=e.message||"Envoi impossible."}).finally(function(){$("paymentreport").disabled=false})},function(e){$("paymentmsg").textContent=(e&&e.message)||"Impossible de préparer la capture. Essaie une autre image.";$("paymentreport").disabled=false});
 };
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 function renderMessages(c){
