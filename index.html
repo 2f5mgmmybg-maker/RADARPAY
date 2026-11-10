@@ -451,7 +451,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
       <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
       <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
-      <h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Chats privés avec les Lanceurs</h3><div id="adminlaunchers"></div></div></div>
+      <h3>Supervision privée — administrateur</h3><p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p><div id="adminchatitems"></div><h3>Suivi des paiements LINK</h3><p class="lead">Déclarations de paiement, justificatifs, retards et raisons de non-paiement. Choisis si la raison est valable ou non valable.</p><button class="btn s" id="refreshpaymentreports" type="button">↻ Actualiser les suivis</button><div id="adminpaymentreports"></div><h3>Chats privés avec les Lanceurs</h3><div id="adminlaunchers"></div></div></div>
   </section>
 
   <section id="b">
@@ -461,7 +461,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
   </section>
-  <section id="d"><p class="lead">Tes discussions en tant que CALLER. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
+  <section id="d"><p class="lead">Tes discussions en tant que CALLER. Les déclarations de paiement et les raisons de non-paiement sont suivies dans cet espace.</p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
     <p class="lead" id="publications-intro">Espace SPITTA : publie tes TARGETS avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un CALLER te contacte, tu le vois ici et dans Chat direct.</p>
     <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une TARGET</button>
@@ -484,7 +484,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le SPITTA responsable de TARGET. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
 </main>
-<div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="erop-sender-proof" hidden style="margin:14px 0;padding:16px;border:1px solid var(--sweep);border-radius:16px;background:var(--bg2)"><b>Preuve d’envoi demandée par EROP</b><p class="lead" style="margin:8px 0 12px">Avant que le délai du SPITTA commence, joins une photo lisible de ta preuve d’envoi. Si tu ne peux vraiment pas fournir de photo, déclare-le avec le bouton ci-dessous. Le délai de 3 min 30 du SPITTA démarre seulement après ton choix et son enregistrement.</p><button class="btn" id="erop-sender-photo" type="button" style="width:100%">📷 Joindre une photo de preuve</button><button class="btn s" id="erop-sender-unavailable" type="button" style="width:100%;margin-top:8px">Je ne peux pas envoyer de photo</button><input type="file" id="erop-sender-file" accept="image/*" hidden></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
+<div id="payment-followup" hidden style="position:fixed;inset:0;z-index:60;background:rgba(3,8,18,.98);padding:max(22px,env(safe-area-inset-top)) 18px max(22px,env(safe-area-inset-bottom));overflow:auto"><div style="max-width:520px;margin:0 auto"><h2 style="margin:10px 0">As-tu effectué le paiement ?</h2><p class="lead">À ton retour du site partenaire, réponds dans les 3 minutes. Si tu as payé, indique l’article et le montant et joins le justificatif. Sinon, explique la raison.</p><div id="payment-timer" class="lead" style="font-size:1.35rem;font-weight:800;color:#fbbf24;text-align:center">03:00</div><p class="lead" id="payment-followup-site"></p><div id="payment-paid-form"><label class="spitta-field-label" for="payment-site">Site partenaire</label><select class="inp" id="payment-site"></select><label class="spitta-field-label" for="payment-article">Article acheté</label><input class="inp" id="payment-article" maxlength="160" placeholder="Nom de l’article"><label class="spitta-field-label" for="payment-amount">Montant payé</label><input class="inp" id="payment-amount" inputmode="decimal" placeholder="Ex. : 120,50"><select class="inp" id="payment-currency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><label class="spitta-field-label" for="payment-proof">Justificatif en photo</label><input type="file" id="payment-proof" accept="image/*" class="inp"><button class="btn" id="payment-paid-submit" style="width:100%">J’ai effectué le paiement</button></div><div style="height:1px;background:var(--line);margin:20px 0"></div><div id="payment-unpaid-form"><label class="spitta-field-label" for="payment-reason">Si tu n’as pas payé, explique pourquoi</label><textarea class="inp" id="payment-reason" rows="4" maxlength="1000" placeholder="Explique clairement la raison…"></textarea><button class="btn s" id="payment-unpaid-submit" style="width:100%">Je n’ai pas effectué le paiement</button></div><p class="lead" id="payment-followup-msg" aria-live="polite"></p></div></div><div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="erop-sender-proof" hidden style="margin:14px 0;padding:16px;border:1px solid var(--sweep);border-radius:16px;background:var(--bg2)"><b>Preuve d’envoi demandée par EROP</b><p class="lead" style="margin:8px 0 12px">Avant que le délai du SPITTA commence, joins une photo lisible de ta preuve d’envoi. Si tu ne peux vraiment pas fournir de photo, déclare-le avec le bouton ci-dessous. Le délai de 3 min 30 du SPITTA démarre seulement après ton choix et son enregistrement.</p><button class="btn" id="erop-sender-photo" type="button" style="width:100%">📷 Joindre une photo de preuve</button><button class="btn s" id="erop-sender-unavailable" type="button" style="width:100%;margin-top:8px">Je ne peux pas envoyer de photo</button><input type="file" id="erop-sender-file" accept="image/*" hidden></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
 <script>
 // ➜ Les liens des boutons : on peut changer l’adresse de chaque ligne ici.
@@ -901,6 +901,90 @@ $("paymentreport").onclick=function(){
     openAdminChat();
   }).catch(function(e){$("paymentmsg").textContent=e.message||"Envoi impossible."}).finally(function(){$("paymentreport").disabled=false})},function(e){$("paymentmsg").textContent=(e&&e.message)||"Impossible de préparer la capture. Essaie une autre image.";$("paymentreport").disabled=false});
 };
+var PAYMENT_FOLLOWUP=null,PAYMENT_TIMER=null,PAYMENT_POLL_BUSY=false;
+function populatePaymentSites(selected){
+  var select=$("payment-site");if(!select)return;select.innerHTML="";
+  SERVICES.forEach(function(site){var option=document.createElement("option");option.value=site.n;option.textContent=site.n;select.appendChild(option)});
+  if(selected)select.value=selected;
+}
+function showPaymentFollowup(data){
+  PAYMENT_FOLLOWUP=data;populatePaymentSites(data.site);
+  $("payment-followup-site").textContent="Site ouvert : "+(data.site||"Partenaire");
+  $("payment-followup").hidden=false;
+  $("payment-followup-msg").textContent=data.status==="overdue"?"Le délai de 3 minutes est dépassé. Explique maintenant pourquoi le paiement n’a pas été effectué.": "Merci de répondre rapidement.";
+  $("payment-paid-form").hidden=data.status==="overdue";
+  $("payment-unpaid-form").hidden=data.status==="submitted"||data.status==="decided";
+  updatePaymentTimer();
+}
+function updatePaymentTimer(){
+  var deadline=Number(PAYMENT_FOLLOWUP&&PAYMENT_FOLLOWUP.deadline||0),left=Math.max(0,deadline-Math.floor(Date.now()/1000));
+  var m=Math.floor(left/60),sec=left%60;
+  $("payment-timer").textContent=String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+  if(left===0&&PAYMENT_FOLLOWUP&&PAYMENT_FOLLOWUP.status==="awaiting"){
+    $("payment-followup-msg").textContent="⏰ Délai dépassé. Tu dois maintenant expliquer pourquoi tu n’as pas effectué le paiement.";
+    $("payment-paid-form").hidden=true;
+    $("payment-unpaid-form").hidden=false;
+  }
+}
+function resumePaymentFollowup(){
+  if(USER_ROLE!=="lanceur"||PAYMENT_POLL_BUSY||document.visibilityState==="hidden")return;
+  PAYMENT_POLL_BUSY=true;
+  call("/api/payment/status",{start:true}).then(function(r){
+    if(!r.ok||!r.active)return;
+    if(r.status==="decided"){
+      $("payment-followup").hidden=true;PAYMENT_FOLLOWUP=null;
+      alert("L’administration a répondu : "+(r.decision==="valid"?"raison valable":"raison non valable")+". Retour à l’accueil pour un nouvel achat.");
+      document.querySelectorAll("#tabs button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="a")});
+      document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="a")});
+      return;
+    }
+    if(r.status==="submitted"){$("payment-followup-msg").textContent="Ta réponse est enregistrée. En attente de la décision de l’administration.";return}
+    showPaymentFollowup(r);
+  }).catch(function(e){console.warn("Suivi paiement:",e)}).finally(function(){PAYMENT_POLL_BUSY=false});
+}
+$("payment-paid-submit").onclick=function(){
+  var amount=$("payment-amount").value.trim(),article=$("payment-article").value.trim(),site=$("payment-site").value,file=$("payment-proof").files[0];
+  if(!amount||!article||!file){$("payment-followup-msg").textContent="Indique l’article, le montant et joins la photo du justificatif.";return}
+  var btn=$("payment-paid-submit");btn.disabled=true;$("payment-followup-msg").textContent="Préparation du justificatif…";
+  shrink(file,function(src){
+    call("/api/payment/report",{site:site,article:article,amount:amount,currency:$("payment-currency").value,image:src}).then(function(r){
+      if(!r.ok)throw new Error(r.error||"Déclaration impossible.");
+      $("payment-paid-form").hidden=true;$("payment-unpaid-form").hidden=true;
+      $("payment-followup-msg").textContent="Déclaration envoyée à l’administration. Le paiement reste à vérifier.";
+      PAYMENT_FOLLOWUP.status="submitted";
+    }).catch(function(e){$("payment-followup-msg").textContent=e.message||"Envoi impossible."}).finally(function(){btn.disabled=false});
+  },function(e){$("payment-followup-msg").textContent=e.message||"Photo impossible à préparer.";btn.disabled=false});
+};
+$("payment-unpaid-submit").onclick=function(){
+  var reason=$("payment-reason").value.trim();if(reason.length<12){$("payment-followup-msg").textContent="Donne une explication d’au moins 12 caractères.";return}
+  var btn=$("payment-unpaid-submit");btn.disabled=true;
+  call("/api/payment/not-done",{reason:reason}).then(function(r){if(!r.ok)throw new Error(r.error||"Envoi impossible.");$("payment-paid-form").hidden=true;$("payment-unpaid-form").hidden=true;$("payment-followup-msg").textContent=r.late?"Raison envoyée après le délai. En attente de la décision de l’administration.":"Raison envoyée à l’administration. En attente de sa décision.";PAYMENT_FOLLOWUP.status="submitted";})
+  .catch(function(e){$("payment-followup-msg").textContent=e.message||"Envoi impossible."}).finally(function(){btn.disabled=false});
+};
+function loadAdminPaymentReports(){
+  if(!ADMIN)return;
+  call("/api/admin/payment-reports",{}).then(function(r){
+    var host=$("adminpaymentreports");if(!host)return;host.innerHTML="";
+    (r.reports||[]).forEach(function(x){
+      var card=document.createElement("div");card.className="chatitem";
+      var title=document.createElement("b");title.textContent=(x.status==="overdue"?"⏰ Délai dépassé":x.status==="declared_unverified"?"💳 Paiement déclaré":"❌ Paiement non effectué")+" · "+(x.site||"LINK");card.appendChild(title);
+      var detail=document.createElement("p");detail.className="lead";detail.textContent="CALLER #"+x.launcher+" · "+(x.article?"Article : "+x.article+" · ":"")+(x.amount?"Montant : "+x.amount+" "+(x.currency||"")+" · ":"")+"Date : "+new Date((x.time||0)*1000).toLocaleString("fr-FR")+(x.late?" · Réponse hors délai":"");card.appendChild(detail);
+      if(x.reason){var reason=document.createElement("p");reason.className="lead";reason.textContent="Raison : "+x.reason;card.appendChild(reason)}
+      if(x.image){var img=document.createElement("img");img.src=x.image;img.alt="Justificatif de paiement";img.style.cssText="display:block;max-width:100%;max-height:240px;border-radius:12px;margin:8px 0";card.appendChild(img)}
+      if(["approved","rejected"].indexOf(x.status)<0&&x.status!=="overdue"){
+        var actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;flex-wrap:wrap";
+        [["valid","Raison valable"],["invalid","Raison non valable"]].forEach(function(pair){var button=document.createElement("button");button.className="btn s";button.textContent=pair[1];button.onclick=function(){button.disabled=true;call("/api/admin/payment-decision",{id:x.id,decision:pair[0]}).then(function(z){if(!z.ok)throw new Error(z.error||"Décision impossible.");loadAdminPaymentReports()}).catch(function(e){button.disabled=false;alert(e.message||"Décision impossible.")})};actions.appendChild(button)});
+        card.appendChild(actions);
+      }else{var state=document.createElement("p");state.className="lead";state.textContent=x.status==="approved"?"Décision : raison valable":x.status==="rejected"?"Décision : raison non valable":"En attente de la raison du CALLER";card.appendChild(state)}
+      host.appendChild(card);
+    });
+    if(!host.children.length)host.textContent="Aucune déclaration de paiement pour le moment.";
+  }).catch(function(e){console.warn("Suivi admin paiements:",e)});
+}
+$("refreshpaymentreports").onclick=loadAdminPaymentReports;
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")resumePaymentFollowup()});
+window.addEventListener("focus",resumePaymentFollowup);
+setInterval(function(){if(PAYMENT_FOLLOWUP&&!$("payment-followup").hidden)updatePaymentTimer();if(USER_ROLE==="lanceur"&&document.visibilityState==="visible")resumePaymentFollowup();if(ADMIN&&$("c").classList.contains("on"))loadAdminPaymentReports()},4000);
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 function renderMessages(c){
   var signature=JSON.stringify([c.status,c.client_offer,c.proof_deadline,c.erop_deadline,c.erop_sender_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
@@ -1132,7 +1216,7 @@ tabs.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
-  if(b.dataset.t==="c")adminOpen();
+  if(b.dataset.t==="c"){adminOpen();loadAdminPaymentReports();}
   if(["d","e","f"].indexOf(b.dataset.t)>-1)loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
@@ -1187,6 +1271,7 @@ function enterApp(response){
   }
   if(USER_ROLE==="spitta")loadSpittaItems();
   arrangeTabs();loadChatList();
+  if(USER_ROLE==="lanceur")setTimeout(resumePaymentFollowup,700);
   if(USER_ROLE==="spitta"){
     $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b");});
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b");});
