@@ -2295,7 +2295,7 @@ class Ping(BaseHTTPRequestHandler):
             self._s({"error": "Erreur, réessaie."})
         finally:
             elapsed_ms = int((time.perf_counter() - started_at) * 1000)
-            if elapsed_ms >= 1200:
+            if elapsed_ms >= 700:
                 print(f"LATENCE API {self.path}: {elapsed_ms} ms")
 
     def log_message(self, *a):
