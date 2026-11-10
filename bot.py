@@ -1323,6 +1323,33 @@ def api(path, b):
                 "counts": {"total": len(events), "critical": sum(1 for x in events if x.get("level") == "critical"),
                            "warning": sum(1 for x in events if x.get("level") == "warning"),
                            "info": sum(1 for x in events if x.get("level") == "info")}}
+    if path == "/api/admin/reset-registrations":
+        if uid != OWNER:
+            return {"error": "Accès réservé à l’administrateur."}
+        configured_code = os.environ.get("ADMIN_ACCESS_CODE", "").strip().strip(chr(34)).strip(chr(39)).strip()
+        supplied_code = str(b.get("admin_code", "")).strip()
+        if not re.fullmatch(r"\\d{6}", configured_code or "") or not re.fullmatch(r"\\d{6}", supplied_code):
+            return {"error": "Code administrateur invalide ou non configuré."}
+        if not hmac.compare_digest(supplied_code, configured_code):
+            return {"error": "Code administrateur incorrect."}
+        if b.get("confirmation") != "REINITIALISER RADARPAY":
+            return {"error": "Confirmation exacte requise."}
+        with LOCK:
+            state = private_load()
+            counts = {
+                "registrations": len(state.setdefault("registrations", [])),
+                "roles": len(state.setdefault("roles", {})),
+                "blacklist": len(state.setdefault("blacklist", {}))
+            }
+            state["registrations"] = []
+            state["roles"] = {}
+            state["blacklist"] = {}
+            private_save()
+        monitor_event("admin_reset", "Réinitialisation des inscriptions",
+                      "Profils : " + str(counts["registrations"]) + " · Rôles : " +
+                      str(counts["roles"]) + " · Blocages : " + str(counts["blacklist"]),
+                      "warning", True)
+        return {"ok": True, "deleted": counts}
     if path == "/api/admin/registrations":
         if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
