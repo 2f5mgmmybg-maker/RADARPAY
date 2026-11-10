@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" role="img" aria-label="Radar">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd66b"/><stop offset=".48" stop-color="#e6a51e"/><stop offset="1" stop-color="#9b5708"/></linearGradient></defs>
+<path d="M28 174 166 57h-111V12h203c48 0 78 25 78 67 0 36-24 63-65 70l98 43H245l-92-56h-38l-66 56H28Zm121-91-58 49h119c22 0 34-9 34-25 0-15-12-24-34-24h-61Z" fill="url(#gold)"/>
+<text x="345" y="177" font-family="Arial,Helvetica,sans-serif" font-size="178" font-weight="800" letter-spacing="-9" fill="#252525">adar</text>
+</svg>
