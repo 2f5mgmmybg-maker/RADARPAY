@@ -423,6 +423,7 @@ button:disabled,.btn:disabled{opacity:.55;filter:saturate(.65);box-shadow:none}
 #tabs button.on{color:#ff6548!important}
 #tabs button.on::after{background:linear-gradient(90deg,#e51b2b,#ff7336)!important}
 @media(max-width:600px){#auth-choices{gap:9px!important}#auth-choices .btn{min-height:46px;font-size:.9rem;padding:9px 8px}}
+@media(max-width:600px){#chatbar,.chatbar{-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 4px 14px rgba(0,0,0,.22)}.rings{opacity:.18}}
 </style>
 </head>
 <body>
@@ -843,10 +844,15 @@ function showMe(r,fromCode){
     d.appendChild(x);m.appendChild(d)});
 }
 var MONITOR_EVENTS=[];
+var MONITOR_RENDER_SIGNATURE="";
 function renderMonitorEvents(){
-  var host=$("monitorevents");if(!host)return;host.innerHTML="";
+  var host=$("monitorevents");if(!host)return;
   var filter=$("monitorfilter")?$("monitorfilter").value:"all";
   var query=$("monitorsearch")?$("monitorsearch").value.trim().toLowerCase():"";
+  var signature=JSON.stringify([MONITOR_EVENTS,filter,query]);
+  if(signature===MONITOR_RENDER_SIGNATURE)return;
+  MONITOR_RENDER_SIGNATURE=signature;
+  host.innerHTML="";
   var events=MONITOR_EVENTS.filter(function(ev){
     return (filter==="all"||ev.level===filter)&&(!query||String(ev.title||"").toLowerCase().includes(query)||String(ev.detail||"").toLowerCase().includes(query));
   });
@@ -1259,7 +1265,7 @@ var CHAT_POLL_BUSY=false;
 setInterval(function(){
   var countdown=$("chatcountdown"),deadline=Number(countdown.dataset.deadline||0);
   if(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));countdown.textContent=(countdown.dataset.kind||"")+" · temps restant : "+left+" secondes";}
-},500);
+},1000);
 setInterval(function(){
   if(document.visibilityState!=="visible"||!ACTIVE_CHAT||$("chatui").hidden||CHAT_POLL_BUSY)return;
   CHAT_POLL_BUSY=true;
