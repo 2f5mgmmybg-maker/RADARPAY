@@ -1358,6 +1358,7 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
   ST.maj=d.maj||"";
   API=(d.api||"").trim().replace(/\/$/,"");
   render();if(USER_ROLE==="spitta"||USER_ROLE==="owner")loadSpittaItems();
+  if(USER_ROLE==="owner")adminOpen();
 }).then(function(){
   var cid=new URLSearchParams(location.search).get("chat");if(cid)openChat(cid);
 }).catch(function(e){
