@@ -1139,7 +1139,7 @@ def api(path, b):
                     "Site : " + str(click.get("site", "")) + " · CALLER : " + str(uid), "warning", False, lock_held=True)
             return {"ok": True, "active": True, "site": click.get("site"),
                     "deadline": followup.get("deadline", 0), "status": followup.get("status", "not_started"),
-                    "decision": followup.get("decision", "")}
+                    "decision": followup.get("decision", ""), "decision_label": followup.get("decision_label", "")}
     if path == "/api/payment/not-done":
         if r != "lanceur":
             return {"error": "Réservé aux comptes CALLER."}
@@ -1215,22 +1215,23 @@ def api(path, b):
             report = next((x for x in pdata.setdefault("payment_reports", []) if x.get("id") == report_id), None)
             if not report or report.get("status") in ("approved", "rejected"):
                 return {"error": "Déclaration introuvable ou déjà traitée."}
+            was_payment = report.get("status") == "declared_unverified"
             report["status"] = "approved" if decision == "valid" else "rejected"
             report["decision"] = decision
             report["decided_at"] = now
+            decision_label = ("justificatif validé" if decision == "valid" else "justificatif non validé") if was_payment else ("raison valable" if decision == "valid" else "raison non valable")
             launcher = str(report.get("launcher", ""))
             click = pdata.setdefault("site_clicks", {}).get(launcher)
             if click and click.get("followup", {}).get("report_id") == report_id:
-                click["followup"].update({"status": "decided", "decision": decision, "decided_at": now})
+                click["followup"].update({"status": "decided", "decision": decision, "decision_label": decision_label, "decided_at": now})
             pdata.setdefault("admin_chats", {}).setdefault(launcher, []).append({
                 "from": OWNER, "name": "RADAR PAYMENT",
-                "text": "Décision de l’administration : " + ("RAISON VALABLE" if decision == "valid" else "RAISON NON VALABLE") +
+                "text": "Décision de l’administration : " + decision_label.upper() +
                         " — retour à l’accueil pour effectuer un nouvel achat.",
                 "time": now})
             private_save()
         try:
-            say(int(launcher), "L’administration a répondu : " +
-                ("raison valable" if decision == "valid" else "raison non valable") +
+            say(int(launcher), "L’administration a répondu : " + decision_label +
                 ". Tu peux retourner à l’accueil de RADARPAY pour effectuer un nouvel achat.")
         except Exception as e:
             print("notification décision paiement:", repr(e))
