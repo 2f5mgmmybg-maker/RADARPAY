@@ -61,7 +61,7 @@ header span{margin-left:auto;color:var(--mute);font-size:.8rem}
 .tabs::-webkit-scrollbar{display:none}
 .tabs.admin-tabs{display:flex;max-width:100%;gap:30px}
 .tabs.admin-tabs button{min-height:46px}
-#SPITTA-publish-card[hidden],#SPITTA-requests[hidden]{display:none!important}
+#spitta-publish-card[hidden],#spitta-requests[hidden]{display:none!important}
 .tabs button{position:relative;z-index:1;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-height:46px;padding:8px 1px 11px;border:0;border-radius:0;background:transparent;color:#85837d;font:500 .88rem Inter,system-ui,sans-serif;cursor:pointer;transition:color .22s ease,opacity .22s ease;white-space:nowrap;text-align:center;line-height:1.25}
 .tabs button::after{content:"";position:absolute;left:0;right:0;bottom:1px;height:2px;border-radius:2px;background:var(--sweep);transform:scaleX(0);transform-origin:center;opacity:0;transition:transform .25s ease,opacity .25s ease}
 .tabs button.on{color:var(--ink);background:transparent;border:0;box-shadow:none}
@@ -168,30 +168,30 @@ section.on{display:block;animation:in .4s ease both}
 
 /* Cartes SPITTA : photo et commandes bien séparées */
 #spittamine{display:grid;grid-template-columns:1fr;gap:22px;margin-top:18px}
-.SPITTA-product-card{display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden;border:1px solid #44423d;border-radius:16px;background:linear-gradient(145deg,rgba(238,234,226,.045),transparent 45%),#090909;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-.SPITTA-product-photo{display:block;width:100%;height:auto;max-height:340px;aspect-ratio:16/10;object-fit:contain;background:#050505}
-.SPITTA-product-info{display:flex;flex-direction:column;gap:12px;padding:16px}
-.SPITTA-product-price{font-family:Inter,system-ui,sans-serif;font-size:1.12rem;color:#eeeae2;font-weight:600;overflow-wrap:anywhere}
-.SPITTA-category-heading{grid-column:1/-1;margin:22px 0 0;padding:10px 12px;border-bottom:1px solid var(--line);font-size:1.05rem;color:var(--sweep)}
-.SPITTA-product-actions{display:flex;flex-direction:column;gap:10px}
-.SPITTA-product-actions .btn{width:100%;min-height:48px;padding:12px 16px;font-size:1rem;font-weight:700;white-space:normal}
-.SPITTA-delete{border-color:#77746d!important;background:rgba(238,234,226,.08)!important;color:#eeeae2!important}
-.SPITTA-delete:hover{background:rgba(238,234,226,.16)!important;box-shadow:0 0 18px rgba(238,234,226,.12)!important}
-.SPITTA-product-hint{margin:0;color:var(--mute);font-size:.88rem;line-height:1.5}
-@media(min-width:430px){#spittamine{grid-template-columns:repeat(2,minmax(0,1fr))}.SPITTA-product-photo{aspect-ratio:4/3}.SPITTA-product-info{padding:14px}}
+.spitta-product-card{display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden;border:1px solid #44423d;border-radius:16px;background:linear-gradient(145deg,rgba(238,234,226,.045),transparent 45%),#090909;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.spitta-product-photo{display:block;width:100%;height:auto;max-height:340px;aspect-ratio:16/10;object-fit:contain;background:#050505}
+.spitta-product-info{display:flex;flex-direction:column;gap:12px;padding:16px}
+.spitta-product-price{font-family:Inter,system-ui,sans-serif;font-size:1.12rem;color:#eeeae2;font-weight:600;overflow-wrap:anywhere}
+.spitta-category-heading{grid-column:1/-1;margin:22px 0 0;padding:10px 12px;border-bottom:1px solid var(--line);font-size:1.05rem;color:var(--sweep)}
+.spitta-product-actions{display:flex;flex-direction:column;gap:10px}
+.spitta-product-actions .btn{width:100%;min-height:48px;padding:12px 16px;font-size:1rem;font-weight:700;white-space:normal}
+.spitta-delete{border-color:#77746d!important;background:rgba(238,234,226,.08)!important;color:#eeeae2!important}
+.spitta-delete:hover{background:rgba(238,234,226,.16)!important;box-shadow:0 0 18px rgba(238,234,226,.12)!important}
+.spitta-product-hint{margin:0;color:var(--mute);font-size:.88rem;line-height:1.5}
+@media(min-width:430px){#spittamine{grid-template-columns:repeat(2,minmax(0,1fr))}.spitta-product-photo{aspect-ratio:4/3}.spitta-product-info{padding:14px}}
 
 
 /* Espace de publication SPITTA : formulaire large et lisible */
-.SPITTA-publish-card{margin:18px 0 28px;padding:22px 18px;border:1px solid #5a5750;border-radius:20px;background:linear-gradient(145deg,rgba(238,234,226,.09),rgba(238,234,226,.025) 55%),#090909;box-shadow:0 12px 32px rgba(0,0,0,.35)}
-.SPITTA-publish-card h3{margin:0 0 8px;font-size:1.4rem}
-.SPITTA-publish-help{margin:0 0 18px;color:var(--mute);font-size:.98rem;line-height:1.65}
-.SPITTA-field-label{display:block;margin:18px 0 8px;color:var(--ink);font-size:1rem;font-weight:600}
-.SPITTA-publish-card .SPITTA-field{min-height:58px;margin:0;padding:16px;font-size:1.05rem;border-radius:14px}
-.SPITTA-upload-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:76px;margin-top:22px;padding:16px;border-radius:16px;font-size:1rem;white-space:normal;line-height:1.4}
-.SPITTA-upload-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid currentColor;border-radius:50%;font-size:1.6rem;font-weight:400}
-.SPITTA-publish-card #spittamsg{margin:14px 0 0;font-size:.95rem;overflow-wrap:anywhere}
+.spitta-publish-card{margin:18px 0 28px;padding:22px 18px;border:1px solid #5a5750;border-radius:20px;background:linear-gradient(145deg,rgba(238,234,226,.09),rgba(238,234,226,.025) 55%),#090909;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.spitta-publish-card h3{margin:0 0 8px;font-size:1.4rem}
+.spitta-publish-help{margin:0 0 18px;color:var(--mute);font-size:.98rem;line-height:1.65}
+.spitta-field-label{display:block;margin:18px 0 8px;color:var(--ink);font-size:1rem;font-weight:600}
+.spitta-publish-card .spitta-field{min-height:58px;margin:0;padding:16px;font-size:1.05rem;border-radius:14px}
+.spitta-upload-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:76px;margin-top:22px;padding:16px;border-radius:16px;font-size:1rem;white-space:normal;line-height:1.4}
+.spitta-upload-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid currentColor;border-radius:50%;font-size:1.6rem;font-weight:400}
+.spitta-publish-card #spittamsg{margin:14px 0 0;font-size:.95rem;overflow-wrap:anywhere}
 #spittamine{grid-template-columns:1fr;gap:20px;margin-top:14px}
-@media(min-width:600px){main:has(#e.on){max-width:760px}.SPITTA-publish-card{padding:28px}.SPITTA-upload-btn{min-height:84px}#spittamine{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:600px){main:has(#e.on){max-width:760px}.spitta-publish-card{padding:28px}.spitta-upload-btn{min-height:84px}#spittamine{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* Thème noir et bleu */
 :root{
@@ -221,19 +221,19 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(29,78,216,.22) 0%,transpa
 .tabs button::after{background:#38bdf8;box-shadow:0 0 10px rgba(56,189,248,.55)}
 .dot{background:#38bdf8;box-shadow:0 0 0 0 rgba(56,189,248,.6)}
 @keyframes ping{70%{box-shadow:0 0 0 12px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
-.row,.slot,.card,.SPITTA-card{background-color:var(--bg2);border-color:var(--line)}
+.row,.slot,.card,.spitta-card{background-color:var(--bg2);border-color:var(--line)}
 .row{background:linear-gradient(110deg,rgba(37,99,235,.14),transparent 62%),var(--bg2)}
 .row:hover{border-color:#38bdf8;box-shadow:0 0 26px rgba(37,99,235,.18)}
 .blip{border-color:#24518c;background:radial-gradient(circle,rgba(56,189,248,.24),transparent 70%)}
 .blip::after{background:var(--blip);box-shadow:0 0 12px var(--blip)}
 input,select,textarea,.inp{background:#080f1d!important;color:var(--ink)!important;border-color:#24436e!important}
 input::placeholder,textarea::placeholder{color:#8da3c4!important}
-.SPITTA-product-card{border-color:#1e3558;background:linear-gradient(145deg,rgba(37,99,235,.09),transparent 48%),#080d18;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.SPITTA-product-photo{background:#03060c}
-.SPITTA-publish-card{border-color:#24518c;background:linear-gradient(145deg,rgba(37,99,235,.16),rgba(14,165,233,.035) 55%),#0b1220;box-shadow:0 12px 32px rgba(0,0,0,.35)}
-.SPITTA-category-heading{color:#7dd3fc;border-color:#24436e}
-.SPITTA-delete{background:#10264a!important;color:#dbeafe!important;border-color:#2563eb!important}
-.SPITTA-delete:hover{background:#17376a!important}
+.spitta-product-card{border-color:#1e3558;background:linear-gradient(145deg,rgba(37,99,235,.09),transparent 48%),#080d18;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.spitta-product-photo{background:#03060c}
+.spitta-publish-card{border-color:#24518c;background:linear-gradient(145deg,rgba(37,99,235,.16),rgba(14,165,233,.035) 55%),#0b1220;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.spitta-category-heading{color:#7dd3fc;border-color:#24436e}
+.spitta-delete{background:#10264a!important;color:#dbeafe!important;border-color:#2563eb!important}
+.spitta-delete:hover{background:#17376a!important}
 .countryfilters button,.filter button{border-color:#24436e}
 .countryfilters button.on,.filter button.on{background:#1d4ed8;color:#fff;border-color:#3b82f6}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
@@ -322,7 +322,7 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
     <div class="pill"></div>
     <button class="on" data-t="a">DISPONIBILITÉ DE LINK</button>
     <button data-t="b">TARGET DISPONIBLE</button>
-    <button data-t="e" id="SPITTA-tab">TARGET DISPONIBLE</button>
+    <button data-t="e" id="spitta-tab">TARGET DISPONIBLE</button>
     <button data-t="f">Messages</button>
 
     <button data-t="c" id="admin-tab" hidden>Admin</button>
@@ -356,22 +356,22 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
   <section id="e">
     <p class="lead" id="publications-intro">Espace SPITTA : publie tes TARGETS avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
     <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une TARGET</button>
-    <div class="SPITTA-publish-card" id="SPITTA-publish-card">
+    <div class="spitta-publish-card" id="spitta-publish-card">
       <h3>Publier une TARGET</h3>
-      <p class="SPITTA-publish-help">Choisis l’un des trois prix proposés, indique ton pourcentage et sélectionne le pays concerné.</p>
-      <label class="SPITTA-field-label" for="spittaprice">Prix du TARGET</label>
-      <select class="inp SPITTA-field" id="spittaprice" required><option value="">Choisir un prix</option><option value="2500 €">2 500 €</option><option value="5000 €">5 000 €</option><option value="9900 €">9 900 €</option></select>
-      <label class="SPITTA-field-label" for="spittapercentage">Pourcentage souhaité (%)</label>
-      <input class="inp SPITTA-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" required inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
-      <label class="SPITTA-field-label" for="spittacountry">Pays</label>
-      <select class="inp SPITTA-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
-      <button class="btn SPITTA-upload-btn" id="spittaadd" type="button"><span class="SPITTA-upload-icon">＋</span><span>Choisir une grande photo du TARGET</span></button>
+      <p class="spitta-publish-help">Choisis l’un des trois prix proposés, indique ton pourcentage et sélectionne le pays concerné.</p>
+      <label class="spitta-field-label" for="spittaprice">Prix du TARGET</label>
+      <select class="inp spitta-field" id="spittaprice" required><option value="">Choisir un prix</option><option value="2500 €">2 500 €</option><option value="5000 €">5 000 €</option><option value="9900 €">9 900 €</option></select>
+      <label class="spitta-field-label" for="spittapercentage">Pourcentage souhaité (%)</label>
+      <input class="inp spitta-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" required inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
+      <label class="spitta-field-label" for="spittacountry">Pays</label>
+      <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
+      <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du TARGET</span></button>
       <input type="file" id="spittafile" accept="image/*" hidden>
-      <p class="SPITTA-publish-help">Ta publication sera envoyée dès que tu auras sélectionné une photo.</p>
+      <p class="spitta-publish-help">Ta publication sera envoyée dès que tu auras sélectionné une photo.</p>
       <p class="lead" id="spittamsg" aria-live="polite"></p>
     </div>
     <h3 id="publications-title">Mes TARGETS disponibles</h3><div class="grid" id="spittamine"></div>
-    <div id="SPITTA-requests"><h3>Demandes reçues</h3><div id="spittachatitems"></div></div>
+    <div id="spitta-requests"><h3>Demandes reçues</h3><div id="spittachatitems"></div></div>
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le SPITTA responsable de TARGET. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
 </main>
