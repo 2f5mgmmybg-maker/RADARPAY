@@ -445,7 +445,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <h3>Supervision en direct</h3>
       <p class="lead">Journal sécurisé des événements RADARPAY, actualisé toutes les 5 secondes. Les contenus des messages privés ne sont pas copiés dans ce journal.</p>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0"><button class="btn s" id="monitorrefresh" type="button">↻ Actualiser</button><span class="lead" id="monitorstatus" aria-live="polite">Chargement…</span></div>
-      <div class="lead" id="monitorstats"></div><div id="monitorevents" aria-live="polite"></div>
+      <div class="lead" id="monitorstats"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><select class="inp" id="monitorfilter" style="width:auto;min-width:150px;margin:0"><option value="all">Tous les événements</option><option value="critical">Alertes critiques</option><option value="warning">Avertissements</option><option value="info">Informations</option></select><input class="inp" id="monitorsearch" placeholder="Rechercher dans le journal" style="width:auto;flex:1;min-width:180px;margin:0"></div>
+      <div id="monitorevents" aria-live="polite"></div>
       <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
       <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
       <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
@@ -746,27 +748,38 @@ function showMe(r,fromCode){
     x.onclick=function(){x.disabled=true;call("/api/delete",{id:p.id}).then(function(r){if(!r.ok)throw new Error(r.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});render();adminOpen()}).catch(function(e){$("pm").textContent=e.message||"Suppression impossible.";x.disabled=false})};
     d.appendChild(x);m.appendChild(d)});
 }
+var MONITOR_EVENTS=[];
+function renderMonitorEvents(){
+  var host=$("monitorevents");if(!host)return;host.innerHTML="";
+  var filter=$("monitorfilter")?$("monitorfilter").value:"all";
+  var query=$("monitorsearch")?$("monitorsearch").value.trim().toLowerCase():"";
+  var events=MONITOR_EVENTS.filter(function(ev){
+    return (filter==="all"||ev.level===filter)&&(!query||String(ev.title||"").toLowerCase().includes(query)||String(ev.detail||"").toLowerCase().includes(query));
+  });
+  if(!events.length){host.textContent=MONITOR_EVENTS.length?"Aucun événement ne correspond à ce filtre.":"Aucun événement enregistré pour le moment.";return;}
+  events.forEach(function(ev){
+    var item=document.createElement("div");item.style.cssText="padding:12px 14px;margin:8px 0;border:1px solid var(--line);border-radius:14px;background:var(--bg2)";
+    var head=document.createElement("div");head.style.cssText="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap";
+    var title=document.createElement("b");title.textContent=(ev.level==="critical"?"🚨 ":ev.level==="warning"?"⚠️ ":"• ")+(ev.title||"Événement");
+    var when=document.createElement("small");when.style.color="var(--mute)";when.textContent=new Date(Number(ev.time||0)*1000).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"medium"});
+    head.appendChild(title);head.appendChild(when);item.appendChild(head);
+    if(ev.detail){var detail=document.createElement("div");detail.style.cssText="color:var(--mute);font-size:.86rem;margin-top:5px;overflow-wrap:anywhere";detail.textContent=ev.detail;item.appendChild(detail);}
+    host.appendChild(item);
+  });
+}
 function loadMonitor(){
   if(!ADMIN||!$("monitorevents"))return Promise.resolve();
   return call("/api/admin/monitor",{}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Journal indisponible.");
-    var host=$("monitorevents");host.innerHTML="";var stats=r.counts||{};
-    $("monitorstats").textContent="Événements conservés : "+(stats.total||0)+" · "+(stats.critical||0)+" critiques · "+(stats.warning||0)+" avertissements";
-    var events=r.events||[];
-    if(!events.length){host.textContent="Aucun événement enregistré pour le moment.";return;}
-    events.forEach(function(ev){
-      var item=document.createElement("div");item.style.cssText="padding:12px 14px;margin:8px 0;border:1px solid var(--line);border-radius:14px;background:var(--bg2)";
-      var head=document.createElement("div");head.style.cssText="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap";
-      var title=document.createElement("b");title.textContent=(ev.level==="critical"?"🚨 ":ev.level==="warning"?"⚠️ ":"• ")+(ev.title||"Événement");
-      var when=document.createElement("small");when.style.color="var(--mute)";when.textContent=new Date(Number(ev.time||0)*1000).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"medium"});
-      head.appendChild(title);head.appendChild(when);item.appendChild(head);
-      if(ev.detail){var detail=document.createElement("div");detail.style.cssText="color:var(--mute);font-size:.86rem;margin-top:5px;overflow-wrap:anywhere";detail.textContent=ev.detail;item.appendChild(detail);}
-      host.appendChild(item);
-    });
-    $("monitorstatus").textContent="Mis à jour à "+new Date(Number(r.server_time||0)*1000).toLocaleTimeString("fr-FR");
-  }).catch(function(e){$("monitorstatus").textContent=e.message||"Erreur de supervision.";});
+    MONITOR_EVENTS=r.events||[];var stats=r.counts||{},service=r.service||{};
+    $("monitorstats").textContent="Service : "+(service.status==="ok"?"opérationnel":"état inconnu")+" · Temps de fonctionnement : "+Math.floor((service.uptime_seconds||0)/3600)+" h · Journal : "+(stats.total||0)+" événements conservés · "+(stats.critical||0)+" critiques · "+(stats.warning||0)+" avertissements";
+    renderMonitorEvents();
+    $("monitorstatus").textContent="Contrôle serveur réussi à "+new Date(Number(r.server_time||0)*1000).toLocaleTimeString("fr-FR");
+  }).catch(function(e){$("monitorstatus").textContent="⚠ Supervision indisponible : "+(e.message||"Erreur serveur.");});
 }
 $("monitorrefresh").onclick=loadMonitor;
+$("monitorfilter").onchange=renderMonitorEvents;
+$("monitorsearch").oninput=renderMonitorEvents;
 function loadSpittaItems(){
   if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
   var isAdmin=USER_ROLE==="owner";
