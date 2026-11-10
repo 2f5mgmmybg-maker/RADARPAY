@@ -642,7 +642,7 @@ function showMe(r,fromCode){
 function loadSpittaItems(){
   if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
   var isAdmin=USER_ROLE==="owner";
-  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications actuellement enregistrées sur RADAR PAYMENT.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;var adminToggle=$("admin-publish-toggle");adminToggle.hidden=false;if(adminToggle.dataset.adminInitialized!=="1"){adminToggle.textContent="＋ Publier une TARGET";adminToggle.setAttribute("aria-expanded","false");$("spitta-publish-card").hidden=true;adminToggle.dataset.adminInitialized="1";}$("spitta-requests").hidden=true;}
+  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications des Spitta. La publication de TARGETS est réservée aux comptes Spitta.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;$("admin-publish-toggle").hidden=true;$("spitta-requests").hidden=true;}
   call("/api/me",{}).then(function(r){
     var host=$("spittamine");if(!host)return;host.innerHTML="";
     var mine=(r.mine||[]);MY_PHOTO_IDS=mine.slice();
