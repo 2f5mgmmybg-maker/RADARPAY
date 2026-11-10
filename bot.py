@@ -1551,8 +1551,18 @@ def api(path, b):
                 private_save()
             pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
             has_pin = bool(profile and profile.get("pin_hash"))
+            active_cutoff = int(time.time()) - 75
+            active_counts = {"caller": 0, "spitta": 0}
+            approved_roles = state.setdefault("roles", {})
+            for candidate in state.setdefault("registrations", []):
+                candidate_id = str(candidate.get("user_id", ""))
+                candidate_role = approved_roles.get(candidate_id)
+                if (candidate_role in ("lanceur", "spitta") and
+                        candidate.get("status", "approved") != "pending" and
+                        int(candidate.get("last_seen", 0) or 0) >= active_cutoff):
+                    active_counts["caller" if candidate_role == "lanceur" else "spitta"] += 1
         return {"role": r, "mine": mine, "pending": pending,
-                "has_pin": has_pin,
+                "has_pin": has_pin, "active_counts": active_counts,
                 "telegram_username": str(user.get("username") or ""),
                 "first_name": str(user.get("first_name") or "")}
     if path == "/api/blacklist":
