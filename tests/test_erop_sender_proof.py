@@ -101,6 +101,15 @@ class EropSenderProofTests(unittest.TestCase):
         self.assertEqual(self.chat["status"], "erop_pending")
         self.assertFalse(self.chat.get("erop_blacklist_until"))
 
+    def test_proof_pending_timeout_expires_without_chat_polling(self):
+        self.chat["status"] = "proof_pending"
+        self.chat["proof_deadline"] = int(time.time()) - 1
+        bot.process_pending_requests()
+        self.assertEqual(self.chat["status"], "proof_expired")
+        self.assertIn("Délai de 2 minutes dépassé", self.chat["messages"][-1]["text"])
+        bot.say.assert_any_call(self.client["id"], "⏰ Le délai de 2 minutes pour la capture est dépassé. La vente est bloquée.")
+        bot.say.assert_any_call(self.vendor["id"], "⏰ Le délai de 2 minutes pour envoyer la capture est dépassé. La vente est bloquée.")
+
     def test_sender_stage_timeout_closes_request_without_blacklisting_spitta(self):
         self.chat["erop_sender_deadline"] = int(time.time()) - 1
         bot.process_pending_requests()
