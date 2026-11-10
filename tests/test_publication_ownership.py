@@ -38,7 +38,7 @@ class PublicationOwnershipTests(unittest.TestCase):
             patch.object(bot, "save"),
             patch.object(bot, "gh_put"),
             patch.object(bot, "gh_del"),
-            patch.object(bot, "decode_image_data_uri", return_value=b"image-bytes"),
+            patch.object(bot, "decode_jpeg_data_uri", return_value=b"\xff\xd8\xffimage-bytes"),
             patch.object(bot, "say"),
             patch.object(bot, "chats_load", return_value=({"chats": []}, None)),
             patch.object(bot, "chats_save")
