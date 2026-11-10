@@ -658,7 +658,7 @@ def process_pending_requests():
                     and now >= int(c.get("erop_sender_deadline", 0))):
                 c["status"] = "erop_sender_expired"
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai de 2 minutes dépassé : le Lanceur n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au Spitta pour cette étape qui dépend du Lanceur.", "time": now})
+                    "text": "⛔ Délai de 2 minutes dépassé : le CALLER n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au SPITTA pour cette étape qui dépend du CALLER.", "time": now})
                 changed = True
             if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and now >= int(c.get("erop_deadline", 0)):
                 c["status"] = "erop_expired"
@@ -673,7 +673,7 @@ def process_pending_requests():
                 record_guarantee_fee(c, blacklist[vendor_id], now)
                 c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                    "text": "⛔ Délai EROP de 3 min 30 dépassé. Discussion bloquée. Le SPITTA est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "erop_expired" and (
                     not c.get("erop_client_notified") or not c.get("erop_vendor_notified")):
@@ -696,7 +696,7 @@ def process_pending_requests():
                 c["eraf_blacklist_until"] = now + ERAF_BLACKLIST_SECONDS
                 c["erop_photo_sent"] = False
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 10 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
+                    "text": "⛔ Délai ERAF de 10 minutes dépassé. Discussion bloquée. Le SPITTA est inscrit sur la liste noire pendant 10 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus ; leur règlement doit être confirmé par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "eraf_expired" and (
                     not c.get("eraf_client_notified") or not c.get("eraf_vendor_notified")):
@@ -728,7 +728,7 @@ def process_pending_requests():
             _, rid, client_id, vendor_id, price, client_done, vendor_done = action
             for field, recipient, message, already_sent in (
                 ("erop_client_notified", client_id,
-                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 7 jours et les frais de garantie (50 % du montant de la Target concernée) sont signalés comme dus.",
+                 "⛔ Le délai EROP de 3 min 30 est dépassé. La discussion est bloquée. Le SPITTA est blacklisté pendant 7 jours et les frais de garantie (50 % du montant de la Target concernée) sont signalés comme dus.",
                  client_done),
                 ("erop_vendor_notified", vendor_id,
                  "⛔ Tu n'as pas envoyé la deuxième capture dans les 3 min 30. La discussion est bloquée. Ton compte est blacklisté pendant 7 jours. Les frais de garantie (50 % du montant de la Target concernée) sont dus : contacte l’administration pour confirmer le montant et le règlement.",
@@ -755,7 +755,7 @@ def process_pending_requests():
             _, rid, client_id, vendor_id, client_done, vendor_done = action
             for field, recipient, message, already_sent in (
                 ("eraf_client_notified", client_id,
-                 "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le Spitta est blacklisté pendant 10 jours et les frais de garantie (50 % du montant de la Target concernée) sont signalés comme dus.",
+                 "⛔ Le délai ERAF de 10 minutes est dépassé. La discussion est bloquée. Le SPITTA est blacklisté pendant 10 jours et les frais de garantie (50 % du montant de la Target concernée) sont signalés comme dus.",
                  client_done),
                 ("eraf_vendor_notified", vendor_id,
                  "⛔ Tu n'as pas validé ERAF dans les 10 minutes après ta deuxième capture. La discussion est bloquée. Ton compte est blacklisté pendant 10 jours. Les frais de garantie (50 % du montant de la Target concernée) sont dus : contacte l’administration pour confirmer le montant et le règlement.",
@@ -783,7 +783,7 @@ def process_pending_requests():
                 say(action[1], f"⏱️ Plus que 20 secondes pour répondre à la demande ({action[3] or 'sans prix'}) !")
             else:
                 say(action[1], "⏱️ Le délai de 50 secondes est dépassé. Tu peux poursuivre la discussion dans RADAR PAYMENT.")
-                say(action[2], "⌛ La demande a expiré. Le Lanceur peut encore t'écrire dans la discussion.")
+                say(action[2], "⌛ La demande a expiré. Le CALLER peut encore t'écrire dans la discussion.")
         except Exception as e:
             print("notification délai:", repr(e))
 
@@ -806,7 +806,7 @@ def handle_cb(cb):
             return
         c["status"] = "vendor_confirmed" if kind == "y" else "declined"
         c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-            "text": "✅ Le Spitta confirme la disponibilité." if kind == "y" else "❌ Le Spitta indique que le produit n'est plus disponible.",
+            "text": "✅ Le SPITTA confirme la disponibilité." if kind == "y" else "❌ Le SPITTA indique que le produit n'est plus disponible.",
             "time": int(time.time())})
         chats_save(data, None)
     tg("answerCallbackQuery", callback_query_id=cb["id"],
@@ -816,14 +816,14 @@ def handle_cb(cb):
         if SITE:
             target = {"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}
         else:
-            target = {"text": "💬 Contacter le Lanceur", "url": c.get("client_url") or "https://t.me/"}
+            target = {"text": "💬 Contacter le CALLER", "url": c.get("client_url") or "https://t.me/"}
         tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
            reply_markup={"inline_keyboard": [[target]]})
-        say(c["client"], "✅ Le Spitta a confirmé la disponibilité. Ouvre RADAR PAYMENT et appuie sur « Accepter la vente » pour lancer les 2 minutes.")
+        say(c["client"], "✅ Le SPITTA a confirmé la disponibilité. Ouvre RADAR PAYMENT et appuie sur « Accepter la vente » pour lancer les 2 minutes.")
     else:
         tg("editMessageReplyMarkup", chat_id=m.get("chat", {}).get("id"), message_id=m.get("message_id"),
            reply_markup={"inline_keyboard": []})
-        say(c["client"], "❌ Le Spitta indique que le produit n'est plus disponible. Tu peux refaire une demande si tu le souhaites.")
+        say(c["client"], "❌ Le SPITTA indique que le produit n'est plus disponible. Tu peux refaire une demande si tu le souhaites.")
 
 
 def api(path, b):
@@ -856,7 +856,7 @@ def api(path, b):
         if guarantee_acceptance != "Garant":
             return {"error": "Lis le règlement puis écris exactement Garant pour l’accepter."}
         if chosen not in ("lanceur", "spitta"):
-            return {"error": "Choisis Lanceur ou Spitta."}
+            return {"error": "Choisis CALLER ou SPITTA."}
         if not pseudo or len(pseudo) < 3 or len(pseudo) > 24 or not re.fullmatch(r"[\w .@-]+", pseudo, re.UNICODE):
             return {"error": "Choisis un pseudo de 3 à 24 caractères (lettres, chiffres, espaces, . _ @ -)." }
         if not re.fullmatch(r"\d{4}", pin):
@@ -984,7 +984,7 @@ def api(path, b):
             return {"error": "Session fermée. Clique sur Se connecter et entre ton code secret à 4 chiffres."}
     if path == "/api/want":
         if role(user) != "lanceur":
-            return {"error": "Seuls les comptes Lanceur peuvent contacter un spitta. Choisis le rôle Lanceur."}
+            return {"error": "Seuls les comptes CALLER peuvent contacter un SPITTA. Choisis le rôle CALLER."}
         product_id = str(b.get("id", ""))
         data, _ = load()
         p = next((x for x in data["photos"] if x.get("id") == product_id), None)
@@ -998,7 +998,7 @@ def api(path, b):
         prix = p.get("prix") or "sans prix"
         client_offer = str(b.get("client_offer", "")).strip()[:40]
         if not client_offer:
-            return {"error": "Indique ta proposition de prix avant de contacter le Spitta."}
+            return {"error": "Indique ta proposition de prix avant de contacter le SPITTA."}
         if user.get("username"):
             who, url = "@" + user["username"], "https://t.me/" + user["username"]
         else:
@@ -1034,18 +1034,18 @@ def api(path, b):
                 [{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
                 [{"text": "✅ Je confirme", "callback_data": "y:" + rid},
                  {"text": "❌ Pas disponible", "callback_data": "n:" + rid}]]}
-            say(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\nProposition du Lanceur : {client_offer}.\n"
+            say(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\nProposition du CALLER : {client_offer}.\n"
                         f"Réponse attendue sous 50 secondes.\nClient : {who}", reply_markup=markup)
         except Exception as e:
-            print("notification spitta impossible:", repr(e))
+            print("notification SPITTA impossible:", repr(e))
             chat_update(rid, status="notification_failed")
             return {"ok": True, "chat": rid, "notification": False,
-                    "error": "Demande enregistrée, mais Telegram n'a pas prévenu le Spitta. Demande réessayable."}
+                    "error": "Demande enregistrée, mais Telegram n'a pas prévenu le SPITTA. Demande réessayable."}
         return {"ok": True, "chat": rid, "notification": True}
     r = role(user)
     if path == "/api/catalog/click":
-        if r != "lanceur":
-            return {"error": "Réservé aux comptes Lanceur."}
+        if r != "CALLER":
+            return {"error": "Réservé aux comptes CALLER."}
         site = str(b.get("site", "")).strip()[:100]
         url = str(b.get("url", "")).strip()[:500]
         if not site or CATALOG_SITES.get(site) != url:
@@ -1055,11 +1055,11 @@ def api(path, b):
             pdata = private_load()
             pdata.setdefault("site_clicks", {})[str(uid)] = {"site": site, "url": url, "time": now}
             thread = pdata.setdefault("admin_chats", {}).setdefault(str(uid), [])
-            thread.append({"from": 0, "name": "RADAR PAYMENT", "text": "🌐 Site ouvert par le Lanceur : " + site + "\n" + url, "time": now})
+            thread.append({"from": 0, "name": "RADAR PAYMENT", "text": "🌐 Site ouvert par le CALLER : " + site + "\n" + url, "time": now})
             private_save()
         notified = True
         try:
-            who = user.get("username") and ("@" + user["username"]) or user.get("first_name", "Lanceur")
+            who = user.get("username") and ("@" + user["username"]) or user.get("first_name", "CALLER")
             say(OWNER, "🌐 CLIC SUR UN SITE — RADAR PAYMENT\\nLanceur : " + who + " (ID " + str(uid) + ")\\nSite : " + site + "\\nLien : " + url + "\\nHeure : " + datetime.fromtimestamp(now, ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y à %H:%M:%S") + "\\nUne discussion privée a été ouverte dans l’espace Admin.")
         except Exception as e:
             notified = False
@@ -1074,14 +1074,14 @@ def api(path, b):
             pdata = private_load()
             items = []
             for launcher, launcher_role in roles.items():
-                if launcher_role == "lanceur":
+                if launcher_role == "CALLER":
                     msgs = list(pdata.setdefault("admin_chats", {}).get(str(launcher), []))
                     last = msgs[-1].get("text", "") if msgs else "Aucun message"
                     items.append({"id": str(launcher), "last": last, "time": msgs[-1].get("time", 0) if msgs else 0})
         return {"ok": True, "launchers": sorted(items, key=lambda x: x["time"], reverse=True)}
     if path == "/api/adminchat/messages":
         target = str(b.get("id", uid))
-        if r != "owner" and (r != "lanceur" or target != str(uid)):
+        if r != "owner" and (r != "CALLER" or target != str(uid)):
             return {"error": "Accès refusé."}
         with LOCK:
             pdata = private_load()
@@ -1100,7 +1100,7 @@ def api(path, b):
     if path == "/api/adminchat/send":
         target = str(b.get("id", uid))
         msg = str(b.get("text", "")).strip()[:1500]
-        if r != "owner" and (r != "lanceur" or target != str(uid)):
+        if r != "owner" and (r != "CALLER" or target != str(uid)):
             return {"error": "Accès refusé."}
         if not msg:
             return {"error": "Écris un message."}
@@ -1120,7 +1120,7 @@ def api(path, b):
         return {"ok": True, "chat": {"id": target, "client": int(target), "vendor": OWNER,
                                       "status": "proof_received", "messages": admin_messages}}
     if path == "/api/payment/status":
-        if r != "lanceur":
+        if r != "CALLER":
             return {"error": "Réservé aux comptes CALLER."}
         now = int(time.time())
         with LOCK:
@@ -1154,7 +1154,7 @@ def api(path, b):
                     "deadline": followup.get("deadline", 0), "status": followup.get("status", "not_started"),
                     "decision": followup.get("decision", ""), "decision_label": followup.get("decision_label", "")}
     if path == "/api/payment/not-done":
-        if r != "lanceur":
+        if r != "CALLER":
             return {"error": "Réservé aux comptes CALLER."}
         reason = re.sub(r"\s+", " ", str(b.get("reason", "")).strip())[:1000]
         if len(reason) < 12:
@@ -1250,7 +1250,7 @@ def api(path, b):
             print("notification décision paiement:", repr(e))
         return {"ok": True}
     if path == "/api/payment/report":
-        if r != "lanceur":
+        if r != "CALLER":
             return {"error": "Seuls les CALLER peuvent déclarer un paiement."}
         amount = str(b.get("amount", "")).strip().replace(",", ".")
         currency = str(b.get("currency", "")).upper().strip()
@@ -1350,7 +1350,7 @@ def api(path, b):
             if not profile:
                 return {"error": "Demande introuvable ou déjà traitée."}
             chosen = profile.get("role")
-            if chosen not in ("lanceur", "spitta"):
+            if chosen not in ("CALLER", "SPITTA"):
                 return {"error": "Rôle de demande invalide."}
             if roles.get(target) == chosen:
                 profile["status"] = "approved"
@@ -1368,10 +1368,10 @@ def api(path, b):
         data, _ = load()
         state = private_load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and
-                (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
+                (r == "owner" or (r == "SPITTA" and owner_of(p) == uid))]
         profile = next((x for x in state.setdefault("registrations", [])
                         if str(x.get("user_id")) == str(uid)), None)
-        if r in ("lanceur", "spitta"):
+        if r in ("CALLER", "SPITTA"):
             if not profile:
                 profile = {"user_id": str(uid), "role": r, "status": "approved",
                            "pseudo": str(user.get("first_name") or "Utilisateur")[:24],
@@ -1405,7 +1405,7 @@ def api(path, b):
             profile = next((x for x in private_load().get("registrations", [])
                             if str(x.get("user_id")) == str(blocked_id)), {})
             display_name = (profile.get("pseudo") or profile.get("first_name")
-                            or (("@" + profile.get("telegram_username")) if profile.get("telegram_username") else "Spitta"))
+                            or (("@" + profile.get("telegram_username")) if profile.get("telegram_username") else "SPITTA"))
             entries.append({
                 "label": str(display_name)[:40],
                 "until": until,
@@ -1447,7 +1447,7 @@ def api(path, b):
                     and time.time() >= c.get("erop_sender_deadline", 0)):
                 c["status"] = "erop_sender_expired"
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai de 2 minutes dépassé : le Lanceur n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au Spitta pour cette étape qui dépend du Lanceur.", "time": int(time.time())})
+                    "text": "⛔ Délai de 2 minutes dépassé : le CALLER n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au SPITTA pour cette étape qui dépend du CALLER.", "time": int(time.time())})
                 changed = True
             if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and time.time() >= c.get("erop_deadline", 0):
                 now = int(time.time())
@@ -1459,7 +1459,7 @@ def api(path, b):
                 private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = blacklist_entry
                 c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                 c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
+                    "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le SPITTA est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                 changed = True
             if c.get("status") == "proof_pending" and time.time() > c.get("proof_deadline", 0):
                 c["status"] = "proof_expired"
@@ -1579,14 +1579,14 @@ def api(path, b):
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid != c.get("client"):
-                return {"error": "Seul le lanceur peut accepter cette vente."}
+                return {"error": "Seul le CALLER peut accepter cette vente."}
             if c.get("status") != "vendor_confirmed":
                 return {"error": "Cette vente n'attend pas ton acceptation."}
             c["status"] = "proof_pending"
             c["proof_deadline"] = int(time.time()) + 120
             chats_save(chats_data, None)
         try:
-            say(c["vendor"], "⏱️ Le lanceur a accepté la vente. Tu as 2 minutes pour envoyer la capture d’écran dans la discussion RADAR PAYMENT.")
+            say(c["vendor"], "⏱️ Le CALLER a accepté la vente. Tu as 2 minutes pour envoyer la capture d’écran dans la discussion RADAR PAYMENT.")
         except Exception as e:
             print("notification délai preuve impossible:", repr(e))
         return {"ok": True}
@@ -1596,9 +1596,9 @@ def api(path, b):
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid != c.get("client"):
-                return {"error": "Seul le lanceur peut demander une capture EROP."}
+                return {"error": "Seul le CALLER peut demander une capture EROP."}
             if eraf_validation_pending(c):
-                return {"error": "Le Spitta doit d’abord valider ERAF après la deuxième capture avant une nouvelle demande EROP."}
+                return {"error": "Le SPITTA doit d’abord valider ERAF après la deuxième capture avant une nouvelle demande EROP."}
             if c.get("status") not in ("proof_received", "expired"):
                 return {"error": "La discussion doit être ouverte et ne doit pas déjà être verrouillée."}
             c["erop_previous_status"] = c.get("status")
@@ -1609,11 +1609,11 @@ def api(path, b):
             c["erop_sender_deadline"] = int(time.time()) + 120
             c["erop_deadline"] = 0
             c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                "text": "📸 EROP — étape 1/2 : le Lanceur doit envoyer une photo lisible de sa preuve d’envoi ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du Spitta (3 min 30) ne démarre qu’après l’enregistrement de cette étape.", "time": int(time.time())})
+                "text": "📸 EROP — étape 1/2 : le CALLER doit envoyer une photo lisible de sa preuve d’envoi ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du SPITTA (3 min 30) ne démarre qu’après l’enregistrement de cette étape.", "time": int(time.time())})
             chats_save(chats_data, None)
             vendor_id = c.get("vendor")
         try:
-            say(vendor_id, "📸 EROP — étape 1/2 : le Lanceur doit envoyer sa photo de preuve ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du Spitta (3 min 30) ne démarre qu’après cette étape. Aucune capture n’est prise à distance.")
+            say(vendor_id, "📸 EROP — étape 1/2 : le CALLER doit envoyer sa photo de preuve ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du SPITTA (3 min 30) ne démarre qu’après cette étape. Aucune capture n’est prise à distance.")
         except Exception as e:
             print("notification EROP impossible:", repr(e))
         return {"ok": True}
@@ -1628,7 +1628,7 @@ def api(path, b):
             try:
                 raw_image = decode_image_data_uri(image)
             except Exception as e:
-                print("validation preuve EROP du Lanceur:", repr(e))
+                print("validation preuve EROP du CALLER:", repr(e))
                 return {"error": "Photo invalide ou trop lourde. Réessaie."}
         elif mode != "unavailable":
             return {"error": "Choisis une photo ou confirme que l’envoi de photo est impossible."}
@@ -1637,23 +1637,23 @@ def api(path, b):
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid != c.get("client"):
-                return {"error": "Seul le Lanceur de cette discussion peut envoyer sa preuve EROP."}
+                return {"error": "Seul le CALLER de cette discussion peut envoyer sa preuve EROP."}
             if c.get("status") != "erop_pending":
                 return {"error": "Aucune demande EROP n’attend ta preuve."}
             if c.get("erop_sender_proof_submitted"):
                 return {"error": "Ta preuve EROP a déjà été enregistrée."}
             if int(time.time()) >= int(c.get("erop_sender_deadline", 0)):
-                return {"error": "Le délai de 2 minutes pour l’étape du Lanceur est dépassé. Cette demande EROP est clôturée."}
+                return {"error": "Le délai de 2 minutes pour l’étape du CALLER est dépassé. Cette demande EROP est clôturée."}
             vendor_id = c.get("vendor")
 
         proof_file = None
         if raw_image is not None:
             proof_file = "private_proofs/" + rid + "/erop_sender_" + secrets.token_hex(12) + ".enc"
             try:
-                gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée de la preuve EROP du Lanceur")
+                gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée de la preuve EROP du CALLER")
                 PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
             except Exception as e:
-                print("sauvegarde preuve EROP du Lanceur:", repr(e))
+                print("sauvegarde preuve EROP du CALLER:", repr(e))
                 return {"error": "Impossible de sauvegarder la photo. Réessaie."}
 
         accepted = False
@@ -1671,10 +1671,10 @@ def api(path, b):
                 deadline = now + 210
                 c["erop_deadline"] = deadline
                 message = {
-                    "from": uid, "name": user.get("first_name", "Lanceur"),
-                    "text": ("⚠️ Le Lanceur déclare ne pas pouvoir envoyer une photo de sa preuve EROP. Cette déclaration ne constitue pas une preuve photographique."
+                    "from": uid, "name": user.get("first_name", "CALLER"),
+                    "text": ("⚠️ Le CALLER déclare ne pas pouvoir envoyer une photo de sa preuve EROP. Cette déclaration ne constitue pas une preuve photographique."
                              if mode == "unavailable" else
-                             "📸 Preuve d’envoi EROP transmise par le Lanceur."),
+                             "📸 Preuve d’envoi EROP transmise par le CALLER."),
                     "time": now
                 }
                 if proof_file:
@@ -1688,9 +1688,9 @@ def api(path, b):
                 PROOF_CACHE.pop(proof_file, None)
             return {"error": "La demande EROP a changé d’état. La preuve n’a pas été enregistrée."}
         try:
-            say(vendor_id, ("⚠️ EROP — étape 1 terminée : le Lanceur a déclaré ne pas pouvoir fournir de photo. Ce message est une déclaration, pas une preuve photographique. Ton délai de 3 min 30 commence maintenant : envoie volontairement la deuxième capture dans RADAR PAYMENT." if mode == "unavailable" else "📸 EROP — étape 1 terminée : le Lanceur a envoyé sa photo de preuve. Ton délai de 3 min 30 commence maintenant : vérifie la photo et envoie volontairement la deuxième capture dans RADAR PAYMENT."))
+            say(vendor_id, ("⚠️ EROP — étape 1 terminée : le CALLER a déclaré ne pas pouvoir fournir de photo. Ce message est une déclaration, pas une preuve photographique. Ton délai de 3 min 30 commence maintenant : envoie volontairement la deuxième capture dans RADAR PAYMENT." if mode == "unavailable" else "📸 EROP — étape 1 terminée : le CALLER a envoyé sa photo de preuve. Ton délai de 3 min 30 commence maintenant : vérifie la photo et envoie volontairement la deuxième capture dans RADAR PAYMENT."))
         except Exception as e:
-            print("notification preuve EROP au Spitta impossible:", repr(e))
+            print("notification preuve EROP au SPITTA impossible:", repr(e))
         return {"ok": True, "deadline": deadline}
 
     if path == "/api/chat/eraf":
@@ -1699,7 +1699,7 @@ def api(path, b):
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid != c.get("vendor"):
-                return {"error": "Seul le Spitta de cette discussion peut valider ERAF."}
+                return {"error": "Seul le SPITTA de cette discussion peut valider ERAF."}
             if not c.get("erop_photo_sent"):
                 return {"error": "Envoie d’abord la deuxième capture EROP avant de valider ERAF."}
             if c.get("erop_confirmed"):
@@ -1708,14 +1708,14 @@ def api(path, b):
                 return {"error": "Le délai de 10 minutes pour valider ERAF est dépassé."}
             c["erop_confirmed"] = True
             c["erop_photo_sent"] = False
-            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
-                "text": "✅ ERAF : le Spitta confirme que tout est OK après la deuxième capture.", "time": int(time.time())})
+            c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "SPITTA"),
+                "text": "✅ ERAF : le SPITTA confirme que tout est OK après la deuxième capture.", "time": int(time.time())})
             chats_save(chats_data, None)
             client_id = c.get("client")
         try:
-            say(client_id, "✅ Le Spitta a validé ERAF : tout est OK après la deuxième capture.")
+            say(client_id, "✅ Le SPITTA a validé ERAF : tout est OK après la deuxième capture.")
         except Exception as e:
-            print("notification ERAF au lanceur impossible:", repr(e))
+            print("notification ERAF au CALLER impossible:", repr(e))
         return {"ok": True}
 
     if path == "/api/chat/proof":
@@ -1733,10 +1733,10 @@ def api(path, b):
             chats_data, _ = chats_load()
             c = next((x for x in chats_data.get("chats", []) if x.get("id") == rid), None)
             if not c or uid != c.get("vendor"):
-                return {"error": "Seul le spitta peut envoyer la capture."}
+                return {"error": "Seul le SPITTA peut envoyer la capture."}
             if c.get("status") == "erop_pending":
                 if not c.get("erop_sender_proof_submitted"):
-                    return {"error": "Le Lanceur doit d’abord envoyer sa preuve EROP ou déclarer qu’il ne peut pas joindre de photo."}
+                    return {"error": "Le CALLER doit d’abord envoyer sa preuve EROP ou déclarer qu’il ne peut pas joindre de photo."}
                 if time.time() >= c.get("erop_deadline", 0):
                     now = int(time.time())
                     c["status"] = "erop_expired"
@@ -1747,9 +1747,9 @@ def api(path, b):
                     private_load().setdefault("blacklist", {})[str(c.get("vendor"))] = blacklist_entry
                     c["erop_blacklist_until"] = now + EROP_BLACKLIST_SECONDS
                     c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                        "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
+                        "text": "⛔ Délai EROP dépassé. Discussion bloquée. Le SPITTA est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus et doivent être vérifiés par l’administration.", "time": now})
                     chats_save(chats_data, None)
-                    return {"error": "Le délai EROP est dépassé. La discussion est bloquée et le compte du Spitta est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus."}
+                    return {"error": "Le délai EROP est dépassé. La discussion est bloquée et le compte du SPITTA est inscrit sur la liste noire pendant 7 jours. Les frais de garantie, fixés à 50 % du montant de la Target concernée, sont signalés comme dus."}
                 is_erop = True
             elif c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
                 is_erop = False
@@ -1781,14 +1781,14 @@ def api(path, b):
                     c["erop_photo_sent"] = True
                     c["erop_confirmed"] = False
                     c["eraf_deadline"] = int(time.time()) + 600
-                    message_text = "📸 Deuxième capture EROP envoyée — en attente de validation ERAF par le Spitta."
+                    message_text = "📸 Deuxième capture EROP envoyée — en attente de validation ERAF par le SPITTA."
                     accepted = True
                 elif not is_erop and c.get("status") == "proof_pending" and time.time() <= c.get("proof_deadline", 0):
                     c["status"] = "proof_received"
                     message_text = "📸 Capture d’écran envoyée — preuve reçue."
                     accepted = True
                 if accepted:
-                    c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Spitta"),
+                    c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "SPITTA"),
                         "text": message_text, "proof_file": proof_file, "time": int(time.time())})
                     chats_save(chats_data, None)
                     client_id = c.get("client")
@@ -1797,7 +1797,7 @@ def api(path, b):
             PROOF_CACHE.pop(proof_file, None)
             return {"error": "Le délai est terminé ou la vente a changé d’état. La capture n’a pas été enregistrée."}
         try:
-            say(client_id, "📸 Le Spitta a envoyé la capture demandée. La discussion est ouverte.")
+            say(client_id, "📸 Le SPITTA a envoyé la capture demandée. La discussion est ouverte.")
         except Exception as e:
             print("notification capture impossible:", repr(e))
         return {"ok": True}
@@ -1819,7 +1819,7 @@ def api(path, b):
             if not c or uid not in (c.get("client"), c.get("vendor")):
                 return {"error": "Discussion introuvable ou accès refusé."}
             if c.get("status") not in ("proof_received", "expired"):
-                return {"error": "La discussion est verrouillée jusqu’à la capture du spitta ou à l’expiration du délai de réponse."}
+                return {"error": "La discussion est verrouillée jusqu’à la capture du SPITTA ou à l’expiration du délai de réponse."}
 
         voice_file = "private_voice/" + rid + "/" + str(int(time.time() * 1000)) + ".enc"
         try:
@@ -1863,7 +1863,7 @@ def api(path, b):
             if not c or uid not in (c.get("client"), c.get("vendor")):
                 return {"error": "Discussion introuvable ou accès refusé."}
             if c.get("status") not in ("proof_received", "expired"):
-                return {"error": "La discussion est verrouillée jusqu’à la capture du spitta ou à l’expiration du délai de réponse."}
+                return {"error": "La discussion est verrouillée jusqu’à la capture du SPITTA ou à l’expiration du délai de réponse."}
             c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
                                                   "text": msg, "time": int(time.time())})
             chats_save(chats_data, sha_ch)
@@ -1879,7 +1879,7 @@ def api(path, b):
         public_chat["messages"] = [dict(item) for item in (c.get("messages") or [])]
         return {"ok": True, "chat": public_chat}
     if path == "/api/add" and r != "spitta":
-        return {"error": "Seuls les comptes Spitta peuvent publier une TARGET."}
+        return {"error": "Seuls les comptes SPITTA peuvent publier une TARGET."}
     if path in ("/api/update", "/api/delete") and r not in ("owner", "spitta"):
         return {"error": "Accès réservé."}
     if path == "/api/add":
@@ -1931,7 +1931,7 @@ def api(path, b):
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
-            if not p or not (r == "owner" or (r == "spitta" and owner_of(p) == uid)):
+            if not p or not (r == "owner" or (r == "SPITTA" and owner_of(p) == uid)):
                 return {"error": "Tu peux modifier uniquement tes propres publications."}
             if "prix" in b:
                 allowed_prices = {"2500 €": "2500", "5000 €": "5000", "9900 €": "9900"}
@@ -1948,7 +1948,7 @@ def api(path, b):
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
-            if not p or not (r == "owner" or (r == "spitta" and owner_of(p) == uid)):
+            if not p or not (r == "owner" or (r == "SPITTA" and owner_of(p) == uid)):
                 return {"error": "Impossible."}
             data["photos"].remove(p)
             save(data, sha)
