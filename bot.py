@@ -1883,18 +1883,19 @@ def api(path, b):
     if path in ("/api/update", "/api/delete") and r not in ("owner", "spitta"):
         return {"error": "Accès réservé."}
     if path == "/api/add":
+        private_state = private_load()
+        profile = next((x for x in private_state.setdefault("registrations", [])
+                        if str(x.get("user_id")) == str(uid)), None)
+        signup_pseudo = str((profile or {}).get("pseudo") or "").strip()
+        if (not profile or profile.get("role") != "spitta" or
+                len(signup_pseudo) < 3 or len(signup_pseudo) > 24):
+            return {"error": "Profil SPITTA invalide : ton pseudo d’inscription est introuvable. Contacte l’administration avant de publier."}
+        display_name = signup_pseudo
         try:
             raw = decode_image_data_uri(b.get("image", ""), max_bytes=3_000_000)
         except (ValueError, KeyError):
             return {"error": "Photo invalide ou trop lourde. Utilise une image JPEG, PNG, GIF ou WebP."}
         pid = str(int(time.time() * 1000))
-        private_state = private_load()
-        profile = next((x for x in private_state.setdefault("registrations", [])
-                        if str(x.get("user_id")) == str(uid)), {})
-        signup_pseudo = str(profile.get("pseudo") or "").strip()
-        telegram_username = str(user.get("username") or profile.get("telegram_username") or "").strip().lstrip("@")
-        display_name = (signup_pseudo or (("@" + telegram_username) if telegram_username else "") or
-                        str(user.get("first_name") or profile.get("first_name") or "Utilisateur Telegram"))[:40]
         photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", "")).strip()[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "auteur": display_name, "o": enc(uid, pid)}
         allowed_prices = {"2500 €": "2500", "5000 €": "5000", "9900 €": "9900"}
         if photo["prix"] not in allowed_prices or photo["categorie"] != allowed_prices[photo["prix"]]:
