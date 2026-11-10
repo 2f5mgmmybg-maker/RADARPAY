@@ -1401,7 +1401,7 @@ $("admin-access-back").onclick=function(){
 };
 $("admin-access-submit").onclick=function(){
   var code=$("admin-access-code").value;
-  if(!/^\\d{6}$/.test(code)){$("role-message").textContent="Le code doit contenir 6 chiffres.";return;}
+  if(!/^\d{6}$/.test(code)){$("role-message").textContent="Le code doit contenir 6 chiffres.";return;}
   $("admin-access-submit").disabled=true;$("role-message").textContent="Vérification du code administrateur…";
   call("/api/admin/access",{code:code}).then(function(resp){
     if(!resp.ok)throw new Error(resp.error||"Accès refusé.");
