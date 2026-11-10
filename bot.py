@@ -17,6 +17,8 @@ LINK = os.environ.get("MINIAPP_LINK") or SITE
 # si RENDER_EXTERNAL_URL n'est pas disponible.
 API_URL = (os.environ.get("API_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
 LOCK = threading.Lock()
+# Le catalogue GitHub a son propre verrou : ses appels réseau ne doivent jamais bloquer les chats.
+CATALOG_LOCK = threading.Lock()
 ACTIVE_PRESENCE = {}
 FAILS = {}
 RATE_LOCK = threading.Lock()
@@ -477,7 +479,7 @@ def add_photo(msg, chat, caption):
     name = f"{int(time.time() * 1000)}.jpg"
     gh_put(f"photos/{name}", img, "Ajout d'une photo")
     pid = name[:-4]
-    with LOCK:
+    with CATALOG_LOCK:
         data, sha = load()
         data["photos"].insert(0, {"id": pid, "image": name, "prix": caption, "o": enc(OWNER, pid)})
         save(data, sha)
@@ -514,42 +516,46 @@ def handle(msg):
     if cmd in ("aide", "help"):
         say(chat, AIDE)
     elif cmd == "liste":
-        data, _ = load()
+        with CATALOG_LOCK:
+            data, _ = load()
         if not data["photos"]:
             say(chat, "Aucune photo pour le moment.")
         else:
             say(chat, "\n".join(f"{i + 1}. {p.get('prix') or '(sans prix)'}"
                                 for i, p in enumerate(data["photos"])))
     elif cmd == "supprimer":
-        data, sha = load()
         try:
-            n = int(arg) - 1
-            p = data["photos"].pop(n)
+            with CATALOG_LOCK:
+                data, sha = load()
+                n = int(arg) - 1
+                p = data["photos"].pop(n)
+                save(data, sha)
         except Exception:
             say(chat, "Écris par exemple : /supprimer 2")
             return
-        save(data, sha)
         gh_del(f"photos/{p['image']}", "Suppression d'une photo")
         say(chat, "🗑️ Photo supprimée.")
     elif cmd == "prix":
         bits = arg.split(None, 1)
-        data, sha = load()
         try:
-            n = int(bits[0]) - 1
-            data["photos"][n]["prix"] = bits[1] if len(bits) > 1 else ""
+            with CATALOG_LOCK:
+                data, sha = load()
+                n = int(bits[0]) - 1
+                data["photos"][n]["prix"] = bits[1] if len(bits) > 1 else ""
+                save(data, sha)
         except Exception:
             say(chat, "Écris par exemple : /prix 2 150 €")
             return
-        save(data, sha)
         say(chat, "✅ Prix changé.")
     elif cmd == "vider":
         if arg.lower() != "oui":
             say(chat, "Pour tout enlever, écris : /vider oui")
             return
-        data, sha = load()
-        old = data["photos"]
-        data["photos"] = []
-        save(data, sha)
+        with CATALOG_LOCK:
+            data, sha = load()
+            old = data["photos"]
+            data["photos"] = []
+            save(data, sha)
         for p in old:
             gh_del(f"photos/{p['image']}", "Suppression d'une photo")
         say(chat, "🗑️ Tout est enlevé.")
@@ -1127,7 +1133,8 @@ def api(path, b):
         if role(user) != "lanceur":
             return {"error": "Seuls les comptes CALLER peuvent contacter un SPITTA. Choisis le rôle CALLER."}
         product_id = str(b.get("id", ""))
-        data, _ = load()
+        with CATALOG_LOCK:
+            data, _ = load()
         p = next((x for x in data["photos"] if x.get("id") == product_id), None)
         if not p:
             return {"error": "Produit introuvable."}
@@ -1600,7 +1607,8 @@ def api(path, b):
         monitor_event("approval", "Compte approuvé", "Rôle : " + chosen + " · Compte Telegram : " + target, "info", True)
         return {"ok": True, "user_id": target, "role": chosen}
     if path == "/api/me":
-        data, _ = load()
+        with CATALOG_LOCK:
+            data, _ = load()
         mine = [p["id"] for p in data["photos"] if p.get("id") and
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
         with LOCK:
@@ -2173,7 +2181,7 @@ def api(path, b):
             print("upload TARGET impossible:", repr(e))
             return {"error": "Impossible d’envoyer la photo. Réessaie."}
         try:
-            with LOCK:
+            with CATALOG_LOCK:
                 data, sha = load()
                 data["photos"].insert(0, photo)
                 save(data, sha)
@@ -2198,7 +2206,7 @@ def api(path, b):
         return {"ok": True, "notification": notification,
                 "photo": {k: photo[k] for k in ("id", "image", "prix", "pays", "pourcentage", "categorie", "auteur")}}
     if path == "/api/update":
-        with LOCK:
+        with CATALOG_LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
             if not p or not (r == "owner" or (r == "spitta" and owner_of(p) == uid)):
@@ -2215,7 +2223,7 @@ def api(path, b):
             save(data, sha)
         return {"ok": True}
     if path == "/api/delete":
-        with LOCK:
+        with CATALOG_LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
             if not p or r != "owner":
@@ -2331,10 +2339,11 @@ def startup():
         if not API_URL:
             print("ERREUR CONFIG: API_BASE_URL/RENDER_EXTERNAL_URL est vide; l'Admin ne pourra pas joindre l'API.")
             return
-        data, sha = load()
-        if data.get("api") != API_URL:
-            data["api"] = API_URL
-            save(data, sha)
+        with CATALOG_LOCK:
+            data, sha = load()
+            if data.get("api") != API_URL:
+                data["api"] = API_URL
+                save(data, sha)
             print("API publiée dans photos.json.")
         else:
             print("API déjà correctement publiée dans photos.json.")
