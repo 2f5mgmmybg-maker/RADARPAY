@@ -944,7 +944,7 @@ function showMe(r,fromCode){
     var d=document.createElement("article");d.className="admin-publication";
     var title=document.createElement("b");title.textContent=p.auteur||"Auteur non renseigné";d.appendChild(title);
     var time=document.createElement("small");time.className="admin-publication-time";
-    var stamp=Number(p.id);time.textContent=Number.isFinite(stamp)&&stamp>0?"Publié le "+new Date(stamp).toLocaleString("fr-FR"):"Heure de publication indisponible";d.appendChild(time);
+    var stamp=Number(p.created||p.id);var stampMs=p.created?stamp*1000:stamp;time.textContent=Number.isFinite(stampMs)&&stampMs>0?"Publié le "+new Date(stampMs).toLocaleString("fr-FR"):"Heure de publication indisponible";d.appendChild(time);
     var details=document.createElement("div");details.className="admin-publication-details";
     details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");d.appendChild(details);
     var controls=document.createElement("div");controls.className="admin-publication-controls";
