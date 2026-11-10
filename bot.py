@@ -1967,11 +1967,21 @@ def api(path, b):
             return {"error": "Le pourcentage doit être un nombre entre 0 et 100."}
         if not 0 <= percentage <= 100:
             return {"error": "Le pourcentage doit être compris entre 0 et 100."}
-        with LOCK:
+        try:
+            # Le transfert de l'image ne doit pas bloquer le verrou partagé de l'application.
             gh_put(f"photos/{pid}.jpg", raw, "Ajout d'une photo")
-            data, sha = load()
-            data["photos"].insert(0, photo)
-            save(data, sha)
+        except Exception as e:
+            print("upload TARGET impossible:", repr(e))
+            return {"error": "Impossible d’envoyer la photo. Réessaie."}
+        try:
+            with LOCK:
+                data, sha = load()
+                data["photos"].insert(0, photo)
+                save(data, sha)
+        except Exception as e:
+            print("enregistrement TARGET impossible:", repr(e))
+            gh_del(f"photos/{pid}.jpg", "Nettoyage d'une TARGET non enregistrée")
+            return {"error": "La photo a été envoyée mais la publication n’a pas pu être enregistrée. Réessaie."}
         monitor_event("publication", "Nouvelle TARGET publiée", "SPITTA : " + display_name + " · Prix : " + photo["prix"] + " · Pays : " + (photo["pays"] or "Non précisé"), "info", False)
         notification = True
         try:
@@ -2012,8 +2022,10 @@ def api(path, b):
                 return {"error": "Seul l’administrateur peut supprimer une publication."}
             data["photos"].remove(p)
             save(data, sha)
-            gh_del(f"photos/{p['image']}", "Suppression d'une photo")
-        return {"ok": True}
+            image_path = "photos/" + str(p.get("image", ""))
+        # La suppression du média se fait après libération du verrou partagé.
+        image_removed = gh_del(image_path, "Suppression d'une photo") if p.get("image") else True
+        return {"ok": True, "image_cleanup": image_removed}
     return {"error": "?"}
 
 
