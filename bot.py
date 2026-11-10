@@ -1390,7 +1390,15 @@ def api(path, b):
                     "from": uid, "name": user.get("first_name", "CALLER"), "text": text_report,
                     "proof_file": proof_file, "time": now
                 })
-                pdata.setdefault("payment_reports", []).append({
+                payment_reports = pdata.setdefault("payment_reports", [])
+                if late:
+                    for previous_report in payment_reports:
+                        if (previous_report.get("launcher") == uid
+                                and previous_report.get("site") == site
+                                and previous_report.get("status") == "overdue"):
+                            previous_report["status"] = "superseded"
+                            previous_report["resolved_by_report"] = report_id
+                payment_reports.append({
                     "id": report_id, "launcher": uid, "site": click_snapshot["site"], "url": click_snapshot["url"],
                     "article": article, "amount": amount, "currency": currency, "proof_file": proof_file,
                     "time": now, "status": "declared_unverified", "late": late
