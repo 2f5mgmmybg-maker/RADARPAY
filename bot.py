@@ -1135,17 +1135,26 @@ def api(path, b):
         with LOCK:
             pdata = private_load()
             msgs = [dict(m) for m in pdata.setdefault("admin_chats", {}).get(target, [])]
-        for msg in msgs:
-            proof_file = msg.get("proof_file")
-            if proof_file:
-                try:
-                    if proof_file not in PROOF_CACHE:
-                        encrypted = base64.b64decode(gh_get(proof_file).get("content", ""))
-                        PROOF_CACHE[proof_file] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
-                    msg["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
-                except Exception as e:
-                    print("lecture preuve paiement:", repr(e))
         return {"ok": True, "chat": {"id": target, "client": int(target), "vendor": OWNER, "status": "proof_received", "messages": msgs}}
+    if path == "/api/adminchat/file":
+        target = str(b.get("id", uid))
+        file_key = str(b.get("file", ""))
+        if r != "owner" and (r not in ("lanceur", "spitta") or target != str(uid)):
+            return {"error": "Accès refusé."}
+        with LOCK:
+            thread = private_load().setdefault("admin_chats", {}).get(target, [])
+            msg = next((item for item in thread if item.get("proof_file") == file_key), None)
+            if not msg or not file_key.startswith("private_payment_proofs/" + target + "/"):
+                return {"error": "Justificatif introuvable ou accès refusé."}
+        try:
+            if file_key not in PROOF_CACHE:
+                encrypted = base64.b64decode(gh_get(file_key).get("content", ""))
+                PROOF_CACHE[file_key] = base64.b64encode(FERNET.decrypt(encrypted)).decode()
+            return {"ok": True, "data": "data:image/jpeg;base64," + PROOF_CACHE[file_key],
+                    "name": "Justificatif de paiement", "mime": "image/jpeg"}
+        except Exception as e:
+            print("lecture preuve paiement:", repr(e))
+            return {"error": "Impossible de charger ce justificatif."}
     if path == "/api/adminchat/send":
         target = str(b.get("id", uid))
         msg = str(b.get("text", "")).strip()[:1500]
@@ -1253,6 +1262,7 @@ def api(path, b):
             pdata = private_load()
             reports = [dict(x) for x in pdata.setdefault("payment_reports", [])]
         reports.sort(key=lambda x: int(x.get("time", 0)), reverse=True)
+        reports = reports[:100]
         for report in reports:
             proof_file = report.get("proof_file")
             if proof_file:
@@ -1263,7 +1273,7 @@ def api(path, b):
                     report["image"] = "data:image/jpeg;base64," + PROOF_CACHE[proof_file]
                 except Exception as e:
                     print("lecture preuve paiement admin:", repr(e))
-        return {"ok": True, "reports": reports[:100]}
+        return {"ok": True, "reports": reports}
     if path == "/api/admin/payment-decision":
         if uid != OWNER or r != "owner":
             return {"error": "Accès réservé à l’administrateur."}
