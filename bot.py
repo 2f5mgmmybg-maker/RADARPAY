@@ -1238,7 +1238,7 @@ def api(path, b):
         return {"ok": True}
     if path == "/api/payment/report":
         if r != "lanceur":
-            return {"error": "Seuls les Lanceurs peuvent déclarer un paiement."}
+            return {"error": "Seuls les CALLER peuvent déclarer un paiement."}
         amount = str(b.get("amount", "")).strip().replace(",", ".")
         currency = str(b.get("currency", "")).upper().strip()
         article = re.sub(r"\s+", " ", str(b.get("article", "")).strip())[:160]
@@ -1275,7 +1275,7 @@ def api(path, b):
                 PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
                 text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click["site"] + "\nArticle : " + article + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
                 pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
-                    "from": uid, "name": user.get("first_name", "Lanceur"), "text": text_report,
+                    "from": uid, "name": user.get("first_name", "CALLER"), "text": text_report,
                     "proof_file": proof_file, "time": now
                 })
                 pdata.setdefault("payment_reports", []).append({
