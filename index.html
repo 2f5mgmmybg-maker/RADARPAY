@@ -809,7 +809,8 @@ function call(path,body){
       return data;
     });
   }).catch(function(e){
-    if(e && e.name==="AbortError") throw new Error("Délai API dépassé (90 secondes).");
+    if(e && e.name==="AbortError") throw new Error("Le serveur met trop de temps à répondre. Réessaie dans quelques instants.");
+    if(e && (e instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(e.message||""))) throw new Error("Connexion au serveur impossible. Vérifie ta connexion et réessaie. Si le problème persiste, le serveur RADARPAY est peut-être indisponible.");
     throw e;
   }).finally(function(){if(timer)clearTimeout(timer)});
 }
@@ -873,7 +874,7 @@ $("monitorsearch").oninput=renderMonitorEvents;
 function loadSpittaItems(){
   if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
   var isAdmin=USER_ROLE==="owner";
-  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications des SPITTA. La publication de TARGETS est réservée aux comptes SPITTA.";$("publications-title").textContent="Toutes les publications";$("SPITTA-publish-card").hidden=true;$("admin-publish-toggle").hidden=true;$("SPITTA-requests").hidden=true;}
+  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications des SPITTA. La publication de TARGETS est réservée aux comptes SPITTA.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;$("admin-publish-toggle").hidden=true;$("spitta-requests").hidden=true;}
   call("/api/me",{}).then(function(r){
     var host=$("spittamine");if(!host)return;host.innerHTML="";
     var mine=(r.mine||[]);MY_PHOTO_IDS=mine.slice();
@@ -1228,7 +1229,7 @@ setInterval(function(){
     .catch(function(){})
     .finally(function(){CHAT_POLL_BUSY=false});
 },2000);
- setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN){loadAdminChats();loadMonitor()}}},10000);
+ setInterval(function(){if(document.visibilityState==="visible"&&USER_ROLE){loadChatList();if(ADMIN)loadAdminChats()}},10000);
 setInterval(function(){if(document.visibilityState==="visible"&&ADMIN&&$("c").classList.contains("on"))loadMonitor()},5000);
 function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegram.";return}
   call("/api/me",{}).then(function(r){showMe(r,false) }).catch(function(e){$("msg").textContent=(e&&e.message)||"Connexion à l’API impossible. Vérifie la configuration Render."})}
@@ -1241,7 +1242,7 @@ $("spittaadd").onclick=function(){
   if(!percentage||!Number.isFinite(Number(percentage))||Number(percentage)<0||Number(percentage)>100){$("spittamsg").textContent="Indique un pourcentage valide entre 0 et 100.";$("spittapercentage").focus();return}
   $("spittamsg").textContent="";$("spittafile").click();
 };
-$("admin-publish-toggle").onclick=function(){var card=$("SPITTA-publish-card");var opening=card.hidden;card.hidden=!opening;$("admin-publish-toggle").setAttribute("aria-expanded",String(opening));$("admin-publish-toggle").textContent=opening?"− Fermer le formulaire":"＋ Publier une TARGET";if(opening)card.scrollIntoView({behavior:"smooth",block:"start"});};
+$("admin-publish-toggle").onclick=function(){var card=$("spitta-publish-card");var opening=card.hidden;card.hidden=!opening;$("admin-publish-toggle").setAttribute("aria-expanded",String(opening));$("admin-publish-toggle").textContent=opening?"− Fermer le formulaire":"＋ Publier une TARGET";if(opening)card.scrollIntoView({behavior:"smooth",block:"start"});};
 $("spittafile").onchange=function(){
   var f=this.files[0];this.value="";if(!f)return;
   var uploadButton=$("spittaadd"),uploadLabel=uploadButton.querySelector("span:last-child");
@@ -1372,7 +1373,7 @@ function selectSignupRole(role){
   $("signup-step-rules").hidden=false;
   $("signup-rules-title").textContent=role==="lanceur"?"Règlement du CALLER":"Règlement du SPITTA";
   $("signup-rules-lanceur").hidden=role!=="lanceur";
-  $("signup-rules-SPITTA").hidden=role!=="spitta";
+  $("signup-rules-spitta").hidden=role!=="spitta";
   $("signup-guarantee-word").value="";
   $("role-message").textContent="Étape 3 : lis le règlement correspondant à ton profil.";
 }
@@ -1452,7 +1453,7 @@ $("signup-next").onclick=function(){
   $("role-message").textContent="Étape 2 : choisis ton profil."; 
 };
 $("choose-lanceur").onclick=function(){selectSignupRole("lanceur");};
-$("choose-SPITTA").onclick=function(){selectSignupRole("spitta");};
+$("choose-spitta").onclick=function(){selectSignupRole("spitta");};
 $("signup-accept-rules").onclick=function(){if(!SIGNUP_ROLE){$("role-message").textContent="Choisis d’abord ton profil.";return;}registerRole(SIGNUP_ROLE);};
 $("signup-back-role").onclick=function(){$("signup-step-rules").hidden=true;$("signup-step-role").hidden=false;SIGNUP_ROLE=null;$("signup-guarantee-word").value="";$("role-message").textContent="Étape 2 : choisis ton profil.";};
 $("login-submit").onclick=doLogin;
