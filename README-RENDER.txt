@@ -12,6 +12,9 @@ RENDER
 - Build command : pip install -r requirements.txt
 - Start command : python bot.py
 - Le service doit écouter sur le port PORT fourni par Render.
+- Health Check Path conseillé : /health. Cette route vérifie PostgreSQL lorsqu'il est configuré
+  et renvoie HTTP 503 si la base est indisponible. En mode GitHub seul, le service est signalé
+  comme dégradé; les accès GitHub/Telegram restent à contrôler dans les journaux Render.
 
 VARIABLES D'ENVIRONNEMENT
 - BOT_TOKEN : token Telegram du bot (secret).
