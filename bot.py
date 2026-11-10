@@ -343,6 +343,12 @@ def chat_last_activity(chat):
     return int(last_message.get("time") or chat.get("updated") or chat.get("created", 0))
 
 
+def _delete_expired_chat_media(files):
+    for private_file, cache in files:
+        gh_del(private_file, "Suppression d'un média arrivé à expiration")
+        cache.pop(private_file, None)
+
+
 def chats_load():
     data = private_load()
     now = int(time.time())
@@ -350,15 +356,19 @@ def chats_load():
     data["chats"] = [c for c in old_chats
                      if now - chat_last_activity(c) < CHAT_TTL]
     if len(data["chats"]) != len(old_chats):
-        private_save()
+        expired_files = []
         for expired in old_chats:
             if expired not in data["chats"]:
                 for msg in expired.get("messages", []):
                     for file_key, cache in (("proof_file", PROOF_CACHE), ("voice_file", VOICE_CACHE), ("attachment_file", ATTACHMENT_CACHE)):
                         private_file = msg.get(file_key)
                         if private_file:
-                            gh_del(private_file, "Suppression d'un média arrivé à expiration")
+                            expired_files.append((private_file, cache))
                             cache.pop(private_file, None)
+        private_save()
+        if expired_files:
+            # GitHub peut répondre lentement : ne jamais supprimer les médias sous le verrou global.
+            threading.Thread(target=_delete_expired_chat_media, args=(expired_files,), daemon=True).start()
     return data, None
 
 
@@ -791,6 +801,7 @@ def process_pending_requests():
 
 def handle_cb(cb):
     kind, _, rid = (cb.get("data") or "").partition(":")
+    rejection = None
     with LOCK:
         data, _ = chats_load()
         c = next((x for x in data.get("chats", []) if x.get("id") == rid), None)
@@ -800,16 +811,18 @@ def handle_cb(cb):
             if c and c.get("status") == "pending" and time.time() > int(c.get("request_deadline", 0)):
                 c["status"] = "expired"
                 chats_save(data, None)
-            tg("answerCallbackQuery", callback_query_id=cb["id"], text="Délai dépassé ou demande déjà traitée.")
-            return
-        if kind not in ("y", "n"):
-            tg("answerCallbackQuery", callback_query_id=cb["id"], text="Action inconnue.")
-            return
-        c["status"] = "vendor_confirmed" if kind == "y" else "declined"
-        c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-            "text": "✅ Le SPITTA confirme la disponibilité." if kind == "y" else "❌ Le SPITTA indique que le produit n'est plus disponible.",
-            "time": int(time.time())})
-        chats_save(data, None)
+            rejection = "Délai dépassé ou demande déjà traitée."
+        elif kind not in ("y", "n"):
+            rejection = "Action inconnue."
+        else:
+            c["status"] = "vendor_confirmed" if kind == "y" else "declined"
+            c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+                "text": "✅ Le SPITTA confirme la disponibilité." if kind == "y" else "❌ Le SPITTA indique que le produit n'est plus disponible.",
+                "time": int(time.time())})
+            chats_save(data, None)
+    if rejection:
+        tg("answerCallbackQuery", callback_query_id=cb["id"], text=rejection)
+        return
     tg("answerCallbackQuery", callback_query_id=cb["id"],
        text="Disponibilité confirmée." if kind == "y" else "Indisponibilité envoyée.")
     m = cb.get("message") or {}
