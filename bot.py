@@ -1255,10 +1255,10 @@ def api(path, b):
             return {"error": "Seuls les CALLER peuvent déclarer un paiement."}
         amount = str(b.get("amount", "")).strip().replace(",", ".")
         currency = str(b.get("currency", "")).upper().strip()
-        article = re.sub(r"\\s+", " ", str(b.get("article", "")).strip())[:160]
+        article = re.sub(r"\s+", " ", str(b.get("article", "")).strip())[:160]
         site = str(b.get("site", "")).strip()[:100]
         image = str(b.get("image", ""))
-        if not re.fullmatch(r"\\d{1,9}(?:\\.\\d{1,2})?", amount) or float(amount) <= 0:
+        if not re.fullmatch(r"\d{1,9}(?:\\.\\d{1,2})?", amount) or float(amount) <= 0:
             return {"error": "Indique un montant valide."}
         if currency not in ("EUR", "USD", "GBP", "CHF"):
             return {"error": "Choisis une devise valide."}
@@ -1303,7 +1303,7 @@ def api(path, b):
                         or current_followup.get("started_at") != started_at
                         or int(time.time()) > int(current_followup.get("deadline", 0))):
                     raise ValueError("Le délai est dépassé ou cette déclaration a déjà été enregistrée.")
-                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\\nSite : " + click_snapshot["site"] + "\\nArticle : " + article + "\\nMontant : " + amount + " " + currency + "\\nCapture d’écran jointe."
+                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click_snapshot["site"] + "\nArticle : " + article + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
                 pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
                     "from": uid, "name": user.get("first_name", "CALLER"), "text": text_report,
                     "proof_file": proof_file, "time": now
@@ -1325,9 +1325,9 @@ def api(path, b):
             return {"error": str(e) if isinstance(e, ValueError) else "Impossible d’enregistrer la déclaration."}
         monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click_snapshot["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
         try:
-            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\\nLanceur : " + str(uid) +
-                "\\nSite : " + click_snapshot["site"] + "\\nMontant : " + amount + " " + currency +
-                "\\nCapture jointe dans le chat admin de la mini-app.")
+            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
+                "\nSite : " + click_snapshot["site"] + "\nMontant : " + amount + " " + currency +
+                "\nCapture jointe dans le chat admin de la mini-app.")
         except Exception as e:
             print("notification paiement admin:", repr(e))
         return {"ok": True}
