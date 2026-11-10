@@ -946,7 +946,18 @@ function showMe(r,fromCode){
     var time=document.createElement("small");time.className="admin-publication-time";
     var stamp=Number(p.id);time.textContent=Number.isFinite(stamp)&&stamp>0?"Publié le "+new Date(stamp).toLocaleString("fr-FR"):"Heure de publication indisponible";d.appendChild(time);
     var details=document.createElement("div");details.className="admin-publication-details";
-    details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé");d.appendChild(details);
+    details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");d.appendChild(details);
+    var controls=document.createElement("div");controls.className="admin-publication-controls";
+    var priceSelect=document.createElement("select");priceSelect.className="inp";priceSelect.setAttribute("aria-label","Modifier le prix de la TARGET");
+    [["2500 €","2 500 €"],["5000 €","5 000 €"],["9900 €","9 900 €"]].forEach(function(item){var option=document.createElement("option");option.value=item[0];option.textContent=item[1];priceSelect.appendChild(option)});
+    if(["2500 €","5000 €","9900 €"].indexOf(p.prix)>-1)priceSelect.value=p.prix;
+    var countrySelect=document.createElement("select");countrySelect.className="inp";countrySelect.setAttribute("aria-label","Modifier le pays de la TARGET");
+    ["","Belgique","Suisse","Luxembourg","France"].forEach(function(country){var option=document.createElement("option");option.value=country;option.textContent=country||"Pays non précisé";countrySelect.appendChild(option)});
+    if(p.pays&&["Belgique","Suisse","Luxembourg","France"].indexOf(p.pays)<0){var other=document.createElement("option");other.value=p.pays;other.textContent=p.pays;countrySelect.appendChild(other)}
+    countrySelect.value=p.pays||"";
+    var update=document.createElement("button");update.className="btn s";update.type="button";update.textContent="Enregistrer les modifications";
+    update.onclick=function(){update.disabled=true;call("/api/update",{id:p.id,prix:priceSelect.value,pays:countrySelect.value}).then(function(result){if(!result.ok)throw new Error(result.error||"Modification impossible.");p.prix=priceSelect.value;p.pays=countrySelect.value;PHOTOS.forEach(function(photo){if(photo.id===p.id){photo.prix=p.prix;photo.pays=p.pays;photo.categorie=({"2500 €":"2500","5000 €":"5000","9900 €":"9900"})[p.prix]}});details.textContent="Prix : "+p.prix+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");render();loadSpittaItems();$("pm").textContent="Publication mise à jour."}).catch(function(error){$("pm").textContent=error.message||"Modification impossible."}).finally(function(){update.disabled=false})};
+    controls.appendChild(priceSelect);controls.appendChild(countrySelect);controls.appendChild(update);d.appendChild(controls);
     var del=document.createElement("button");del.className="btn s spitta-delete";del.textContent="Supprimer";
     del.onclick=function(){if(!confirm("Supprimer définitivement cette publication ?"))return;del.disabled=true;call("/api/delete",{id:p.id}).then(function(a){if(!a.ok)throw new Error(a.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});d.remove();render();$("pm").textContent="Publication supprimée."}).catch(function(e){$("pm").textContent=e.message||"Suppression impossible.";del.disabled=false})};
     d.appendChild(del);m.appendChild(d);
