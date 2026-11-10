@@ -424,13 +424,65 @@ button:disabled,.btn:disabled{opacity:.55;filter:saturate(.65);box-shadow:none}
 #tabs button.on::after{background:linear-gradient(90deg,#e51b2b,#ff7336)!important}
 @media(max-width:600px){#auth-choices{gap:9px!important}#auth-choices .btn{min-height:46px;font-size:.9rem;padding:9px 8px}}
 @media(max-width:600px){#chatbar,.chatbar{-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 4px 14px rgba(0,0,0,.22)}.rings{opacity:.18}}
+
+/* Identité RADARPAY : noir profond, vert radar et bleu électrique */
+:root{
+ --bg:#030914;--bg2:#071321;--line:rgba(57,255,20,.28);
+ --ink:#f3f8ff;--mute:#9eb2c5;--sweep:#39ff14;--blip:#39ff14;
+ color-scheme:dark;
+}
+html,body{background:#020711!important;color:#f3f8ff!important}
+body{
+ background-image:linear-gradient(rgba(1,5,12,.88),rgba(1,5,12,.92)),url('/assets/radarpay-logo.svg')!important;
+ background-position:center center!important;background-size:cover!important;background-attachment:fixed!important;background-repeat:no-repeat!important;
+}
+#welcome{
+ background-color:#020711!important;
+ background-image:linear-gradient(rgba(1,5,12,.48),rgba(1,5,12,.72)),url('/assets/radarpay-logo.svg')!important;
+ background-position:center 38%!important;background-size:cover!important;background-repeat:no-repeat!important;
+}
+.welcome-logo{width:min(70vw,300px)!important;max-height:30vh!important;height:auto!important;object-fit:contain!important;filter:drop-shadow(0 0 18px rgba(57,255,20,.28))}
+.rings{opacity:.23!important;background:repeating-radial-gradient(circle at 50% 18%,transparent 0 46px,rgba(57,255,20,.14) 47px 48px)!important}
+.rings::after{background:conic-gradient(from 0deg,transparent 0 78%,rgba(57,255,20,.42) 95%,rgba(19,191,255,.05) 100%)!important}
+.rings::before{background:#39ff14!important;box-shadow:0 0 14px 4px rgba(57,255,20,.7)!important}
+.radar{border-color:rgba(57,255,20,.65)!important;background:radial-gradient(circle,transparent 0 24%,rgba(57,255,20,.23) 24.5% 25%,transparent 25.5% 49%,rgba(57,255,20,.23) 49.5% 50%,transparent 50.5% 74%,rgba(57,255,20,.23) 74.5% 75%,transparent 75.5%),linear-gradient(90deg,transparent 49.7%,rgba(57,255,20,.24) 50%,transparent 50.3%),linear-gradient(transparent 49.7%,rgba(57,255,20,.24) 50%,transparent 50.3%)!important;box-shadow:0 0 38px rgba(57,255,20,.14),inset 0 0 30px rgba(57,255,20,.1)!important}
+.radar::before{background:conic-gradient(from 0deg,rgba(57,255,20,0) 0 70%,rgba(57,255,20,.65) 100%)!important}
+.radar i,.dot,.blip::after,.stamp::before{background:#39ff14!important;box-shadow:0 0 12px #39ff14!important}
+.btn,button:not(#tabs button),.refresh,.countryfilters button,.filter button,.ctl button{
+ background:linear-gradient(135deg,#087b24 0%,#20cf19 52%,#0a8cbb 100%)!important;
+ border:1px solid #72ff5a!important;color:#fff!important;
+ box-shadow:0 5px 18px rgba(57,255,20,.17)!important;
+}
+.btn:hover,button:not(#tabs button):hover,.refresh:hover{filter:brightness(1.12);box-shadow:0 7px 22px rgba(57,255,20,.28)!important}
+#tabs button.on{color:#39ff14!important}
+#tabs button.on::after{background:linear-gradient(90deg,#39ff14,#13bfff)!important}
+.row,.spitta-product-card,.spitta-publish-card,.slot,.chatitem,.inp,.photo-details{
+ background:linear-gradient(145deg,rgba(7,25,39,.94),rgba(2,10,19,.96))!important;
+ border-color:rgba(57,255,20,.24)!important;
+}
+.row:hover{border-color:#39ff14!important;box-shadow:0 0 22px rgba(57,255,20,.12)!important}
+.spitta-product-price,.photo-details .photo-price,.go{color:#39ff14!important}
+.spitta-product-photo{background:#020711!important}
+#chatui{background:radial-gradient(ellipse at 50% -15%,rgba(57,255,20,.12),transparent 48%),linear-gradient(180deg,#071321 0%,#020711 100%)!important}
+.chatmsg{background:linear-gradient(145deg,#14283a,#091522)!important;border-color:rgba(19,191,255,.22)!important}
+.chatmsg.mine{background:linear-gradient(145deg,#087b45,#075e73)!important;border-color:rgba(57,255,20,.48)!important}
+.chatbar{background:rgba(5,18,29,.94)!important;border-color:rgba(57,255,20,.22)!important}
+#chattext{background:#030d17!important;border-color:rgba(19,191,255,.25)!important}
+#chatsend{background:linear-gradient(135deg,#16a34a,#0891b2)!important}
+#lb{background:rgba(1,6,13,.97)!important}
+a{color:#7defff}
+@media(max-width:600px){
+ .welcome-logo{width:min(72vw,260px)!important;max-height:25vh!important}
+ body{background-attachment:scroll!important}
+}
+
 </style>
 </head>
 <body>
 <div class="rings"></div>
 
 <div id="welcome">
-  <img class="welcome-logo" src="assets/radar-logo.svg" alt="Radar">
+  <img class="welcome-logo" src="assets/radarpay-logo.svg" alt="Radar">
   <div class="radar"><i></i><i></i><i></i></div>
   <h1>Bienvenue</h1>
   <p>Inscris-toi une seule fois, puis connecte-toi avec ton code à 4 chiffres.</p>
@@ -510,7 +562,7 @@ button:disabled,.btn:disabled{opacity:.55;filter:saturate(.65);box-shadow:none}
 </div>
 
 <main>
-  <header class="brand-header"><img class="brand-logo" src="assets/radar-logo.svg" alt="Radar"><div class="dot"></div><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
+  <header class="brand-header"><img class="brand-logo" src="assets/radarpay-logo.svg" alt="Radar"><div class="dot"></div><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
