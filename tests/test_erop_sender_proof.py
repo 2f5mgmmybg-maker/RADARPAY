@@ -80,7 +80,7 @@ class EropSenderProofTests(unittest.TestCase):
 
     def test_spitta_cannot_submit_lanceur_proof(self):
         result = self.call(self.vendor, mode="unavailable")
-        self.assertIn("Seul le Lanceur", result["error"])
+        self.assertIn("Seul le CALLER", result["error"])
         self.assertFalse(self.chat["erop_sender_proof_submitted"])
 
     def test_photo_or_unavailable_choice_is_mandatory(self):
@@ -92,7 +92,7 @@ class EropSenderProofTests(unittest.TestCase):
         result = self.call_path(
             "/api/chat/proof", self.vendor, image="data:image/jpeg;base64,dGVzdA=="
         )
-        self.assertIn("Lanceur doit d’abord envoyer sa preuve", result["error"])
+        self.assertIn("CALLER doit d’abord envoyer sa preuve", result["error"])
         self.assertEqual(self.chat["status"], "erop_pending")
 
     def test_background_timeout_does_not_blacklist_vendor_before_launcher_evidence(self):
