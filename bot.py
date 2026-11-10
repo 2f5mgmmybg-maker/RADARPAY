@@ -424,7 +424,7 @@ def handle(msg):
     text = (msg.get("text") or msg.get("caption") or "").strip()
 
     if is_owner and private and msg.get("photo"):
-        add_photo(msg, chat, text)
+        say(chat, "Seuls les comptes SPITTA peuvent publier une TARGET depuis la mini-app. Tu peux toujours gérer les publications existantes dans l’administration.")
         return
 
     if not text.startswith("/"):
