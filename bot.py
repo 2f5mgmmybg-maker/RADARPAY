@@ -1340,8 +1340,7 @@ def api(path, b):
             followup = dict(click.get("followup") or {})
             if followup.get("status") not in ("awaiting", "overdue") or not followup.get("started_at"):
                 return {"error": "Aucune réponse de paiement n’attend actuellement."}
-            if now > int(followup.get("deadline", 0)):
-                return {"error": "Le délai est dépassé. Envoie plutôt une raison expliquant pourquoi le paiement n’a pas été effectué."}
+            late = now >= int(followup.get("deadline", 0))
             started_at = followup.get("started_at")
             click_snapshot = dict(click)
         try:
@@ -1358,10 +1357,10 @@ def api(path, b):
                 current_followup = (current_click or {}).get("followup") or {}
                 if (not current_click or current_click.get("site") != site
                         or current_followup.get("status") not in ("awaiting", "overdue")
-                        or current_followup.get("started_at") != started_at
-                        or int(time.time()) >= int(current_followup.get("deadline", 0))):
-                    raise ValueError("Le délai est dépassé ou cette déclaration a déjà été enregistrée.")
-                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click_snapshot["site"] + "\nArticle : " + article + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
+                        or current_followup.get("started_at") != started_at):
+                    raise ValueError("Cette déclaration a déjà été enregistrée ou le suivi a changé.")
+                late = late or int(time.time()) >= int(current_followup.get("deadline", 0))
+                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ" + (" — DÉCLARATION TARDIVE" if late else "") + "\nSite : " + click_snapshot["site"] + "\nArticle : " + article + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
                 pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
                     "from": uid, "name": user.get("first_name", "CALLER"), "text": text_report,
                     "proof_file": proof_file, "time": now
@@ -1369,21 +1368,21 @@ def api(path, b):
                 pdata.setdefault("payment_reports", []).append({
                     "id": report_id, "launcher": uid, "site": click_snapshot["site"], "url": click_snapshot["url"],
                     "article": article, "amount": amount, "currency": currency, "proof_file": proof_file,
-                    "time": now, "status": "declared_unverified"
+                    "time": now, "status": "declared_unverified", "late": late
                 })
                 current_click["followup"] = {
                     "status": "submitted", "answer": "paid", "report_id": report_id,
                     "submitted_at": now, "deadline": current_followup.get("deadline", 0),
-                    "started_at": current_followup.get("started_at", 0)}
+                    "started_at": current_followup.get("started_at", 0), "late": late}
                 private_save()
         except Exception as e:
             print("enregistrement déclaration paiement:", repr(e))
             gh_del(proof_file, "Nettoyage d'une preuve de paiement non enregistrée")
             PROOF_CACHE.pop(proof_file, None)
             return {"error": str(e) if isinstance(e, ValueError) else "Impossible d’enregistrer la déclaration."}
-        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click_snapshot["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
+        monitor_event("payment", "Paiement déclaré — à vérifier" + (" (tardif)" if late else ""), "Site : " + click_snapshot["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
         try:
-            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nCALLER : " + str(uid) +
+            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)" + (" — DÉCLARATION TARDIVE" if late else "") + "\nCALLER : " + str(uid) +
                 "\nSite : " + click_snapshot["site"] + "\nMontant : " + amount + " " + currency +
                 "\nCapture jointe dans le chat admin de la mini-app.")
         except Exception as e:
