@@ -1203,10 +1203,10 @@ window.addEventListener("focus",resumePaymentFollowup);
 setInterval(function(){if(PAYMENT_FOLLOWUP&&!$("payment-followup").hidden)updatePaymentTimer();if(USER_ROLE==="lanceur"&&document.visibilityState==="visible")resumePaymentFollowup()},4000);
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 var CHAT_FILE_CACHE={},CHAT_FILE_CACHE_KEYS=[];
-function loadChatFile(chatId,fileId){
-  var key=String(chatId)+":"+String(fileId);
+function loadChatFile(chatId,fileId,adminMode){
+  var key=(adminMode?"admin:":"chat:")+String(chatId)+":"+String(fileId);
   if(CHAT_FILE_CACHE[key])return CHAT_FILE_CACHE[key];
-  var request=call("/api/chat/file",{id:chatId,file:fileId}).then(function(result){
+  var request=call(adminMode?"/api/adminchat/file":"/api/chat/file",{id:chatId,file:fileId}).then(function(result){
     if(!result.ok)throw new Error(result.error||"Fichier indisponible.");
     return result;
   }).catch(function(error){
@@ -1257,7 +1257,7 @@ function renderMessages(c){
     d.appendChild(document.createTextNode(m.text||""));
     if(m.proof_file){
       var proofImg=document.createElement("img");proofImg.alt="Capture envoyée";proofImg.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";proofImg.loading="lazy";d.appendChild(proofImg);
-      loadChatFile(c.id,m.proof_file).then(function(result){if(result.ok)proofImg.src=result.data;else throw new Error(result.error||"Capture indisponible.")}).catch(function(){proofImg.alt="Capture indisponible pour le moment"});
+      loadChatFile(c.id,m.proof_file,ADMIN_CHAT_MODE).then(function(result){if(result.ok)proofImg.src=result.data;else throw new Error(result.error||"Capture indisponible.")}).catch(function(){proofImg.alt="Capture indisponible pour le moment"});
     }else if(m.image){var im=document.createElement("img");im.src=m.image;im.alt="Capture envoyée";im.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";d.appendChild(im)}
     if(m.voice_file){
       var au=document.createElement("audio");au.controls=true;au.preload="none";au.style.cssText="display:block;width:min(260px,70vw);margin-top:8px";au.setAttribute("aria-label","Message vocal");au.src="";
