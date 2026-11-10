@@ -1001,18 +1001,18 @@ function loadSpittaItems(){
     groups.forEach(function(group){
       var items=own.filter(function(p){return (p.categorie||"other")===group.key;});
       if(!items.length)return;
-      var heading=document.createElement("h3");heading.className="SPITTA-category-heading";heading.textContent=group.label;host.appendChild(heading);
+      var heading=document.createElement("h3");heading.className="spitta-category-heading";heading.textContent=group.label;host.appendChild(heading);
       items.forEach(function(p){
-        var d=document.createElement("article");d.className="SPITTA-product-card";
-        if(!isAdmin){var im=document.createElement("img");im.className="SPITTA-product-photo";im.src=p.src;im.alt="Photo associée au TARGET";d.appendChild(im);}
-        var info=document.createElement("div");info.className="SPITTA-product-info";
+        var d=document.createElement("article");d.className="spitta-product-card";
+        if(!isAdmin){var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée au TARGET";d.appendChild(im);}
+        var info=document.createElement("div");info.className="spitta-product-info";
         if(isAdmin){var author=document.createElement("b");author.textContent=p.auteur||"Auteur non renseigné";info.appendChild(author);
-          var stamp=Number(p.id),time=document.createElement("div");time.className="SPITTA-product-hint";time.textContent=Number.isFinite(stamp)&&stamp>0?"Publié le "+new Date(stamp).toLocaleString("fr-FR"):"Heure de publication indisponible";info.appendChild(time);}
-        var price=document.createElement("div");price.className="SPITTA-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
-        if(p.pourcentage){var pct=document.createElement("div");pct.className="SPITTA-product-hint";pct.textContent="Pourcentage : "+p.pourcentage+" %";info.appendChild(pct);}
-        if(!isAdmin){var country=document.createElement("div");country.className="SPITTA-product-hint";country.textContent="Pays : "+(p.pays||"Non précisé");info.appendChild(country);
-          var actions=document.createElement("div");actions.className="SPITTA-product-actions";
-          var hint=document.createElement("p");hint.className="SPITTA-product-hint";hint.textContent="TARGET est publié sur ton espace.";actions.appendChild(hint);info.appendChild(actions);}
+          var stamp=Number(p.id),time=document.createElement("div");time.className="spitta-product-hint";time.textContent=Number.isFinite(stamp)&&stamp>0?"Publié le "+new Date(stamp).toLocaleString("fr-FR"):"Heure de publication indisponible";info.appendChild(time);}
+        var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
+        if(p.pourcentage){var pct=document.createElement("div");pct.className="spitta-product-hint";pct.textContent="Pourcentage : "+p.pourcentage+" %";info.appendChild(pct);}
+        if(!isAdmin){var country=document.createElement("div");country.className="spitta-product-hint";country.textContent="Pays : "+(p.pays||"Non précisé");info.appendChild(country);
+          var actions=document.createElement("div");actions.className="spitta-product-actions";
+          var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent="TARGET est publié sur ton espace.";actions.appendChild(hint);info.appendChild(actions);}
         d.appendChild(info);host.appendChild(d);
       });
     });
