@@ -111,6 +111,18 @@ class SecurityTests(unittest.TestCase):
         self.assertIn("sans sanction pour le SPITTA", chat["messages"][-1]["text"])
         self.assertFalse(bot.expire_erop_sender_step(chat, 101))
 
+    def test_payment_report_accepts_late_followup_for_admin_review(self):
+        awaiting = {"status": "awaiting", "started_at": 100, "deadline": 200}
+        overdue = {"status": "overdue", "started_at": 100, "deadline": 200}
+        submitted = {"status": "submitted", "started_at": 100, "deadline": 200}
+        self.assertTrue(bot.payment_report_followup_valid(awaiting, 100))
+        self.assertTrue(bot.payment_report_followup_valid(overdue, 100))
+        self.assertFalse(bot.payment_report_followup_valid(submitted, 100))
+        self.assertFalse(bot.payment_report_followup_valid(overdue, 0))
+        self.assertFalse(bot.payment_report_is_late(awaiting, 199))
+        self.assertTrue(bot.payment_report_is_late(awaiting, 200))
+        self.assertTrue(bot.payment_report_is_late(overdue, 250))
+
     def test_chat_retention_covers_full_erop_eraf_flow(self):
         self.assertGreaterEqual(bot.CHAT_TTL, 24 * 60 * 60)
         self.assertEqual(bot.EROP_BLACKLIST_SECONDS, 7 * 24 * 60 * 60)
