@@ -1783,7 +1783,7 @@ def api(path, b):
             if not image.startswith("data:image/") or len(image) > 4_200_000:
                 return {"error": "Photo invalide ou trop lourde. Réessaie avec une image plus légère."}
             try:
-                raw_image = decode_image_data_uri(image)
+                raw_image = decode_jpeg_data_uri(image)
             except Exception as e:
                 print("validation preuve EROP du CALLER:", repr(e))
                 return {"error": "Photo invalide ou trop lourde. Réessaie."}
@@ -1880,7 +1880,7 @@ def api(path, b):
         if not image.startswith("data:image/") or len(image) > 4_200_000:
             return {"error": "Capture invalide ou trop lourde. Réessaie avec une image plus légère."}
         try:
-            raw_image = decode_image_data_uri(image)
+            raw_image = decode_jpeg_data_uri(image)
         except Exception as e:
             print("validation capture chiffrée:", repr(e))
             return {"error": "Capture invalide ou trop lourde. Réessaie avec une image plus légère."}
