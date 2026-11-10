@@ -932,7 +932,6 @@ function loadMonitor(){
     $("monitorstatus").textContent="Contrôle serveur réussi à "+new Date(Number(r.server_time||0)*1000).toLocaleTimeString("fr-FR");
   }).catch(function(e){$("monitorstatus").textContent="⚠ Supervision indisponible : "+(e.message||"Erreur serveur.");});
 }
-$("monitorrefresh").onclick=loadMonitor;
 $("monitorfilter").onchange=renderMonitorEvents;
 $("monitorsearch").oninput=renderMonitorEvents;
 function loadSpittaItems(){
@@ -991,7 +990,6 @@ function loadRegistrations(){
     });
   }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."});
 }
-$("refreshregistrations").onclick=loadRegistrations;
 $("resetregistrations").onclick=function(){
   var msg=$("resetregistrationsmsg");
   if(!ADMIN){msg.textContent="Action réservée à l’administrateur.";return}
@@ -1380,7 +1378,7 @@ $("refresh").onclick=function(){
   var button=$("refresh");button.disabled=true;button.textContent="↻ Actualisation…";
   var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=d.maj||"";render()})];
   if(USER_ROLE)tasks.push(loadChatList());
-  if(ADMIN){loadRegistrations();loadMonitor();loadAdminPaymentReports();loadAdminChats();var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
+  if(ADMIN){loadRegistrations();loadMonitor();loadAdminPaymentReports();var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
   Promise.all(tasks).then(function(){var msg=$("adminrefreshmsg");if(ADMIN&&msg)msg.textContent="Données actualisées.";}).catch(function(e){var msg=$("adminrefreshmsg");if(msg)msg.textContent=e.message||"Actualisation impossible.";}).finally(function(){button.disabled=false;button.textContent="↻ Actualiser"});
 };
 $("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
