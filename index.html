@@ -1215,7 +1215,7 @@ function renderMessages(c){
   var signature=JSON.stringify([c.status,c.client_offer,c.proof_deadline,c.erop_deadline,c.erop_sender_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
-  $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le CALLER #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le SPITTA — ":vendor?"Discussion avec le CALLER — ":"Supervision — ")+(c.price||"commande");
+  $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le compte #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le SPITTA — ":vendor?"Discussion avec le CALLER — ":"Supervision — ")+(c.price||"commande");
   var open=ADMIN_CHAT_MODE||c.status==="proof_received"||c.status==="expired";
   $("chattext").disabled=observer||!open;$("chatsend").disabled=observer||!open;
   $("chatattach").disabled=ADMIN_CHAT_MODE||observer||!open;
