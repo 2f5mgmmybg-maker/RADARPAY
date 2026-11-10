@@ -1320,7 +1320,8 @@ def api(path, b):
         events = [dict(item) for item in private_load().setdefault("monitor_events", [])]
         events.sort(key=lambda item: int(item.get("time", 0)), reverse=True)
         return {"ok": True, "events": events[:200], "server_time": int(time.time()),
-                "service": {"status": "ok", "uptime_seconds": max(0, int(time.time()) - PROCESS_STARTED_AT)},
+                "service": {"status": "ok", "storage": "PostgreSQL" if DATABASE_URL else "GitHub (lent)",
+                            "uptime_seconds": max(0, int(time.time()) - PROCESS_STARTED_AT)},
                 "counts": {"total": len(events), "critical": sum(1 for x in events if x.get("level") == "critical"),
                            "warning": sum(1 for x in events if x.get("level") == "warning"),
                            "info": sum(1 for x in events if x.get("level") == "info")}}
