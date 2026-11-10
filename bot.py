@@ -1255,10 +1255,10 @@ def api(path, b):
             return {"error": "Seuls les CALLER peuvent déclarer un paiement."}
         amount = str(b.get("amount", "")).strip().replace(",", ".")
         currency = str(b.get("currency", "")).upper().strip()
-        article = re.sub(r"\s+", " ", str(b.get("article", "")).strip())[:160]
+        article = re.sub(r"\\s+", " ", str(b.get("article", "")).strip())[:160]
         site = str(b.get("site", "")).strip()[:100]
         image = str(b.get("image", ""))
-        if not re.fullmatch(r"\d{1,9}(?:\.\d{1,2})?", amount) or float(amount) <= 0:
+        if not re.fullmatch(r"\\d{1,9}(?:\\.\\d{1,2})?", amount) or float(amount) <= 0:
             return {"error": "Indique un montant valide."}
         if currency not in ("EUR", "USD", "GBP", "CHF"):
             return {"error": "Choisis une devise valide."}
@@ -1272,45 +1272,62 @@ def api(path, b):
             print("validation preuve paiement:", repr(e))
             return {"error": "Capture de paiement invalide ou trop lourde."}
         now = int(time.time())
-        proof_file = "private_payment_proofs/" + str(uid) + "/" + str(int(time.time() * 1000)) + ".enc"
+        proof_file = "private_payment_proofs/" + str(uid) + "/" + secrets.token_hex(12) + ".enc"
+        # Vérifier d'abord l'état, puis envoyer le fichier hors du verrou global.
         with LOCK:
             pdata = private_load()
             click = pdata.setdefault("site_clicks", {}).get(str(uid))
             if not click or click.get("site") != site:
                 return {"error": "Sélectionne le site partenaire qui a été ouvert."}
-            followup = click.get("followup") or {}
+            followup = dict(click.get("followup") or {})
             if followup.get("status") not in ("awaiting", "overdue") or not followup.get("started_at"):
                 return {"error": "Aucune réponse de paiement n’attend actuellement."}
-            if int(time.time()) > int(followup.get("deadline", 0)):
+            if now > int(followup.get("deadline", 0)):
                 return {"error": "Le délai est dépassé. Envoie plutôt une raison expliquant pourquoi le paiement n’a pas été effectué."}
-            click = dict(click)
-            try:
-                gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
-                PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
-                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click["site"] + "\nArticle : " + article + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
+            started_at = followup.get("started_at")
+            click_snapshot = dict(click)
+        try:
+            gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
+            PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
+        except Exception as e:
+            print("sauvegarde preuve paiement:", repr(e))
+            return {"error": "Impossible de sauvegarder la capture."}
+        report_id = secrets.token_hex(8)
+        try:
+            with LOCK:
+                pdata = private_load()
+                current_click = pdata.setdefault("site_clicks", {}).get(str(uid))
+                current_followup = (current_click or {}).get("followup") or {}
+                if (not current_click or current_click.get("site") != site
+                        or current_followup.get("status") not in ("awaiting", "overdue")
+                        or current_followup.get("started_at") != started_at
+                        or int(time.time()) > int(current_followup.get("deadline", 0))):
+                    raise ValueError("Le délai est dépassé ou cette déclaration a déjà été enregistrée.")
+                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\\nSite : " + click_snapshot["site"] + "\\nArticle : " + article + "\\nMontant : " + amount + " " + currency + "\\nCapture d’écran jointe."
                 pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
                     "from": uid, "name": user.get("first_name", "CALLER"), "text": text_report,
                     "proof_file": proof_file, "time": now
                 })
                 pdata.setdefault("payment_reports", []).append({
-                    "id": secrets.token_hex(8), "launcher": uid, "site": click["site"], "url": click["url"],
+                    "id": report_id, "launcher": uid, "site": click_snapshot["site"], "url": click_snapshot["url"],
                     "article": article, "amount": amount, "currency": currency, "proof_file": proof_file,
                     "time": now, "status": "declared_unverified"
                 })
-                pdata.setdefault("site_clicks", {})[str(uid)]["followup"] = {
-                    "status": "submitted", "answer": "paid", "report_id": pdata["payment_reports"][-1]["id"],
-                    "submitted_at": now, "deadline": followup.get("deadline", 0), "started_at": followup.get("started_at", 0)}
+                current_click["followup"] = {
+                    "status": "submitted", "answer": "paid", "report_id": report_id,
+                    "submitted_at": now, "deadline": current_followup.get("deadline", 0),
+                    "started_at": current_followup.get("started_at", 0)}
                 private_save()
-            except Exception as e:
-                print("sauvegarde preuve paiement:", repr(e))
-                gh_del(proof_file, "Nettoyage d'une preuve de paiement non enregistrée")
-                PROOF_CACHE.pop(proof_file, None)
-                return {"error": "Impossible de sauvegarder la capture."}
-        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
+        except Exception as e:
+            print("enregistrement déclaration paiement:", repr(e))
+            gh_del(proof_file, "Nettoyage d'une preuve de paiement non enregistrée")
+            PROOF_CACHE.pop(proof_file, None)
+            return {"error": str(e) if isinstance(e, ValueError) else "Impossible d’enregistrer la déclaration."}
+        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click_snapshot["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
         try:
-            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
-                "\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency +
-                "\nCapture jointe dans le chat admin de la mini-app.")
+            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\\nLanceur : " + str(uid) +
+                "\\nSite : " + click_snapshot["site"] + "\\nMontant : " + amount + " " + currency +
+                "\\nCapture jointe dans le chat admin de la mini-app.")
         except Exception as e:
             print("notification paiement admin:", repr(e))
         return {"ok": True}
@@ -1319,8 +1336,19 @@ def api(path, b):
             return {"error": "Accès réservé à l’administrateur."}
         events = [dict(item) for item in private_load().setdefault("monitor_events", [])]
         events.sort(key=lambda item: int(item.get("time", 0)), reverse=True)
+        storage = "PostgreSQL" if DATABASE_URL else "GitHub (lent)"
+        service_status = "ok" if DATABASE_URL else "degraded"
+        if DATABASE_URL:
+            try:
+                pool = ensure_db()
+                with pool.connection() as conn:
+                    conn.execute("SELECT 1").fetchone()
+            except Exception as e:
+                service_status = "degraded"
+                storage = "PostgreSQL indisponible"
+                print("contrôle santé PostgreSQL:", repr(e))
         return {"ok": True, "events": events[:200], "server_time": int(time.time()),
-                "service": {"status": "ok", "storage": "PostgreSQL" if DATABASE_URL else "GitHub (lent)",
+                "service": {"status": service_status, "storage": storage,
                             "uptime_seconds": max(0, int(time.time()) - PROCESS_STARTED_AT)},
                 "counts": {"total": len(events), "critical": sum(1 for x in events if x.get("level") == "critical"),
                            "warning": sum(1 for x in events if x.get("level") == "warning"),
