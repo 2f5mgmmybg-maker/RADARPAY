@@ -952,25 +952,33 @@ def api(path, b):
         now = int(time.time())
         cutoff = now - 3600
         pool = ensure_db()
-        if pool is not None and current_role in ("lanceur", "spitta"):
+        active_counts = {"caller": 0, "spitta": 0}
+        if pool is not None:
             with pool.connection() as conn:
-                conn.execute("""
-                    INSERT INTO radarpay_presence (user_id, role, last_seen)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (user_id) DO UPDATE
-                    SET role = EXCLUDED.role, last_seen = EXCLUDED.last_seen
-                """, (uid, current_role, now))
+                # Seuls les utilisateurs normaux actualisent leur présence.
+                # L'administrateur lit les compteurs sans s'ajouter à l'un des rôles.
+                if current_role in ("lanceur", "spitta"):
+                    conn.execute("""
+                        INSERT INTO radarpay_presence (user_id, role, last_seen)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id) DO UPDATE
+                        SET role = EXCLUDED.role, last_seen = EXCLUDED.last_seen
+                        WHERE radarpay_presence.role IS DISTINCT FROM EXCLUDED.role
+                           OR radarpay_presence.last_seen <= EXCLUDED.last_seen - 60
+                    """, (uid, current_role, now))
                 rows = conn.execute("""
                     SELECT role, COUNT(*) FROM radarpay_presence
                     WHERE last_seen >= %s GROUP BY role
                 """, (cutoff,)).fetchall()
-            active_counts = {"caller": 0, "spitta": 0}
             for active_role, total in rows:
-                active_counts["caller" if active_role == "lanceur" else "spitta"] = int(total)
+                if active_role == "lanceur":
+                    active_counts["caller"] = int(total)
+                elif active_role == "spitta":
+                    active_counts["spitta"] = int(total)
         else:
+            # Secours en mémoire si PostgreSQL n'est pas configuré.
             if current_role in ("lanceur", "spitta"):
                 ACTIVE_PRESENCE[str(uid)] = {"role": current_role, "seen": now}
-            active_counts = {"caller": 0, "spitta": 0}
             for active_id, presence in list(ACTIVE_PRESENCE.items()):
                 if int(presence.get("seen", 0)) < cutoff:
                     ACTIVE_PRESENCE.pop(active_id, None)
