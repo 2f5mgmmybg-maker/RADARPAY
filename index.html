@@ -238,6 +238,58 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
 .countryfilters button.on,.filter button.on{background:#1d4ed8;color:#fff;border-color:#3b82f6}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
+
+/* Identité visuelle RADAR — ivoire et or */
+:root{color-scheme:light;--bg:#fffdf8;--bg2:#fffaf0;--line:#ead9b7;--ink:#29231a;--mute:#786b58;--sweep:#d99a19;--blip:#f0b52e}
+body{background:radial-gradient(ellipse at 12% 0%,rgba(245,190,75,.16),transparent 42%),radial-gradient(ellipse at 92% 18%,rgba(191,119,20,.09),transparent 38%),linear-gradient(145deg,#fff 0%,#fffaf0 58%,#f8f0df 100%);color:var(--ink)}
+#welcome{background:radial-gradient(ellipse at 50% 35%,#fff4d7 0%,#fffdf8 60%,#fff 100%);color:var(--ink)}
+#welcome p,.lead{color:var(--mute)}
+.rings{opacity:.28;background:repeating-radial-gradient(circle at 50% 18%,transparent 0 46px,rgba(201,139,28,.16) 47px 48px)}
+.rings::after{background:conic-gradient(from 0deg,transparent 0 78%,rgba(217,154,25,.42) 95%,rgba(240,181,46,.04) 100%)}
+.rings::before{background:#e2a323;box-shadow:0 0 14px 4px rgba(226,163,35,.55),0 0 0 0 rgba(201,139,28,.25)}
+.radar{border-color:#d7b56d;background:radial-gradient(circle,transparent 0 24%,rgba(201,139,28,.18) 24.5% 25%,transparent 25.5% 49%,rgba(201,139,28,.18) 49.5% 50%,transparent 50.5% 74%,rgba(201,139,28,.18) 74.5% 75%,transparent 75.5%),linear-gradient(90deg,transparent 49.7%,rgba(201,139,28,.18) 50%,transparent 50.3%),linear-gradient(transparent 49.7%,rgba(201,139,28,.18) 50%,transparent 50.3%);box-shadow:0 0 60px rgba(217,154,25,.14),inset 0 0 40px rgba(217,154,25,.08)}
+.radar::before{background:conic-gradient(from 0deg,rgba(217,154,25,0) 0 70%,rgba(217,154,25,.7) 100%)}
+.btn,.refresh{border:1px solid #bd7b12;background:linear-gradient(135deg,#f6c95f,#c98712 72%,#9d5e0b);color:#fff;box-shadow:0 5px 18px rgba(165,105,12,.18)}
+.btn:hover{background:linear-gradient(135deg,#ffda7b,#d99a19);color:#fff;box-shadow:0 7px 24px rgba(165,105,12,.24)}
+.tabs button{color:#8b7b63}.tabs button.on{color:#342817}.tabs button::after{background:linear-gradient(90deg,#f3c65a,#b9790c);box-shadow:0 0 9px rgba(217,154,25,.25)}
+.dot{background:#d99a19;box-shadow:0 0 0 0 rgba(217,154,25,.45)}
+@keyframes ping{70%{box-shadow:0 0 0 12px rgba(217,154,25,0)}100%{box-shadow:0 0 0 0 rgba(217,154,25,0)}}
+.row,.slot,.card,.spitta-card{background-color:#fffdf8;border-color:#ead9b7;color:var(--ink)}
+.row{background:linear-gradient(110deg,rgba(217,154,25,.10),transparent 62%),#fffdf8}
+.row:hover{border-color:#d99a19;box-shadow:0 0 24px rgba(165,105,12,.12)}
+.blip{border-color:#e2c98f;background:radial-gradient(circle,rgba(217,154,25,.2),transparent 70%)}
+.blip::after{background:var(--blip);box-shadow:0 0 12px var(--blip)}
+input,select,textarea,.inp{background:#fff!important;color:#29231a!important;border-color:#ddc99f!important}
+input::placeholder,textarea::placeholder{color:#96866d!important}
+.row small,.slot,.photo-details{color:var(--ink)}
+.photo-details{background:#fffaf0;border-color:#ead9b7}
+.photo-details .photo-price,.go,.stamp{color:#9b620b}
+.spitta-product-card{border-color:#e5d2a9;background:linear-gradient(145deg,rgba(217,154,25,.08),transparent 48%),#fffdf8;box-shadow:0 8px 24px rgba(90,60,15,.08)}
+.spitta-product-photo{background:#fffaf0}
+.spitta-product-price{color:#9b620b}
+.spitta-publish-card{border-color:#d9b76e;background:linear-gradient(145deg,rgba(245,190,75,.17),rgba(217,154,25,.035) 55%),#fffdf8;box-shadow:0 12px 32px rgba(90,60,15,.09)}
+.spitta-category-heading{color:#9b620b;border-color:#ead9b7}
+.spitta-delete{background:#fff1cf!important;color:#754707!important;border-color:#d5a33f!important}
+.spitta-delete:hover{background:#ffe5a8!important}
+.countryfilters button,.filter button{border-color:#ddc99f;background:#fffaf0;color:#5c4829}
+.countryfilters button.on,.filter button.on{background:#d99a19;color:#fff;border-color:#bd7b12}
+#lb{background:rgba(35,27,15,.96)}.ctl{background:rgba(255,250,240,.96)}.ctl input{background:#fff!important;color:#29231a!important}
+.chatmsg{background:linear-gradient(145deg,#fff8e8,#f5ead3);border-color:#ead9b7;color:#342817}
+.chatmsg.mine{background:linear-gradient(145deg,#eab642,#b9790c);border-color:#c58a1b;color:#fff}
+.chatmsg small{color:#8b7655}.chatmsg.mine small{color:rgba(255,255,255,.82)}
+#chatui{background:radial-gradient(ellipse at 50% -15%,rgba(245,190,75,.2),transparent 48%),linear-gradient(180deg,#fffdf8 0%,#f7efdf 100%)}
+#chatheading{color:#342817}#chatstatus{color:#887454}
+.chatbar{background:rgba(255,250,240,.96);border-color:#ead9b7}
+#chattext{background:#fff!important;color:#29231a!important;border-color:#ddc99f!important}
+#chattext::placeholder{color:#96866d!important}
+#chatattach,#chatclose{background:#fff1cf;color:#87550a;border-color:#e2c98f}
+#chatsend{background:linear-gradient(135deg,#f3c65a,#b9790c);color:#fff}
+#chatcountdown{color:#a7650b}
+.brand-header{gap:12px}.brand-logo{display:block;width:min(56vw,190px);height:auto;max-height:48px;object-fit:contain;margin-right:auto}
+.brand-header .dot{width:9px;height:9px;flex:none}
+.brand-header h2{display:none}
+@media(prefers-color-scheme:dark){:root{color-scheme:light}}
+
 </style>
 </head>
 <body>
@@ -316,7 +368,7 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
 </div>
 
 <main>
-  <header><div class="dot"></div><h2>RADAR PAYMENT 💡</h2><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
+  <header class="brand-header"><img class="brand-logo" src="assets/radar-logo.svg" alt="Radar"><div class="dot"></div><button class="refresh" id="refresh">↻ Actualiser</button><span>en direct</span></header>
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
