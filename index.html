@@ -970,7 +970,7 @@ function loadSpittaItems(){
 function loadRegistrations(){
   var host=$("registrationslist"),msg=$("registrationsmsg");if(!host||!msg||!ADMIN)return;
   msg.textContent="Chargement des inscriptions…";host.innerHTML="";
-  call("/api/admin/registrations",{}).then(function(r){
+  return call("/api/admin/registrations",{}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Historique indisponible.");
     var items=r.registrations||[];
     if(!items.length){msg.textContent="Aucune nouvelle inscription pour le moment.";return}
@@ -1113,7 +1113,7 @@ $("payment-unpaid-submit").onclick=function(){
 };
 function loadAdminPaymentReports(){
   if(!ADMIN)return;
-  call("/api/admin/payment-reports",{}).then(function(r){
+  return call("/api/admin/payment-reports",{}).then(function(r){
     var host=$("adminpaymentreports");if(!host)return;host.innerHTML="";
     (r.reports||[]).forEach(function(x){
       var card=document.createElement("div");card.className="chatitem";
@@ -1133,7 +1133,7 @@ function loadAdminPaymentReports(){
 }
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")resumePaymentFollowup()});
 window.addEventListener("focus",resumePaymentFollowup);
-setInterval(function(){if(PAYMENT_FOLLOWUP&&!$("payment-followup").hidden)updatePaymentTimer();if(USER_ROLE==="lanceur"&&document.visibilityState==="visible")resumePaymentFollowup()},1000);
+setInterval(function(){if(PAYMENT_FOLLOWUP&&!$("payment-followup").hidden)updatePaymentTimer();if(USER_ROLE==="lanceur"&&document.visibilityState==="visible")resumePaymentFollowup()},4000);
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 var CHAT_FILE_CACHE={},CHAT_FILE_CACHE_KEYS=[];
 function loadChatFile(chatId,fileId){
@@ -1378,7 +1378,7 @@ $("refresh").onclick=function(){
   var button=$("refresh");button.disabled=true;button.textContent="↻ Actualisation…";
   var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=d.maj||"";render()})];
   if(USER_ROLE)tasks.push(loadChatList());
-  if(ADMIN){loadRegistrations();loadMonitor();loadAdminPaymentReports();var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
+  if(ADMIN){tasks.push(loadRegistrations(),loadMonitor(),loadAdminPaymentReports());var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
   Promise.all(tasks).then(function(){var msg=$("adminrefreshmsg");if(ADMIN&&msg)msg.textContent="Données actualisées.";}).catch(function(e){var msg=$("adminrefreshmsg");if(msg)msg.textContent=e.message||"Actualisation impossible.";}).finally(function(){button.disabled=false;button.textContent="↻ Actualiser"});
 };
 $("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
