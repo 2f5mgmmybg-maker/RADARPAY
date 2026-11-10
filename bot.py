@@ -937,6 +937,9 @@ def api(path, b):
         if not vendor:
             return {"error": "Ce produit n’a pas de propriétaire valide. Contacte l’administrateur."}
         prix = p.get("prix") or "sans prix"
+        client_offer = str(b.get("client_offer", "")).strip()[:40]
+        if not client_offer:
+            return {"error": "Indique ta proposition de prix avant de contacter le Spitta."}
         if user.get("username"):
             who, url = "@" + user["username"], "https://t.me/" + user["username"]
         else:
@@ -949,16 +952,19 @@ def api(path, b):
                 c.get("status") in ("pending", "notification_failed", "vendor_confirmed", "proof_pending", "proof_received") and
                 now - int(c.get("created", now)) < CHAT_TTL), None)
             if previous and previous.get("status") != "notification_failed":
+                if previous.get("client_offer") != client_offer:
+                    previous["client_offer"] = client_offer
+                    chats_save(data_ch, None)
                 return {"ok": True, "chat": previous["id"], "notification": True, "existing": True}
             if previous:
                 chat = previous
                 rid = chat["id"]
-                chat.update({"status": "pending", "request_deadline": now + 50,
+                chat.update({"status": "pending", "client_offer": client_offer, "request_deadline": now + 50,
                              "remind_at": now + 30, "reminded": False})
             else:
                 rid = f"{uid}-{int(time.time() * 1000)}"
                 chat = {"id": rid, "client": uid, "vendor": vendor, "product": product_id,
-                        "price": prix, "client_name": who, "client_url": url, "created": now,
+                        "price": prix, "client_offer": client_offer, "client_name": who, "client_url": url, "created": now,
                         "status": "pending", "request_deadline": now + 50, "remind_at": now + 30,
                         "reminded": False, "messages": []}
                 data_ch.setdefault("chats", []).append(chat)
@@ -968,7 +974,7 @@ def api(path, b):
                 [{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
                 [{"text": "✅ Je confirme", "callback_data": "y:" + rid},
                  {"text": "❌ Pas disponible", "callback_data": "n:" + rid}]]}
-            say(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\n"
+            say(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\nProposition du Lanceur : {client_offer}.\n"
                         f"Réponse attendue sous 50 secondes.\nClient : {who}", reply_markup=markup)
         except Exception as e:
             print("notification spitta impossible:", repr(e))
@@ -1197,7 +1203,7 @@ def api(path, b):
             else:
                 visible = [c for c in chats_data.get("chats", []) if uid in (c.get("client"), c.get("vendor"))]
             result = [{k: c.get(k) for k in
-                       ("id", "client", "vendor", "product", "price", "client_name", "created", "status",
+                       ("id", "client", "vendor", "product", "price", "client_offer", "client_name", "created", "status",
                         "guarantee_fee_due", "guarantee_fee_rate", "guarantee_fee_amount", "guarantee_fee_currency")}
                       | {"last": (c.get("messages") or [{}])[-1].get("text", "")}
                       for c in sorted(visible, key=lambda x: x.get("created", 0), reverse=True)]
@@ -1653,9 +1659,10 @@ def api(path, b):
         except (ValueError, KeyError):
             return {"error": "Photo invalide ou trop lourde. Utilise une image JPEG, PNG, GIF ou WebP."}
         pid = str(int(time.time() * 1000))
-        photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", ""))[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "o": enc(uid, pid)}
-        if photo["categorie"] not in ("2500", "5000", "9900"):
-            return {"error": "Choisis une catégorie : 2 500, 5 000 ou 9 900."}
+        photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", "")).strip()[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "o": enc(uid, pid)}
+        allowed_prices = {"2500 €": "2500", "5000 €": "5000", "9900 €": "9900"}
+        if photo["prix"] not in allowed_prices or photo["categorie"] != allowed_prices[photo["prix"]]:
+            return {"error": "Choisis uniquement 2 500 €, 5 000 € ou 9 900 €."}
         if not photo["pourcentage"]:
             return {"error": "Indique le pourcentage souhaité avant de publier."}
         try:
