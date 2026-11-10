@@ -927,7 +927,7 @@ function updatePaymentTimer(){
   }
 }
 function resumePaymentFollowup(){
-  if(USER_ROLE!=="lanceur"||PAYMENT_POLL_BUSY||document.visibilityState==="hidden")return;
+  if(USER_ROLE!=="lanceur"||PAYMENT_POLL_BUSY||document.visibilityState==="hidden"||!document.hasFocus())return;
   PAYMENT_POLL_BUSY=true;
   call("/api/payment/status",{start:true}).then(function(r){
     if(!r.ok||!r.active)return;
