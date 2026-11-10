@@ -1982,6 +1982,7 @@ class Ping(BaseHTTPRequestHandler):
         self._s({"ok": True})
 
     def do_POST(self):
+        started_at = time.perf_counter()
         try:
             length = self.headers.get("Content-Length")
             if length is None:
@@ -2002,6 +2003,10 @@ class Ping(BaseHTTPRequestHandler):
         except Exception as e:
             print("api:", e)
             self._s({"error": "Erreur, réessaie."})
+        finally:
+            elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+            if elapsed_ms >= 1200:
+                print(f"LATENCE API {self.path}: {elapsed_ms} ms")
 
     def log_message(self, *a):
         pass
