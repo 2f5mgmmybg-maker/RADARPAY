@@ -964,7 +964,7 @@ def api(path, b):
         supplied_code = str(b.get("code", "")).strip()
         if not configured_code:
             return {"error": "Le code administrateur n’est pas configuré sur le serveur."}
-        if not re.fullmatch(r"\\d{6}", supplied_code) or not hmac.compare_digest(supplied_code, configured_code):
+        if not re.fullmatch(r"\d{6}", supplied_code) or not hmac.compare_digest(supplied_code, configured_code):
             return {"error": "Code administrateur incorrect."}
         return {"ok": True, "role": "owner"}
 
