@@ -1561,7 +1561,7 @@ def api(path, b):
                 ACTIVE_PRESENCE[str(uid)] = {"role": r, "seen": int(time.time())}
             pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
             has_pin = bool(profile and profile.get("pin_hash"))
-            active_cutoff = int(time.time()) - 75
+            active_cutoff = int(time.time()) - 3600  # Présence conservée 1 h après la dernière activité.
             active_counts = {"caller": 0, "spitta": 0}
             for active_id, presence in list(ACTIVE_PRESENCE.items()):
                 if int(presence.get("seen", 0)) < active_cutoff:
