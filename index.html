@@ -394,7 +394,7 @@ function renderServices(){
   list.innerHTML="";
   SERVICES.filter(function(s){return !(USER_ROLE==="spitta"&&s.gift)}).forEach(function(s){
     var a=document.createElement("a");a.className="row";a.href=s.u;
-    if(s.u!=="#"){a.TARGET="_blank";a.rel="noopener"}
+    if(s.u!=="#"){a.target="_blank";a.rel="noopener"}
     a.innerHTML='<div class="blip"></div><div><b>'+s.n+'</b><small>'+s.d+'</small></div><span class="go">›</span>';
     a.addEventListener("click",function(e){
       if(USER_ROLE!=="lanceur")return;
@@ -950,9 +950,9 @@ $("refresh").onclick=function(){
   Promise.all([fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""}});ST.maj=d.maj||"";render()}),loadChatList()]);
   setTimeout(function(){$("refresh").textContent="↻ Actualiser"},1200);
 };
-$("countryfilters").addEventListener("click",function(e){var b=e.TARGET.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
+$("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
 tabs.addEventListener("click",function(e){
-  var b=e.TARGET.closest("button");if(!b||b.hidden)return;
+  var b=e.target.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c")adminOpen();
