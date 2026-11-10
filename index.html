@@ -1365,12 +1365,18 @@ if(INIT){
     var telegramId=tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id;
     $("role-message").textContent="Bienvenue sur RADAR PAYMENT. Choisis Inscription ou Se connecter.\n\nPropriétaire : si tu dois avoir accès à Admin, vérifie que OWNER_ID sur Render correspond à ton identifiant Telegram : "+(telegramId||"indisponible")+". Après toute modification, redémarre le service Render.";
   }).catch(function(e){
+    $("show-register").hidden=true;
+    $("back-auth-login").hidden=true;
     setAuthView("auth-choices");
-    $("role-message").textContent=(e&&e.message)||"Impossible de vérifier ton compte Telegram. Ouvre RADAR PAYMENT depuis Telegram.";
+    $("auth-choices").hidden=true;
+    $("role-message").textContent="Impossible de vérifier ton compte. Ne crée pas un deuxième compte. Ferme cette page et rouvre RADAR PAYMENT depuis la conversation du bot dans Telegram.";
   });
 }else{
+  $("show-register").hidden=true;
+  $("back-auth-login").hidden=true;
   setAuthView("auth-choices");
-  $("role-message").textContent="Ouvre RADAR PAYMENT depuis Telegram pour créer ton compte ou te connecter.";
+  $("auth-choices").hidden=true;
+  $("role-message").textContent="Cette page a été ouverte hors de Telegram. Ne te réinscris pas : ferme-la et ouvre RADAR PAYMENT depuis la conversation du bot dans Telegram.";
 }
 </script>
 </body>
