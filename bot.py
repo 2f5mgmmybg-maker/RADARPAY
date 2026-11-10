@@ -157,6 +157,7 @@ CHAT_TTL = 24 * 60 * 60  # Conserve les discussions 24 h pour couvrir EROP + ERA
 EROP_BLACKLIST_SECONDS = 7 * 24 * 60 * 60
 ERAF_BLACKLIST_SECONDS = 10 * 24 * 60 * 60
 PRIVATE_CACHE = None
+STORAGE_READY = False
 
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
@@ -215,7 +216,7 @@ def _decode_private(encrypted):
 
 
 def private_load():
-    global PRIVATE_CACHE
+    global PRIVATE_CACHE, STORAGE_READY
     if PRIVATE_CACHE is not None:
         PRIVATE_CACHE.setdefault("blacklist", {})
         PRIVATE_CACHE.setdefault("registrations", [])
@@ -230,6 +231,8 @@ def private_load():
             PRIVATE_CACHE, migrated = _decode_private(bytes(row[0]))
             if migrated:
                 private_save()
+            else:
+                STORAGE_READY = True
             return PRIVATE_CACHE
 
     # Première initialisation PostgreSQL : importer l'état GitHub historique sans le supprimer.
@@ -255,10 +258,13 @@ def private_load():
     PRIVATE_CACHE, migrated = _decode_private(encrypted)
     if pool is not None or migrated:
         private_save()
+    else:
+        STORAGE_READY = True
     return PRIVATE_CACHE
 
 
 def private_save():
+    global STORAGE_READY
     data = private_load()
     encrypted = FERNET.encrypt(json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode())
     pool = ensure_db()
@@ -270,6 +276,7 @@ def private_save():
                 ON CONFLICT (id) DO UPDATE
                 SET payload = EXCLUDED.payload, updated_at = NOW()
             """, (encrypted,))
+        STORAGE_READY = True
         return
 
     # Compatibilité si DATABASE_URL n'est pas encore configuré.
@@ -280,6 +287,7 @@ def private_save():
             raise
         sha = None
     gh_put("radar_private.enc", encrypted, "Sauvegarde chiffrée RADAR PAYMENT", sha)
+    STORAGE_READY = True
 
 def parse_target_amount(value):
     """Retourne (frais à 50 %, devise) si le prix est interprétable sans supposition."""
@@ -2162,6 +2170,9 @@ class Ping(BaseHTTPRequestHandler):
                               "storage": "PostgreSQL indisponible"}
             else:
                 health["storage"] = "GitHub (mode dégradé)"
+            if not STORAGE_READY:
+                health = {"ok": False, "unhealthy": True, "service": "RADARPAY",
+                          "storage": "État privé non chargé ou non déchiffrable"}
             return self._s(health)
         self._s({"ok": True})
 
@@ -2221,6 +2232,7 @@ def startup():
             private_load()  # préchauffe PostgreSQL et importe l'historique chiffré si nécessaire
             print("PostgreSQL RADARPAY activé; état privé chargé.")
         else:
+            private_load()  # vérifie que l'état privé chiffré est lisible avant de déclarer le service prêt
             print("ATTENTION: DATABASE_URL absent; stockage historique GitHub (lent) encore utilisé.")
         if SITE:
             tg("setChatMenuButton", menu_button={"type": "web_app", "text": "Ouvrir", "web_app": {"url": SITE}})
