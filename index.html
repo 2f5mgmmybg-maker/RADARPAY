@@ -98,8 +98,10 @@ section.on{display:block;animation:in .4s ease both}
 @keyframes photoMotion{from{transform:scale(1.02) translateX(-.6%)}to{transform:scale(1.09) translateX(.6%)}}
 @keyframes activePulse{0%,100%{opacity:.78;box-shadow:0 0 8px rgba(238,234,226,.16)}50%{opacity:1;box-shadow:0 0 18px rgba(238,234,226,.48)}}
 .slot.empty{border-style:dashed;cursor:default}
-.price{position:absolute;left:0;right:0;bottom:0;padding:28px 12px 10px;background:linear-gradient(transparent,rgba(3,13,18,.93));font-weight:700;font-size:1rem;text-align:left}
-.price:empty{display:none}
+.price{display:none}
+.photo-details{display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 12px;color:var(--ink);font-size:.88rem;font-weight:650;line-height:1.45;background:var(--bg2);border-top:1px solid var(--line)}
+.photo-details span{overflow-wrap:anywhere}
+.photo-details .photo-price{color:var(--blip);font-weight:800}
 .stamp:empty{display:none}
 #lb{position:fixed;inset:0;z-index:30;background:rgba(3,13,18,.97);display:none;flex-direction:column;align-items:center;gap:14px;padding:16px}
 #lb.on{display:flex;animation:in .25s ease both}
@@ -356,13 +358,11 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
     <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une Target</button>
     <div class="spitta-publish-card" id="spitta-publish-card">
       <h3>Publier une Target</h3>
-      <p class="spitta-publish-help">Ajoute une photo nette, indique ton prix, le pourcentage que tu souhaites et choisis la catégorie du produit (2 500, 5 000 ou 9 900), puis sélectionne le pays concerné.</p>
-      <label class="spitta-field-label" for="spittaprice">Prix / conditions</label>
-      <input class="inp spitta-field" id="spittaprice" placeholder="Ex. : 2 500 € — conditions à préciser">
+      <p class="spitta-publish-help">Choisis l’un des trois prix proposés, indique ton pourcentage et sélectionne le pays concerné.</p>
+      <label class="spitta-field-label" for="spittaprice">Prix du Target</label>
+      <select class="inp spitta-field" id="spittaprice" required><option value="">Choisir un prix</option><option value="2500 €">2 500 €</option><option value="5000 €">5 000 €</option><option value="9900 €">9 900 €</option></select>
       <label class="spitta-field-label" for="spittapercentage">Pourcentage souhaité (%)</label>
       <input class="inp spitta-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" required inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
-      <label class="spitta-field-label" for="spittacategory">Catégorie du Target</label>
-      <select class="inp spitta-field" id="spittacategory" required><option value="">Choisir une catégorie</option><option value="2500">Targets à 2 500</option><option value="5000">Targets à 5 000</option><option value="9900">Targets à 9 900</option></select>
       <label class="spitta-field-label" for="spittacountry">Pays</label>
       <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
       <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du Target</span></button>
@@ -437,12 +437,16 @@ function render(){
     var d=document.createElement("div");d.className="slot";
     var im=document.createElement("img");im.src=p.src;im.alt="";d.appendChild(im);
     if(ADMIN){
+      var details=document.createElement("div");details.className="photo-details";details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");d.appendChild(details);
       var c=document.createElement("div");c.className="ctl";
-      var inp=document.createElement("input");inp.placeholder="Prix";inp.value=p.prix||"";inp.oninput=function(){p.prix=inp.value};
       var x=document.createElement("button");x.textContent="✕";x.onclick=function(){PHOTOS.splice(i,1);render()};
-      c.appendChild(inp);c.appendChild(x);d.appendChild(c);
+      c.appendChild(x);d.appendChild(c);
     }else{
-      var pr=document.createElement("div");pr.className="price";pr.textContent=p.prix||"";d.appendChild(pr);
+      var details=document.createElement("div");details.className="photo-details";
+      var price=document.createElement("span");price.className="photo-price";price.textContent="Prix : "+(p.prix||"Non précisé");details.appendChild(price);
+      var pct=document.createElement("span");pct.textContent="Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé");details.appendChild(pct);
+      var country=document.createElement("span");country.textContent="Pays : "+(p.pays||"Non précisé");details.appendChild(country);
+      d.appendChild(details);
       d.onclick=function(){openLb(p)};
     }
     var countdown=document.createElement("small");countdown.className="physical-countdown";countdown.style.cssText="display:block;text-align:center;color:var(--text);font-size:.78rem;font-weight:700;letter-spacing:.04em;margin:9px auto 2px;padding:7px 10px;width:max-content;max-width:100%;border:1px solid var(--line);border-radius:999px;background:rgba(238,234,226,.07);font-variant-numeric:tabular-nums";countdown.textContent=physicalCountdownText();d.appendChild(countdown);
@@ -452,16 +456,17 @@ function render(){
 }
 function openLb(p){
   var l=document.getElementById("lb");
-  if(!l){l=document.createElement("div");l.id="lb";l.innerHTML='<div class="box"><img alt=""></div><b id="lbp"></b><button class="btn s" id="lbw">Je le veux</button><button class="btn s" id="lbx">Fermer</button><small id="lbm"></small>';document.body.appendChild(l);
+  if(!l){l=document.createElement("div");l.id="lb";l.innerHTML='<div class="box"><img alt=""></div><b id="lbp"></b><label for="lb-offer">Ta proposition de prix au Spitta</label><input class="inp" id="lb-offer" type="text" maxlength="40" placeholder="Ex. : 2 300 €"><button class="btn s" id="lbw">Envoyer ma proposition</button><button class="btn s" id="lbx">Fermer</button><small id="lbm"></small>';document.body.appendChild(l);
     var i0=l.querySelector("img");i0.onclick=function(){i0.classList.toggle("z")};
     l.querySelector("#lbx").onclick=function(){l.classList.remove("on")};
     var w=l.querySelector("#lbw"),m=l.querySelector("#lbm");
     w.onclick=function(){
-      if(w.dataset.s!=="1"){w.dataset.s="1";w.textContent="Confirmer";m.textContent="Ton choix sera transmis au spitta. Dans 50 secondes, tu auras une réponse.";return}
-      w.disabled=true;m.textContent="Envoi…";
-      ask().then(function(){return call("/api/want",{id:CUR.id})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Notification non confirmée. Réessaie."):"Le spitta est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");if(r.notification===false||!r.ok){w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"}else{w.textContent="Envoyé"}if(r.chat)openChat(r.chat)}).catch(function(e){m.textContent=(e&&e.message)||"Le serveur ne répond pas. Réessaie.";w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"})};}
+      var offer=l.querySelector("#lb-offer").value.trim();
+      if(!offer){m.textContent="Indique ta proposition de prix avant de contacter le Spitta.";l.querySelector("#lb-offer").focus();return}
+      w.disabled=true;m.textContent="Envoi de ta proposition…";
+      ask().then(function(){return call("/api/want",{id:CUR.id,client_offer:offer})}).then(function(r){m.textContent=r.ok?(r.notification===false?(r.error||"Notification non confirmée. Réessaie."):"Le spitta est prévenu. Ouvre la discussion pour échanger."):(r.error||"Réessaie.");if(r.notification===false||!r.ok){w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"}else{w.textContent="Envoyé"}if(r.chat)openChat(r.chat)}).catch(function(e){m.textContent=(e&&e.message)||"Le serveur ne répond pas. Réessaie.";w.disabled=false;w.dataset.s="1";w.textContent="Réessayer"})};}
   var im=l.querySelector("img");im.classList.remove("z");im.src=p.src;
-  l.querySelector("#lbp").textContent=p.prix||"";CUR=p;var w0=l.querySelector("#lbw");w0.disabled=false;w0.dataset.s="";w0.textContent="Je le veux";l.querySelector("#lbm").textContent="";l.classList.add("on");
+  l.querySelector("#lbp").textContent=p.prix||"";CUR=p;var offerInput=l.querySelector("#lb-offer");if(offerInput)offerInput.value="";var w0=l.querySelector("#lbw");w0.disabled=false;w0.textContent="Envoyer ma proposition";l.querySelector("#lbm").textContent="Le Spitta recevra ton offre avant le début de la discussion.";l.classList.add("on");
 }
 function shrink(file,cb,onError){
   var objectUrl="",finished=false,loadTimer=null;
@@ -723,7 +728,7 @@ $("paymentreport").onclick=function(){
 };
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
 function renderMessages(c){
-  var signature=JSON.stringify([c.status,c.proof_deadline,c.erop_deadline,c.erop_sender_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
+  var signature=JSON.stringify([c.status,c.client_offer,c.proof_deadline,c.erop_deadline,c.erop_sender_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
   var observer=me!==c.client&&me!==c.vendor,client=me===c.client,vendor=me===c.vendor;
   $("chatheading").textContent=ADMIN_CHAT_MODE?(ADMIN?"Chat privé avec le Lanceur #"+c.client:"Chat privé avec l’administrateur"):(client?"Discussion avec le Spitta — ":vendor?"Discussion avec le Lanceur — ":"Supervision — ")+(c.price||"commande");
@@ -733,7 +738,7 @@ function renderMessages(c){
   $("chattext").placeholder=observer&&!ADMIN_CHAT_MODE?"Supervision admin — lecture seule":open?"Ton message…":"Discussion verrouillée jusqu’à la capture";
   var labels={pending:"demande en attente",vendor_confirmed:"spitta confirmé — en attente de ton accord",proof_pending:"capture exigée — délai de 2 minutes",proof_received:"capture reçue — discussion ouverte",proof_expired:"délai de capture dépassé — vente bloquée",erop_pending:"demande EROP — deuxième capture attendue",erop_sender_expired:"EROP — étape du Lanceur expirée",erop_expired:"délai EROP dépassé — discussion bloquée",declined:"indisponible — tu peux refaire une demande",expired:"délai de réponse dépassé — discussion ouverte"};
   var statusLabel=c.status==="erop_pending"&&!c.erop_sender_proof_submitted?"EROP — preuve du Lanceur attendue (délai de 2 minutes)":labels[c.status]||c.status;
-  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+statusLabel;
+  $("chatstatus").textContent=(observer?"Supervision admin · lecture seule · ":"")+"État : "+statusLabel+(c.client_offer?" · Proposition du Lanceur : "+c.client_offer:"");
   var senderProof=$("erop-sender-proof");
   senderProof.hidden=ADMIN_CHAT_MODE||observer||!(client&&c.status==="erop_pending"&&!c.erop_sender_proof_submitted);
   var step=$("chatproofstep");
@@ -889,8 +894,9 @@ function adminOpen(){if(!INIT){$("msg").textContent="Ouvre l’app depuis Telegr
 
 $("spittaadd").onclick=function(){
   var percentage=$("spittapercentage").value.trim().replace(",",".");
-  var category=$("spittacategory").value;
-  if(!category){$("spittamsg").textContent="Choisis d’abord une catégorie de Target.";$("spittacategory").focus();return}
+  var selectedPrice=$("spittaprice").value;
+  var category={"2500 €":"2500","5000 €":"5000","9900 €":"9900"}[selectedPrice]||"";
+  if(!category){$("spittamsg").textContent="Choisis l’un des trois prix proposés.";$("spittaprice").focus();return}
   if(!percentage||!Number.isFinite(Number(percentage))||Number(percentage)<0||Number(percentage)>100){$("spittamsg").textContent="Indique un pourcentage valide entre 0 et 100.";$("spittapercentage").focus();return}
   $("spittamsg").textContent="";$("spittafile").click();
 };
@@ -902,10 +908,13 @@ $("spittafile").onchange=function(){
   function finishUpload(){uploadButton.disabled=false;uploadLabel.textContent="Choisir une grande photo du Target";}
   shrink(f,function(src){
     $("spittamsg").textContent="Envoi de la publication…";
-    call("/api/add",{image:src,prix:$("spittaprice").value,pourcentage:percentage,categorie:$("spittacategory").value,pays:$("spittacountry").value}).then(function(r){
+    var percentage=$("spittapercentage").value.trim().replace(",",".");
+    var selectedPrice=$("spittaprice").value;
+    var category={"2500 €":"2500","5000 €":"5000","9900 €":"9900"}[selectedPrice]||"";
+    call("/api/add",{image:src,prix:selectedPrice,pourcentage:percentage,categorie:category,pays:$("spittacountry").value}).then(function(r){
       if(!r.ok||!r.photo||!r.photo.id||!r.photo.image)throw new Error(r.error||"Le serveur n’a pas confirmé l’enregistrement de la Target.");
       var p=r.photo;PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});
-      $("spittaprice").value="";$("spittapercentage").value="";$("spittacategory").value="";
+      $("spittaprice").value="";$("spittapercentage").value="";
       $("spittamsg").textContent="Publication enregistrée. Elle apparaît dans tes publications et sera visible dans le catalogue après actualisation.";
       render();loadSpittaItems();
     }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."}).finally(finishUpload);
