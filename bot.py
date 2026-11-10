@@ -148,7 +148,8 @@ def load():
 
 
 def save(data, sha):
-    data["maj"] = today()
+    stamp = datetime.now(ZoneInfo("Europe/Brussels"))
+    data["maj"] = f"{stamp.day} {MOIS[stamp.month - 1]} {stamp.year} à {stamp:%H:%M}"
     gh_put("photos.json", json.dumps(data, ensure_ascii=False, indent=2).encode(),
            "Mise à jour des photos", sha)
 
