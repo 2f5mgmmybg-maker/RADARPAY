@@ -1907,8 +1907,10 @@ def api(path, b):
         return {"ok": True, "chat": public_chat}
     if path == "/api/add" and r != "spitta":
         return {"error": "Seuls les comptes SPITTA peuvent publier une TARGET."}
-    if path in ("/api/update", "/api/delete") and r not in ("owner", "spitta"):
+    if path == "/api/update" and r not in ("owner", "spitta"):
         return {"error": "Accès réservé."}
+    if path == "/api/delete" and r != "owner":
+        return {"error": "Seul l’administrateur peut supprimer une publication."}
     if path == "/api/add":
         private_state = private_load()
         profile = next((x for x in private_state.setdefault("registrations", [])
@@ -1976,8 +1978,8 @@ def api(path, b):
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
-            if not p or not (r == "owner" or (r == "spitta" and owner_of(p) == uid)):
-                return {"error": "Impossible."}
+            if not p or r != "owner":
+                return {"error": "Seul l’administrateur peut supprimer une publication."}
             data["photos"].remove(p)
             save(data, sha)
             gh_del(f"photos/{p['image']}", "Suppression d'une photo")
