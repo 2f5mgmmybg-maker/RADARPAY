@@ -2229,10 +2229,12 @@ def startup():
     try:
         if DATABASE_URL:
             ensure_db()
-            private_load()  # préchauffe PostgreSQL et importe l'historique chiffré si nécessaire
+            with LOCK:
+                private_load()  # préchauffe PostgreSQL et importe l'historique chiffré si nécessaire
             print("PostgreSQL RADARPAY activé; état privé chargé.")
         else:
-            private_load()  # vérifie que l'état privé chiffré est lisible avant de déclarer le service prêt
+            with LOCK:
+                private_load()  # vérifie que l'état privé chiffré est lisible avant de déclarer le service prêt
             print("ATTENTION: DATABASE_URL absent; stockage historique GitHub (lent) encore utilisé.")
         if SITE:
             tg("setChatMenuButton", menu_button={"type": "web_app", "text": "Ouvrir", "web_app": {"url": SITE}})
