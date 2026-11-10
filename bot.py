@@ -1556,9 +1556,10 @@ def api(path, b):
                 if profile.get("first_name") != first_name:
                     profile["first_name"] = first_name
                     changed = True
+                profile["last_seen"] = int(time.time())  # Mis à jour en mémoire sans écriture DB à chaque heartbeat.
                 if changed:
                     private_save()
-                ACTIVE_PRESENCE[str(uid)] = {"role": r, "seen": int(time.time())}
+                ACTIVE_PRESENCE[str(uid)] = {"role": r, "seen": profile["last_seen"]}
             pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
             has_pin = bool(profile and profile.get("pin_hash"))
             active_cutoff = int(time.time()) - 3600  # Présence conservée 1 h après la dernière activité.
