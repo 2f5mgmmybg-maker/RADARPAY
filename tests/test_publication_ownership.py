@@ -37,6 +37,7 @@ class PublicationOwnershipTests(unittest.TestCase):
             patch.object(bot, "load", side_effect=lambda: (self.photos, "sha")),
             patch.object(bot, "save"),
             patch.object(bot, "gh_put"),
+            patch.object(bot, "gh_del"),
             patch.object(bot, "decode_image_data_uri", return_value=b"image-bytes"),
             patch.object(bot, "say"),
             patch.object(bot, "chats_load", return_value=({"chats": []}, None)),
@@ -112,6 +113,18 @@ class PublicationOwnershipTests(unittest.TestCase):
         self.assertIn("Seuls les comptes SPITTA", result["error"])
         bot.gh_put.assert_not_called()
         bot.save.assert_not_called()
+
+    def test_spitta_cannot_delete_a_target(self):
+        result = self.call_as(self.spitta_id, "spitta", "/api/delete", id="target-1")
+        self.assertIn("Seul l’administrateur", result["error"])
+        self.assertEqual(len(self.photos["photos"]), 1)
+        bot.gh_del.assert_not_called()
+
+    def test_owner_can_delete_a_target(self):
+        result = self.call_as(bot.OWNER, "owner", "/api/delete", id="target-1")
+        self.assertTrue(result["ok"])
+        self.assertEqual(self.photos["photos"], [])
+        bot.gh_del.assert_called_once_with("photos/target-1.jpg", "Suppression d'une photo")
 
     def test_owner_cannot_publish_target_from_app(self):
         self.user = {"id": bot.OWNER, "first_name": "Admin"}
