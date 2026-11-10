@@ -957,6 +957,17 @@ def api(path, b):
             token = _new_app_session(profile)
             private_save()
         return {"ok": True, "role": existing_role, "session_token": token}
+    if path == "/api/admin/access":
+        if uid != OWNER:
+            return {"error": "Accès réservé au compte propriétaire Telegram."}
+        configured_code = os.environ.get("ADMIN_ACCESS_CODE", "").strip()
+        supplied_code = str(b.get("code", "")).strip()
+        if not configured_code:
+            return {"error": "Le code administrateur n’est pas configuré sur le serveur."}
+        if not re.fullmatch(r"\\d{6}", supplied_code) or not hmac.compare_digest(supplied_code, configured_code):
+            return {"error": "Code administrateur incorrect."}
+        return {"ok": True, "role": "owner"}
+
     # Toutes les routes de l’application exigent une session ouverte par PIN.
     # Le propriétaire Telegram est reconnu directement par OWNER_ID.
     if uid != OWNER and path not in ("/api/me", "/api/register", "/api/login", "/api/pin/setup"):
