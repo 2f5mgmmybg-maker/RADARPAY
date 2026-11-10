@@ -320,9 +320,9 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
-    <button class="on" data-t="a">Services en ligne</button>
-    <button data-t="b">TARGETS physiques</button>
-    <button data-t="e" id="spitta-tab">Mes publications</button>
+    <button class="on" data-t="a">LINK DISPONIBLE POUR LE SERVICES EN LIGNE</button>
+    <button data-t="b">TARGET DISPONIBLE</button>
+    <button data-t="e" id="spitta-tab">TARGET DISPONIBLE</button>
     <button data-t="f">Messages</button>
 
     <button data-t="c" id="admin-tab" hidden>Admin</button>
@@ -347,7 +347,7 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
 
   <section id="b">
     <div class="stamp" id="stamp"></div>
-    <p class="lead">Disponibilités physiques classées par pays. Les disponibilités sont actualisées automatiquement toutes les 25 minutes.</p>
+    <p class="lead">TARGETS disponibles classées par pays. Les disponibilités sont actualisées automatiquement toutes les 25 minutes.</p>
     <div class="countryfilters" id="countryfilters"><button class="on" data-country="Tous">Tous</button><button data-country="Belgique">Belgique</button><button data-country="Suisse">Suisse</button><button data-country="Luxembourg">Luxembourg</button><button data-country="France">France</button><button data-country="À classer">À classer</button></div>
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
@@ -370,7 +370,7 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
       <p class="spitta-publish-help">Ta publication sera envoyée dès que tu auras sélectionné une photo.</p>
       <p class="lead" id="spittamsg" aria-live="polite"></p>
     </div>
-    <h3 id="publications-title">Mes publications</h3><div class="grid" id="spittamine"></div>
+    <h3 id="publications-title">Mes TARGETS disponibles</h3><div class="grid" id="spittamine"></div>
     <div id="spitta-requests"><h3>Demandes reçues</h3><div id="spittachatitems"></div></div>
   </section>
   <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de TARGET. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
@@ -1010,14 +1010,14 @@ function moveSectionContents(sourceId,targetId,headingText,prepend){
 function simplifyWorkspaceTabs(){
   if(USER_ROLE==="lanceur"){
     moveSectionContents("d","f","Mes actions et paiements",true);
-    var names={"a":"Explorer","b":"TARGETS physiques","f":"Mes échanges"};
+    var names={"a":"Explorer","b":"TARGET DISPONIBLE","f":"Mes échanges"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
-    moveSectionContents("b","e","TARGETS physiques",true);
-    var names={"e":"Mes TARGETS","f":"Messages"};
+    moveSectionContents("b","e","TARGET DISPONIBLE",true);
+    var names={"e":"TARGET DISPONIBLE","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
-    var names={"a":"Services en ligne","b":"TARGETS physiques","e":"Mes publications","f":"Messages","c":"Administration"};
+    var names={"a":"LINK DISPONIBLE POUR LE SERVICES EN LIGNE","b":"TARGET DISPONIBLE","f":"Messages","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
 }
