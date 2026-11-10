@@ -103,6 +103,14 @@ def monitor_event(kind, title, detail="", level="info", notify=False, lock_held=
             print("alerte supervision Telegram:", repr(e))
 
 
+def _notify_registration(event):
+    try:
+        stamp = datetime.fromtimestamp(event["time"], ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y %H:%M:%S")
+        say(OWNER, "🔔 RADARPAY — " + event["title"] + "\n" + event["detail"] + "\n" + stamp + "\nOuvre Administration > Supervision.")
+    except Exception as e:
+        print("alerte inscription Telegram non envoyée:", repr(e))
+
+
 def today():
     d = datetime.now(ZoneInfo("Europe/Brussels"))
     return f"{d.day} {MOIS[d.month - 1]}"
@@ -935,6 +943,9 @@ def api(path, b):
             return {"error": "Choisis un pseudo de 3 à 24 caractères (lettres, chiffres, espaces, . _ @ -)." }
         if not re.fullmatch(r"\d{4}", pin):
             return {"error": "Le code secret doit contenir exactement 4 chiffres."}
+        # Le calcul PBKDF2 est volontairement sécurisé, mais effectué hors du verrou global.
+        salt = secrets.token_hex(16)
+        pin_hash = _pin_digest(pin, salt)
         with LOCK:
             state = private_load()
             uid_key = str(uid)
@@ -946,7 +957,7 @@ def api(path, b):
             if profile:
                 if profile.get("status", "pending") == "pending":
                     if profile.get("role") != chosen:
-                        return {"error": "Ta demande est déjà enregistrée pour un autre profil. Contacte l’administrateur."}
+                        return {"error": "Ta demande est déjà enregistrée pour un autre profil. Contacte l’administration."}
                     profile["guarantee_rules_version"] = "2026-11-09"
                     profile["guarantee_accepted"] = True
                     profile["guarantee_acceptance_word"] = "Garant"
@@ -954,21 +965,29 @@ def api(path, b):
                     private_save()
                     return {"ok": True, "pending": True}
                 return {"error": "Ce compte existe déjà. Utilise Se connecter."}
-            salt = secrets.token_hex(16)
+            now = int(time.time())
             registrations.append({
                 "user_id": uid_key, "pseudo": pseudo, "role": chosen,
                 "telegram_username": str(user.get("username") or ""),
                 "first_name": str(user.get("first_name") or ""),
-                "pin_salt": salt, "pin_hash": _pin_digest(pin, salt),
-                "created": int(time.time()), "status": "pending",
+                "pin_salt": salt, "pin_hash": pin_hash,
+                "created": now, "status": "pending",
                 "guarantee_rules_version": "2026-11-09",
                 "guarantee_accepted": True,
                 "guarantee_acceptance_word": "Garant",
-                "guarantee_accepted_at": int(time.time())
+                "guarantee_accepted_at": now
             })
             registrations[:] = registrations[-1000:]
+            # Un seul enregistrement PostgreSQL : profil + événement de supervision.
+            event = {"id": secrets.token_hex(8), "time": now, "kind": "registration",
+                     "title": "Nouvelle inscription en attente",
+                     "detail": "Profil : " + chosen + " · Pseudo : " + pseudo, "level": "info"}
+            events = state.setdefault("monitor_events", [])
+            events.append(event)
+            del events[:-500]
             private_save()
-        monitor_event("registration", "Nouvelle inscription en attente", "Profil : " + chosen + " · Pseudo : " + pseudo, "info", True)
+        # Telegram ne bloque plus la réponse HTTP d'inscription.
+        threading.Thread(target=_notify_registration, args=(event,), daemon=True).start()
         return {"ok": True, "pending": True}
     if path == "/api/login":
         if uid == OWNER:
