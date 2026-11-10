@@ -741,10 +741,21 @@ function render(){
     var country=document.createElement("span");country.textContent="Pays : "+(p.pays||"Non précisé");details.appendChild(country);
     var author=document.createElement("span");author.textContent="Publié par : "+(p.auteur||"Auteur non renseigné");details.appendChild(author);
     d.appendChild(details);
-    if(!ADMIN)d.onclick=function(){openLb(p)};
+    if(!ADMIN && p.id!==undefined && p.id!==null)d.dataset.photoId=String(p.id);
     grid.appendChild(d);
   });
   document.getElementById("stamp").textContent=ST.maj?"Mis à jour le "+ST.maj:"";
+}
+// Gestion centralisée des clics : elle reste active même lorsque render() reconstruit les cartes après actualisation.
+if(!grid.dataset.photoClickBound){
+  grid.dataset.photoClickBound="1";
+  grid.addEventListener("click",function(e){
+    if(ADMIN)return;
+    var card=e.target.closest(".slot[data-photo-id]");
+    if(!card || !grid.contains(card))return;
+    var photo=PHOTOS.find(function(item){return String(item.id)===card.dataset.photoId;});
+    if(photo)openLb(photo);
+  });
 }
 function openLb(p){
   var l=document.getElementById("lb");
