@@ -1345,7 +1345,7 @@ $("spittafile").onchange=function(){
       $("spittaprice").value="";$("spittapercentage").value="";
       $("spittamsg").textContent=r.notification===false
         ?"Publication enregistrée, mais le bot n’a pas pu prévenir l’administrateur. Vérifie que l’administrateur a déjà ouvert le bot avec /start."
-        :"Publication enregistrée. Le bot a prévenu l’administrateur avec ton nom d’utilisateur.";
+        :"Publication enregistrée. Le bot a prévenu l’administrateur avec ton pseudo SPITTA.";
       render();loadSpittaItems();
     }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."}).finally(finishUpload);
   },function(e){$("spittamsg").textContent=(e&&e.message)||"La photo n’a pas pu être préparée. Choisis une autre image.";finishUpload()});
