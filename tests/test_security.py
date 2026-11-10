@@ -96,6 +96,21 @@ class SecurityTests(unittest.TestCase):
         self.assertFalse(bot.eraf_validation_pending(confirmed))
         self.assertFalse(bot.eraf_validation_pending({"erop_photo_sent": False}))
 
+    def test_erop_sender_timeout_reopens_chat_without_penalty(self):
+        chat = {
+            "status": "erop_pending",
+            "erop_previous_status": "proof_received",
+            "erop_sender_deadline": 100,
+            "erop_sender_proof_submitted": False,
+            "messages": [],
+        }
+        self.assertTrue(bot.expire_erop_sender_step(chat, 100))
+        self.assertEqual(chat["status"], "proof_received")
+        self.assertNotIn("erop_previous_status", chat)
+        self.assertNotIn("erop_sender_deadline", chat)
+        self.assertIn("sans sanction pour le SPITTA", chat["messages"][-1]["text"])
+        self.assertFalse(bot.expire_erop_sender_step(chat, 101))
+
     def test_chat_retention_covers_full_erop_eraf_flow(self):
         self.assertGreaterEqual(bot.CHAT_TTL, 24 * 60 * 60)
         self.assertEqual(bot.EROP_BLACKLIST_SECONDS, 7 * 24 * 60 * 60)
