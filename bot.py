@@ -70,6 +70,29 @@ def say(chat, text, **k):
     tg("sendMessage", chat_id=chat, text=text, **k)
 
 
+def monitor_event(kind, title, detail="", level="info", notify=False):
+    now = int(time.time())
+    event = {"id": secrets.token_hex(8), "time": now, "kind": str(kind)[:40],
+             "title": str(title)[:120], "detail": str(detail)[:240],
+             "level": level if level in ("info", "warning", "critical") else "info"}
+    try:
+        with LOCK:
+            state = private_load()
+            events = state.setdefault("monitor_events", [])
+            events.append(event)
+            del events[:-300]
+            private_save()
+    except Exception as e:
+        print("journal supervision:", repr(e))
+    if notify:
+        try:
+            stamp = datetime.fromtimestamp(now, ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y %H:%M:%S")
+            symbol = "🚨" if event["level"] == "critical" else "⚠️" if event["level"] == "warning" else "🔔"
+            say(OWNER, symbol + " RADARPAY — " + event["title"] + "\n" + event["detail"] + "\n" + stamp + "\nOuvre Administration > Supervision.")
+        except Exception as e:
+            print("alerte supervision Telegram:", repr(e))
+
+
 def today():
     d = datetime.now(ZoneInfo("Europe/Brussels"))
     return f"{d.day} {MOIS[d.month - 1]}"
@@ -171,6 +194,7 @@ def _decode_private(encrypted):
     data.setdefault("admin_chats", {})
     data.setdefault("site_clicks", {})
     data.setdefault("payment_reports", [])
+    data.setdefault("monitor_events", [])
     return data, migrated
 
 
@@ -179,6 +203,7 @@ def private_load():
     if PRIVATE_CACHE is not None:
         PRIVATE_CACHE.setdefault("blacklist", {})
         PRIVATE_CACHE.setdefault("registrations", [])
+        PRIVATE_CACHE.setdefault("monitor_events", [])
         return PRIVATE_CACHE
 
     pool = ensure_db()
@@ -852,6 +877,7 @@ def api(path, b):
             })
             registrations[:] = registrations[-1000:]
             private_save()
+        monitor_event("registration", "Nouvelle inscription en attente", "Profil : " + chosen + " · Pseudo : " + pseudo, "info", True)
         return {"ok": True, "pending": True}
     if path == "/api/login":
         if uid == OWNER:
@@ -971,6 +997,7 @@ def api(path, b):
                         "reminded": False, "messages": []}
                 data_ch.setdefault("chats", []).append(chat)
             chats_save(data_ch, None)
+        monitor_event("offer", "Nouvelle offre envoyée", "Produit : " + prix + " · Proposition : " + client_offer, "warning", True)
         try:
             markup = {"inline_keyboard": [
                 [{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
@@ -1105,6 +1132,7 @@ def api(path, b):
                 gh_del(proof_file, "Nettoyage d'une preuve de paiement non enregistrée")
                 PROOF_CACHE.pop(proof_file, None)
                 return {"error": "Impossible de sauvegarder la capture."}
+        monitor_event("payment", "Paiement déclaré — à vérifier", "Site : " + click["site"] + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", True)
         try:
             say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)\nLanceur : " + str(uid) +
                 "\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency +
@@ -1112,6 +1140,14 @@ def api(path, b):
         except Exception as e:
             print("notification paiement admin:", repr(e))
         return {"ok": True}
+    if path == "/api/admin/monitor":
+        if uid != OWNER:
+            return {"error": "Accès réservé à l’administrateur."}
+        events = [dict(item) for item in private_load().setdefault("monitor_events", [])]
+        events.sort(key=lambda item: int(item.get("time", 0)), reverse=True)
+        return {"ok": True, "events": events[:150], "server_time": int(time.time()),
+                "counts": {"total": len(events), "critical": sum(1 for x in events if x.get("level") == "critical"),
+                           "warning": sum(1 for x in events if x.get("level") == "warning")}}
     if path == "/api/admin/registrations":
         if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
@@ -1151,6 +1187,7 @@ def api(path, b):
             profile["status"] = "approved"
             profile["approved_at"] = int(time.time())
             private_save()
+        monitor_event("approval", "Compte approuvé", "Rôle : " + chosen + " · Compte Telegram : " + target, "info", True)
         return {"ok": True, "user_id": target, "role": chosen}
     if path == "/api/me":
         data, _ = load()
@@ -1655,6 +1692,7 @@ def api(path, b):
             c.setdefault("messages", []).append({"from": uid, "name": user.get("first_name", "Utilisateur"),
                                                   "text": msg, "time": int(time.time())})
             chats_save(chats_data, sha_ch)
+        monitor_event("message", "Message envoyé dans une discussion", "Discussion : " + rid + " · Compte : " + str(uid), "info", False)
         other = c.get("vendor") if uid == c.get("client") else c.get("client")
         def notify():
             try:
@@ -1699,6 +1737,7 @@ def api(path, b):
             data, sha = load()
             data["photos"].insert(0, photo)
             save(data, sha)
+        monitor_event("publication", "Nouvelle TARGET publiée", "SPITTA : " + display_name + " · Prix : " + photo["prix"] + " · Pays : " + (photo["pays"] or "Non précisé"), "info", True)
         notification = True
         try:
             who = display_name + " (ID Telegram " + str(uid) + ")"
