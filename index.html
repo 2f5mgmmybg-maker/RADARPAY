@@ -290,12 +290,63 @@ input::placeholder,textarea::placeholder{color:#96866d!important}
 .brand-header h2{display:none}
 @media(prefers-color-scheme:dark){:root{color-scheme:light}}
 
+
+/* Accueil repensé : logo et ergonomie mobile */
+#welcome{
+  box-sizing:border-box;
+  min-height:100vh;min-height:100dvh;
+  justify-content:flex-start;
+  gap:clamp(14px,3.2vh,28px);
+  padding:calc(env(safe-area-inset-top) + 26px) 22px calc(env(safe-area-inset-bottom) + 28px);
+  overflow-y:auto;overscroll-behavior-y:contain;
+}
+.welcome-logo{display:block;width:min(78vw,430px);max-height:112px;height:auto;object-fit:contain;margin:clamp(10px,5vh,48px) auto 0}
+#welcome .radar{width:clamp(100px,25vw,158px);flex:0 0 auto}
+#welcome h1{font-size:clamp(1.8rem,7vw,2.5rem);line-height:1.12}
+#welcome>p{max-width:34ch;font-size:clamp(.98rem,3.8vw,1.08rem);line-height:1.55}
+#auth-choices{display:flex!important;flex-direction:column;align-items:stretch;gap:14px!important;width:min(100%,390px);margin:4px auto 0}
+#auth-choices .btn{width:100%;min-height:60px;padding:16px 22px;border-radius:16px;font-size:1.08rem;font-weight:750;letter-spacing:.01em}
+#signup-panel,#login-panel,#legacy-pin-panel{width:min(100%,420px)!important;max-width:100%;padding:4px 0 12px}
+#signup-panel input,#login-panel input,#legacy-pin-panel input,#signup-step-rules input{box-sizing:border-box;width:100%;min-height:54px;margin:6px 0;padding:14px 15px;border-radius:13px;font-size:16px}
+#signup-panel .btn,#login-panel .btn,#legacy-pin-panel .btn,#signup-step-rules .btn{min-height:54px;border-radius:14px;font-size:1rem}
+#signup-step-role>div{display:flex;flex-direction:column;gap:12px}
+#signup-step-role .btn{width:100%;min-height:58px}
+#role-message{max-width:34ch;font-size:.88rem}
+.brand-header{min-height:54px}
+.brand-logo{width:min(52vw,190px);max-height:46px}
+main{width:100%;max-width:100%;box-sizing:border-box;padding-left:clamp(14px,4vw,28px);padding-right:clamp(14px,4vw,28px)}
+button,.btn,.refresh,.tabs button{touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(217,154,25,.55);outline-offset:2px}
+@media(max-width:600px){
+  #welcome{gap:clamp(12px,2.6vh,20px);padding-left:20px;padding-right:20px}
+  .welcome-logo{width:min(84vw,390px);max-height:96px;margin-top:clamp(8px,3vh,24px)}
+  #welcome .radar{width:clamp(92px,23vw,124px)}
+  #welcome h1{font-size:1.9rem}
+  #auth-choices .btn{min-height:62px;font-size:1.06rem}
+  main{padding-left:14px;padding-right:14px}
+  header{gap:8px}
+  .brand-logo{width:min(48vw,168px)}
+  .refresh{min-height:42px;padding:9px 12px}
+  .tabs{gap:18px;margin-bottom:18px}
+  .tabs button{min-height:50px;font-size:.82rem}
+  input,select,textarea{font-size:16px!important}
+}
+@media(max-height:700px){
+  #welcome{justify-content:flex-start;gap:12px;padding-top:calc(env(safe-area-inset-top) + 12px)}
+  .welcome-logo{margin-top:4px;max-height:70px;width:min(68vw,300px)}
+  #welcome .radar{width:78px}
+  #welcome h1{font-size:1.65rem}
+  #welcome>p{font-size:.9rem}
+  #auth-choices .btn{min-height:54px}
+}
+
 </style>
 </head>
 <body>
 <div class="rings"></div>
 
 <div id="welcome">
+  <img class="welcome-logo" src="assets/radar-logo.svg" alt="Radar">
   <div class="radar"><i></i><i></i><i></i></div>
   <h1>Bienvenue</h1>
   <p>Inscris-toi une seule fois, puis connecte-toi avec ton code à 4 chiffres.</p>
