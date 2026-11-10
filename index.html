@@ -787,7 +787,7 @@ function render(){
     var country=document.createElement("span");country.textContent="Pays : "+(p.pays||"Non précisé");details.appendChild(country);
     var author=document.createElement("span");author.textContent="Publié par : "+(p.auteur||"Auteur non renseigné");details.appendChild(author);
     d.appendChild(details);
-    if(!ADMIN && p.id!==undefined && p.id!==null)d.dataset.photoId=String(p.id);
+    if(p.id!==undefined && p.id!==null)d.dataset.photoId=String(p.id);
     grid.appendChild(d);
   });
   document.getElementById("stamp").textContent=ST.maj?"Mis à jour le "+ST.maj:"";
@@ -796,7 +796,7 @@ function render(){
 if(!grid.dataset.photoClickBound){
   grid.dataset.photoClickBound="1";
   function activatePhoto(target){
-    if(ADMIN||!target||typeof target.closest!=="function")return;
+    if(!target||typeof target.closest!=="function")return;
     var card=target.closest(".slot[data-photo-id]");
     if(!card||!grid.contains(card))return;
     var photo=PHOTOS.find(function(item){return String(item.id)===card.dataset.photoId;});
