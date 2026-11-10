@@ -20,7 +20,7 @@ body{margin:0;min-height:100vh;background:#000;color:var(--ink);font-family:Inte
 
 /* Typographie professionnelle */
 body{font-family:Inter,system-ui,sans-serif;font-size:15px;letter-spacing:0;line-height:1.5}
-h1,h2,h3,.tabs button,.price,.physical-countdown{font-family:Inter,system-ui,sans-serif;font-weight:600;letter-spacing:-.02em}
+h1,h2,h3,.tabs button,.price{font-family:Inter,system-ui,sans-serif;font-weight:600;letter-spacing:-.02em}
 #welcome h1{font-size:2.2rem;letter-spacing:-.03em}
 header h2{font-size:1.25rem}
 h3{font-size:1.2rem;letter-spacing:-.02em}
@@ -727,17 +727,6 @@ renderServices();
 
 var grid=document.getElementById("grid");
 var PHYSICAL_REFRESH_MS=25*60*1000;
-var nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;
-var LAST_PHYSICAL_REFRESH_AT=null;
-function physicalCountdownText(){
-  var left=Math.max(0,nextPhysicalRefresh-Date.now());
-  var mins=Math.floor(left/60000),secs=Math.floor((left%60000)/1000);
-  return "⏱ "+String(mins).padStart(2,"0")+":"+String(secs).padStart(2,"0")+" — actualisation";
-}
-function updatePhysicalCountdowns(){
-  document.querySelectorAll(".physical-countdown").forEach(function(el){el.textContent=physicalCountdownText()});
-}
-setInterval(updatePhysicalCountdowns,1000);
 function render(){
   grid.innerHTML="";
   var visible=PHOTOS.filter(function(p){return COUNTRY==="Tous"?(true):(COUNTRY==="À classer"?!p.pays:(p.pays||"")===COUNTRY)});
@@ -753,10 +742,9 @@ function render(){
     var author=document.createElement("span");author.textContent="Publié par : "+(p.auteur||"Auteur non renseigné");details.appendChild(author);
     d.appendChild(details);
     if(!ADMIN)d.onclick=function(){openLb(p)};
-    var countdown=document.createElement("small");countdown.className="physical-countdown";countdown.style.cssText="display:block;text-align:center;color:var(--text);font-size:.78rem;font-weight:700;letter-spacing:.04em;margin:9px auto 2px;padding:7px 10px;width:max-content;max-width:100%;border:1px solid var(--line);border-radius:999px;background:rgba(238,234,226,.07);font-variant-numeric:tabular-nums";countdown.textContent=physicalCountdownText();d.appendChild(countdown);
     grid.appendChild(d);
   });
-  document.getElementById("stamp").textContent=ST.maj?"Mis à jour le "+ST.maj+(LAST_PHYSICAL_REFRESH_AT?" à "+LAST_PHYSICAL_REFRESH_AT.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):""):"";
+  document.getElementById("stamp").textContent=ST.maj?"Mis à jour le "+ST.maj:"";
 }
 function openLb(p){
   var l=document.getElementById("lb");
@@ -853,7 +841,7 @@ function shrink(file,cb,onError){
   }catch(e){fail("Impossible de charger cette photo sur cet appareil. Essaie une autre image.")}
 }
 function save(art){
-  ST.photos=PHOTOS;ST.maj=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
+  ST.photos=PHOTOS;ST.maj=new Date().toLocaleString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});
   var root=document.documentElement.cloneNode(true);
   root.querySelector("#state").textContent=JSON.stringify(ST).replace(/</g,"\\u003c");
   root.querySelector("#list").innerHTML="";root.querySelector("#grid").innerHTML="";root.querySelector("#stamp").textContent="";
@@ -1424,7 +1412,7 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
 }).then(function(d){
   PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});
   ST.maj=d.maj||"";
-  LAST_PHYSICAL_REFRESH_AT=new Date();nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;
+  
   API=(d.api||"").trim().replace(/\/$/,"");
   render();if(USER_ROLE==="spitta"||USER_ROLE==="owner")loadSpittaItems();
   if(USER_ROLE==="owner")adminOpen();
@@ -1439,14 +1427,14 @@ fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){
 setInterval(function(){
   fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Actualisation indisponible");return r.json()}).then(function(d){
     PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});
-    ST.maj=d.maj||"";LAST_PHYSICAL_REFRESH_AT=new Date();nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;render();if(USER_ROLE==="spitta")loadSpittaItems();
+    ST.maj=d.maj||"";render();if(USER_ROLE==="spitta")loadSpittaItems();
   }).catch(function(e){console.warn("RADAR PAYMENT: actualisation automatique échouée",e)});
 },PHYSICAL_REFRESH_MS);
 
 var tabs=document.getElementById("tabs");
 $("refresh").onclick=function(){
   var button=$("refresh");button.disabled=true;button.textContent="↻ Actualisation…";
-  var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=d.maj||"";LAST_PHYSICAL_REFRESH_AT=new Date();nextPhysicalRefresh=Date.now()+PHYSICAL_REFRESH_MS;render()})];
+  var tasks=[fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("Catalogue indisponible.");return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""}});ST.maj=d.maj||"";render()})];
   if(USER_ROLE)tasks.push(loadChatList());
   if(ADMIN){tasks.push(loadRegistrations(),loadMonitor(),loadAdminPaymentReports(),loadAdminChats());var msg=$("adminrefreshmsg");if(msg)msg.textContent="Actualisation des données administrateur…";}
   Promise.all(tasks).then(function(){var msg=$("adminrefreshmsg");if(ADMIN&&msg)msg.textContent="Données actualisées.";}).catch(function(e){var msg=$("adminrefreshmsg");if(msg)msg.textContent=e.message||"Actualisation impossible.";}).finally(function(){button.disabled=false;button.textContent="↻ Actualiser"});
