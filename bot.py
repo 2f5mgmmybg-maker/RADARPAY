@@ -1272,7 +1272,7 @@ def api(path, b):
             try:
                 gh_put(proof_file, FERNET.encrypt(raw_image), "Sauvegarde chiffrée d'une preuve de paiement")
                 PROOF_CACHE[proof_file] = base64.b64encode(raw_image).decode()
-                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click["site"] + "\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
+                text_report = "💳 PAIEMENT DÉCLARÉ — NON VÉRIFIÉ\nSite : " + click["site"] + "\nArticle : " + article + "\\nMontant : " + amount + " " + currency + "\nCapture d’écran jointe."
                 pdata.setdefault("admin_chats", {}).setdefault(str(uid), []).append({
                     "from": uid, "name": user.get("first_name", "Lanceur"), "text": text_report,
                     "proof_file": proof_file, "time": now
