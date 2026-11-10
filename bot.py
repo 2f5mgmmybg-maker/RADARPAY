@@ -1328,7 +1328,7 @@ def api(path, b):
             return {"error": "Accès réservé à l’administrateur."}
         configured_code = os.environ.get("ADMIN_ACCESS_CODE", "").strip().strip(chr(34)).strip(chr(39)).strip()
         supplied_code = str(b.get("admin_code", "")).strip()
-        if not re.fullmatch(r"\\d{6}", configured_code or "") or not re.fullmatch(r"\\d{6}", supplied_code):
+        if not re.fullmatch(r"\d{6}", configured_code or "") or not re.fullmatch(r"\d{6}", supplied_code):
             return {"error": "Code administrateur invalide ou non configuré."}
         if not hmac.compare_digest(supplied_code, configured_code):
             return {"error": "Code administrateur incorrect."}
