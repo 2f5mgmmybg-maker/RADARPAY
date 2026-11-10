@@ -52,7 +52,7 @@ class PublicationOwnershipTests(unittest.TestCase):
         return bot.api(path, {"initData": "test-init", "sessionToken": "valid-session", **payload})
 
     def test_lanceur_cannot_make_offer_on_own_listing(self):
-        self.photo["o"] = bot.enc(self.lanceur_id, "target-1")
+        self.photos["photos"][0]["o"] = bot.enc(self.lanceur_id, "target-1")
         result = self.call_as(self.lanceur_id, "lanceur", "/api/want",
                               id="target-1", client_offer="2000 €")
         self.assertIn("propre publication", result["error"])
@@ -80,7 +80,7 @@ class PublicationOwnershipTests(unittest.TestCase):
 
     def test_spitta_cannot_change_another_users_price(self):
         self.user = {"id": self.spitta_id, "first_name": "Vendeur"}
-        self.photo["o"] = bot.enc(self.lanceur_id, "target-1")
+        self.photos["photos"][0]["o"] = bot.enc(self.lanceur_id, "target-1")
         result = bot.api("/api/update", {"initData": "test-init", "sessionToken": "valid-session",
                                         "id": "target-1", "prix": "5000 €"})
         self.assertIn("tes propres publications", result["error"])
