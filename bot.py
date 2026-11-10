@@ -936,6 +936,8 @@ def api(path, b):
         vendor = owner_of(p)
         if not vendor:
             return {"error": "Ce produit n’a pas de propriétaire valide. Contacte l’administrateur."}
+        if int(vendor) == int(uid):
+            return {"error": "Tu ne peux pas faire une offre sur ta propre publication. Modifie plutôt son prix depuis ton espace Mes TARGETS."}
         prix = p.get("prix") or "sans prix"
         client_offer = str(b.get("client_offer", "")).strip()[:40]
         if not client_offer:
@@ -1157,9 +1159,21 @@ def api(path, b):
                 (r == "owner" or (r == "spitta" and owner_of(p) == uid))]
         profile = next((x for x in state.setdefault("registrations", [])
                         if str(x.get("user_id")) == str(uid)), None)
+        if r in ("lanceur", "spitta"):
+            if not profile:
+                profile = {"user_id": str(uid), "role": r, "status": "approved",
+                           "pseudo": str(user.get("first_name") or "Utilisateur")[:24],
+                           "created": int(time.time())}
+                state["registrations"].append(profile)
+            profile["telegram_username"] = str(user.get("username") or profile.get("telegram_username") or "")
+            profile["first_name"] = str(user.get("first_name") or profile.get("first_name") or "")
+            profile["last_seen"] = int(time.time())
+            private_save()
         pending = bool(profile and profile.get("status", "pending") == "pending" and not r)
         return {"role": r, "mine": mine, "pending": pending,
-                "has_pin": bool(profile and profile.get("pin_hash"))}
+                "has_pin": bool(profile and profile.get("pin_hash")),
+                "telegram_username": str(user.get("username") or ""),
+                "first_name": str(user.get("first_name") or "")}
     if path == "/api/blacklist":
         if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
@@ -1659,7 +1673,14 @@ def api(path, b):
         except (ValueError, KeyError):
             return {"error": "Photo invalide ou trop lourde. Utilise une image JPEG, PNG, GIF ou WebP."}
         pid = str(int(time.time() * 1000))
-        photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", "")).strip()[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "o": enc(uid, pid)}
+        private_state = private_load()
+        profile = next((x for x in private_state.setdefault("registrations", [])
+                        if str(x.get("user_id")) == str(uid)), {})
+        telegram_username = str(user.get("username") or profile.get("telegram_username") or "").strip().lstrip("@")
+        display_name = ("@" + telegram_username) if telegram_username else str(
+            profile.get("pseudo") or user.get("first_name") or profile.get("first_name") or "Utilisateur Telegram"
+        )[:40]
+        photo = {"id": pid, "image": pid + ".jpg", "prix": str(b.get("prix", "")).strip()[:40], "pays": str(b.get("pays", ""))[:30], "pourcentage": str(b.get("pourcentage", ""))[:10], "categorie": str(b.get("categorie", ""))[:10], "auteur": display_name, "o": enc(uid, pid)}
         allowed_prices = {"2500 €": "2500", "5000 €": "5000", "9900 €": "9900"}
         if photo["prix"] not in allowed_prices or photo["categorie"] != allowed_prices[photo["prix"]]:
             return {"error": "Choisis uniquement 2 500 €, 5 000 € ou 9 900 €."}
@@ -1676,15 +1697,35 @@ def api(path, b):
             data, sha = load()
             data["photos"].insert(0, photo)
             save(data, sha)
-        return {"ok": True, "photo": {k: photo[k] for k in ("id", "image", "prix", "pays", "pourcentage", "categorie")}}
+        notification = True
+        try:
+            who = display_name + " (ID Telegram " + str(uid) + ")"
+            say(OWNER, "📢 NOUVELLE PUBLICATION RADAR PAYMENT\n"
+                + "Publié par : " + who + "\n"
+                + "Prix : " + photo["prix"] + "\n"
+                + "Pays : " + (photo["pays"] or "Non précisé") + "\n"
+                + "Pourcentage : " + photo["pourcentage"] + " %\n"
+                + "Publication : " + pid)
+        except Exception as e:
+            notification = False
+            print("notification publication Admin impossible:", repr(e))
+        return {"ok": True, "notification": notification,
+                "photo": {k: photo[k] for k in ("id", "image", "prix", "pays", "pourcentage", "categorie", "auteur")}}
     if path == "/api/update":
         with LOCK:
             data, sha = load()
             p = next((x for x in data["photos"] if x.get("id") == b.get("id")), None)
             if not p or not (r == "owner" or (r == "spitta" and owner_of(p) == uid)):
-                return {"error": "Impossible."}
-            p["pays"] = str(b.get("pays", ""))[:30]
-            p["prix"] = str(b.get("prix", p.get("prix", "")))[:40]
+                return {"error": "Tu peux modifier uniquement tes propres publications."}
+            if "prix" in b:
+                allowed_prices = {"2500 €": "2500", "5000 €": "5000", "9900 €": "9900"}
+                new_price = str(b.get("prix", "")).strip()
+                if new_price not in allowed_prices:
+                    return {"error": "Choisis uniquement 2 500 €, 5 000 € ou 9 900 €."}
+                p["prix"] = new_price
+                p["categorie"] = allowed_prices[new_price]
+            if "pays" in b:
+                p["pays"] = str(b.get("pays", ""))[:30]
             save(data, sha)
         return {"ok": True}
     if path == "/api/delete":
