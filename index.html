@@ -733,13 +733,17 @@ function loadPhotoImage(img,src,onFailure){
   if(!img||!src){if(typeof onFailure==="function")onFailure();return}
   if(img._radarRetryTimer){clearTimeout(img._radarRetryTimer);img._radarRetryTimer=null}
   var token=(img._radarLoadToken||0)+1;img._radarLoadToken=token;
-  var attempts=0;
+  var original=String(src),sources=[original],sourceIndex=0,retries=0;
+  // Si GitHub Pages n'a pas encore publié l'image, le fichier du dépôt sert de secours.
+  if(/^photos\/[A-Za-z0-9_-]+\.jpg$/i.test(original)){
+    sources.push("https://raw.githubusercontent.com/2f5mgmmybg-maker/RADARPAY/main/"+original);
+  }
   function attempt(){
     if(img._radarLoadToken!==token)return;
-    var target=String(src);
+    var target=sources[sourceIndex];
     if(!/^data:/i.test(target)){
       var separator=target.indexOf("?")>-1?"&":"?";
-      target+=separator+"radar_retry="+Date.now()+"_"+attempts;
+      target+=separator+"radar_retry="+Date.now()+"_"+sourceIndex+"_"+retries;
     }
     img.onload=function(){
       if(img._radarLoadToken!==token)return;
@@ -750,9 +754,12 @@ function loadPhotoImage(img,src,onFailure){
     };
     img.onerror=function(){
       if(img._radarLoadToken!==token)return;
-      if(attempts<3){
-        attempts++;
-        img._radarRetryTimer=setTimeout(attempt,attempts*1000);
+      if(sourceIndex<sources.length-1){
+        sourceIndex++;retries=0;attempt();return;
+      }
+      if(retries<3){
+        retries++;
+        img._radarRetryTimer=setTimeout(attempt,retries*1000);
         return;
       }
       img.dataset.loadFailed="1";
