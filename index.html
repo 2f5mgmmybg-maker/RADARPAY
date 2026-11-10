@@ -62,7 +62,7 @@ header span{margin-left:auto;color:var(--mute);font-size:.8rem}
 .tabs.admin-tabs{display:flex;max-width:100%;gap:30px}
 .tabs.admin-tabs button{min-height:46px}
 #spitta-publish-card[hidden],#spitta-requests[hidden]{display:none!important}
-.tabs button{position:relative;z-index:1;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-height:46px;padding:8px 1px 11px;border:0;border-radius:0;background:transparent;color:#85837d;font:500 .88rem Inter,system-ui,sans-serif;cursor:pointer;transition:color .22s ease,opacity .22s ease;white-space:nowrap;text-align:center;line-height:1.25}
+.tabs button[hidden]{display:none!important}.tabs button{position:relative;z-index:1;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-height:46px;padding:8px 1px 11px;border:0;border-radius:0;background:transparent;color:#85837d;font:500 .88rem Inter,system-ui,sans-serif;cursor:pointer;transition:color .22s ease,opacity .22s ease;white-space:nowrap;text-align:center;line-height:1.25}
 .tabs button::after{content:"";position:absolute;left:0;right:0;bottom:1px;height:2px;border-radius:2px;background:var(--sweep);transform:scaleX(0);transform-origin:center;opacity:0;transition:transform .25s ease,opacity .25s ease}
 .tabs button.on{color:var(--ink);background:transparent;border:0;box-shadow:none}
 .tabs button.on::after{transform:scaleX(1);opacity:1}
@@ -1324,6 +1324,7 @@ function simplifyWorkspaceTabs(){
     var names={"e":"TARGET DISPONIBLE","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
+    var spittaTab=$("spitta-tab");if(spittaTab)spittaTab.hidden=true;
     var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"Messages","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
