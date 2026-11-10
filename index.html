@@ -947,9 +947,11 @@ $("spittafile").onchange=function(){
     var category={"2500 €":"2500","5000 €":"5000","9900 €":"9900"}[selectedPrice]||"";
     call("/api/add",{image:src,prix:selectedPrice,pourcentage:percentage,categorie:category,pays:$("spittacountry").value}).then(function(r){
       if(!r.ok||!r.photo||!r.photo.id||!r.photo.image)throw new Error(r.error||"Le serveur n’a pas confirmé l’enregistrement de la TARGET.");
-      var p=r.photo;PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});
+      var p=r.photo;PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||"",auteur:p.auteur||""});
       $("spittaprice").value="";$("spittapercentage").value="";
-      $("spittamsg").textContent="Publication enregistrée. Elle apparaît dans tes publications et sera visible dans le catalogue après actualisation.";
+      $("spittamsg").textContent=r.notification===false
+        ?"Publication enregistrée, mais le bot n’a pas pu prévenir l’administrateur. Vérifie que l’administrateur a déjà ouvert le bot avec /start."
+        :"Publication enregistrée. Le bot a prévenu l’administrateur avec ton nom d’utilisateur.";
       render();loadSpittaItems();
     }).catch(function(e){$("spittamsg").textContent=e.message||"Erreur de publication."}).finally(finishUpload);
   },function(e){$("spittamsg").textContent=(e&&e.message)||"La photo n’a pas pu être préparée. Choisis une autre image.";finishUpload()});
