@@ -933,7 +933,7 @@ function resumePaymentFollowup(){
     if(!r.ok||!r.active)return;
     if(r.status==="decided"){
       $("payment-followup").hidden=true;PAYMENT_FOLLOWUP=null;$("chatui").hidden=true;ACTIVE_CHAT=null;ADMIN_CHAT_MODE=false;
-      alert("L’administration a répondu : "+(r.decision==="valid"?"raison valable":"raison non valable")+". Retour à l’accueil pour un nouvel achat.");
+      alert("L’administration a répondu : "+(r.decision_label|| (r.decision==="valid"?"raison valable":"raison non valable"))+". Retour à l’accueil pour un nouvel achat.");
       document.querySelectorAll("#tabs button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="a")});
       document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="a")});
       return;
@@ -975,7 +975,7 @@ function loadAdminPaymentReports(){
         var actions=document.createElement("div");actions.style.cssText="display:flex;gap:8px;flex-wrap:wrap";
         (x.status==="declared_unverified"?[["valid","Justificatif valide"],["invalid","Justificatif non valide"]]:[["valid","Raison valable"],["invalid","Raison non valable"]]).forEach(function(pair){var button=document.createElement("button");button.className="btn s";button.textContent=pair[1];button.onclick=function(){button.disabled=true;call("/api/admin/payment-decision",{id:x.id,decision:pair[0]}).then(function(z){if(!z.ok)throw new Error(z.error||"Décision impossible.");loadAdminPaymentReports()}).catch(function(e){button.disabled=false;alert(e.message||"Décision impossible.")})};actions.appendChild(button)});
         card.appendChild(actions);
-      }else{var state=document.createElement("p");state.className="lead";state.textContent=x.status==="approved"?"Décision : raison valable":x.status==="rejected"?"Décision : raison non valable":"En attente de la raison du CALLER";card.appendChild(state)}
+      }else{var state=document.createElement("p");state.className="lead";state.textContent=x.status==="approved"?(x.article?"Décision : justificatif validé":"Décision : raison valable"):x.status==="rejected"?(x.article?"Décision : justificatif non validé":"Décision : raison non valable"):"En attente de la réponse du CALLER";card.appendChild(state)}
       host.appendChild(card);
     });
     if(!host.children.length)host.textContent="Aucune déclaration de paiement pour le moment.";
