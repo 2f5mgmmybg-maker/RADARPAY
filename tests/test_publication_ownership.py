@@ -105,6 +105,22 @@ class PublicationOwnershipTests(unittest.TestCase):
         self.assertTrue(profile["last_seen"])
         self.assertEqual(profile["telegram_username"], "client_test")
 
+    def test_only_spitta_can_publish_target(self):
+        result = self.call_as(self.lanceur_id, "lanceur", "/api/add",
+                              image="data:image/jpeg;base64,dGVzdA==",
+                              prix="2500 €", categorie="2500", pourcentage="10", pays="Belgique")
+        self.assertIn("Seuls les comptes Spitta", result["error"])
+        bot.gh_put.assert_not_called()
+        bot.save.assert_not_called()
+
+    def test_owner_cannot_publish_target_from_app(self):
+        self.user = {"id": bot.OWNER, "first_name": "Admin"}
+        result = bot.api("/api/add", {"initData": "test-init", "image": "data:image/jpeg;base64,dGVzdA==",
+                                      "prix": "2500 €", "categorie": "2500", "pourcentage": "10"})
+        self.assertIn("Seuls les comptes Spitta", result["error"])
+        bot.gh_put.assert_not_called()
+        bot.save.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
