@@ -163,7 +163,7 @@ class RegistrationAndPinLoginTests(unittest.TestCase):
         self.assertIn("administrateur", denied["error"])
 
     def test_invalid_role_pseudo_or_pin_does_not_create_registration(self):
-        self.assertIn("Choisis Lanceur", self.call_as(self.test_user, "/api/register",
+        self.assertIn("Choisis CALLER ou SPITTA", self.call_as(self.test_user, "/api/register",
                     role="admin", pseudo="Pseudo Test", pin="1234", guarantee_acceptance="Garant")["error"])
         self.assertIn("pseudo", self.call_as(self.test_user, "/api/register",
                     role="spitta", pseudo="x", pin="1234", guarantee_acceptance="Garant")["error"])
