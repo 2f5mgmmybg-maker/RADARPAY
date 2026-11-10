@@ -53,6 +53,13 @@ class SecurityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             bot.decode_image_data_uri(fake)
 
+    def test_jpeg_storage_rejects_other_image_formats(self):
+        png = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\ncontent").decode()
+        jpeg = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xffcontent").decode()
+        with self.assertRaises(ValueError):
+            bot.decode_jpeg_data_uri(png)
+        self.assertTrue(bot.decode_jpeg_data_uri(jpeg).startswith(b"\xff\xd8\xff"))
+
     def test_owner_metadata_fails_closed(self):
         self.assertIsNone(bot.owner_of({"id": "listing-without-owner"}))
         pid = "test-listing"
