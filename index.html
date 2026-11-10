@@ -1088,6 +1088,26 @@ document.addEventListener("visibilitychange",function(){if(document.visibilitySt
 window.addEventListener("focus",resumePaymentFollowup);
 setInterval(function(){if(PAYMENT_FOLLOWUP&&!$("payment-followup").hidden)updatePaymentTimer();if(USER_ROLE==="lanceur"&&document.visibilityState==="visible")resumePaymentFollowup();if(ADMIN&&$("c").classList.contains("on"))loadAdminPaymentReports()},4000);
 function formatErafTime(deadline){var left=Math.max(0,Math.ceil(deadline-Date.now()/1000));var m=Math.floor(left/60),sec=left%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
+var CHAT_FILE_CACHE={},CHAT_FILE_CACHE_KEYS=[];
+function loadChatFile(chatId,fileId){
+  var key=String(chatId)+":"+String(fileId);
+  if(CHAT_FILE_CACHE[key])return CHAT_FILE_CACHE[key];
+  var request=call("/api/chat/file",{id:chatId,file:fileId}).then(function(result){
+    if(!result.ok)throw new Error(result.error||"Fichier indisponible.");
+    return result;
+  }).catch(function(error){
+    delete CHAT_FILE_CACHE[key];
+    CHAT_FILE_CACHE_KEYS=CHAT_FILE_CACHE_KEYS.filter(function(item){return item!==key});
+    throw error;
+  });
+  CHAT_FILE_CACHE[key]=request;
+  CHAT_FILE_CACHE_KEYS.push(key);
+  while(CHAT_FILE_CACHE_KEYS.length>30){
+    var oldest=CHAT_FILE_CACHE_KEYS.shift();
+    delete CHAT_FILE_CACHE[oldest];
+  }
+  return request;
+}
 function renderMessages(c){
   var signature=JSON.stringify([c.status,c.client_offer,c.proof_deadline,c.erop_deadline,c.erop_sender_deadline,c.erop_sender_proof_submitted,c.messages||[]]);if(signature===LAST_CHAT_RENDER)return;LAST_CHAT_RENDER=signature;
   var me=Number((tgw&&tgw.initDataUnsafe&&tgw.initDataUnsafe.user&&tgw.initDataUnsafe.user.id)||0);
@@ -1123,16 +1143,16 @@ function renderMessages(c){
     d.appendChild(document.createTextNode(m.text||""));
     if(m.proof_file){
       var proofImg=document.createElement("img");proofImg.alt="Capture envoyée";proofImg.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";proofImg.loading="lazy";d.appendChild(proofImg);
-      call("/api/chat/file",{id:c.id,file:m.proof_file}).then(function(result){if(result.ok)proofImg.src=result.data;else throw new Error(result.error||"Capture indisponible.")}).catch(function(){proofImg.alt="Capture indisponible pour le moment"});
+      loadChatFile(c.id,m.proof_file).then(function(result){if(result.ok)proofImg.src=result.data;else throw new Error(result.error||"Capture indisponible.")}).catch(function(){proofImg.alt="Capture indisponible pour le moment"});
     }else if(m.image){var im=document.createElement("img");im.src=m.image;im.alt="Capture envoyée";im.style.cssText="display:block;max-width:100%;max-height:300px;margin-top:8px;border-radius:10px";d.appendChild(im)}
     if(m.voice_file){
       var au=document.createElement("audio");au.controls=true;au.preload="none";au.style.cssText="display:block;width:min(260px,70vw);margin-top:8px";au.setAttribute("aria-label","Message vocal");au.src="";
-      call("/api/chat/file",{id:c.id,file:m.voice_file}).then(function(result){if(result.ok)au.src=result.data;else throw new Error(result.error||"Vocal indisponible.")}).catch(function(){au.title="Vocal indisponible"});
+      loadChatFile(c.id,m.voice_file).then(function(result){if(result.ok)au.src=result.data;else throw new Error(result.error||"Vocal indisponible.")}).catch(function(){au.title="Vocal indisponible"});
       d.appendChild(au);
     }else if(m.audio){var legacyAudio=document.createElement("audio");legacyAudio.controls=true;legacyAudio.preload="none";legacyAudio.src=m.audio;d.appendChild(legacyAudio)}
     if(m.attachment_file){
       var fileBox=document.createElement("div");fileBox.className="chat-attachment";fileBox.textContent="📎 "+(m.attachment_name||"Fichier")+" · "+Math.max(1,Math.round((m.attachment_size||0)/1024))+" Ko";d.appendChild(fileBox);
-      call("/api/chat/file",{id:c.id,file:m.attachment_file}).then(function(result){
+      loadChatFile(c.id,m.attachment_file).then(function(result){
         if(!result.ok)throw new Error(result.error||"Fichier indisponible.");
         fileBox.textContent="";
         if((result.mime||"").indexOf("image/")===0){
