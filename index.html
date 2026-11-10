@@ -271,24 +271,24 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
       <div id="signup-rules-lanceur" hidden>
         <p><b>Règlement du Lanceur</b></p>
         <ul>
-          <li>Tu consultes les Targets publiées et contactes le Spitta concerné uniquement si tu souhaites réellement poursuivre.</li>
+          <li>Tu consultes les TARGETS publiées et contactes le Spitta concerné uniquement si tu souhaites réellement poursuivre.</li>
           <li>Tu attends la réponse du Spitta. Après sa confirmation et ton acceptation de la vente, le délai de la première capture est de <b>2 minutes</b>.</li>
           <li>Si une procédure EROP est déclenchée, tu dois envoyer ta photo de preuve dans RADAR PAYMENT ou déclarer que tu ne peux pas joindre de photo. Cette déclaration ne constitue pas une preuve photographique.</li>
           <li>Le délai de <b>3 min 30</b> accordé au Spitta pour la deuxième capture commence uniquement après l’enregistrement de ton étape EROP.</li>
           <li>Tu n’as pas à envoyer de SCREEN : les 3 SCREEN relèvent du Spitta.</li>
-          <li>Les frais de garantie prévus par le règlement représentent <b>50 % du montant de la Target</b>. En cas de manquement sanctionné, ils peuvent être signalés comme dus et leur règlement est vérifié par l’administration.</li>
+          <li>Les frais de garantie prévus par le règlement représentent <b>50 % du montant de la TARGET</b>. En cas de manquement sanctionné, ils peuvent être signalés comme dus et leur règlement est vérifié par l’administration.</li>
         </ul>
       </div>
       <div id="signup-rules-spitta" hidden>
         <p><b>Règlement du Spitta</b></p>
         <ul>
-          <li>Tu publies des Targets exactes et loyales, avec les informations demandées et une photo correspondant à la Target.</li>
+          <li>Tu publies des TARGETS exactes et loyales, avec les informations demandées et une photo correspondant à la TARGET.</li>
           <li>Tu réponds à une demande du Lanceur dans un délai de <b>50 secondes</b>.</li>
           <li>Après avoir confirmé la disponibilité et que le Lanceur a accepté la vente, tu disposes de <b>2 minutes</b> pour envoyer la première capture.</li>
           <li>Si une procédure EROP est déclenchée, tu attends que le Lanceur ait envoyé sa preuve ou enregistré sa déclaration d’indisponibilité. À partir de cette étape, tu disposes de <b>3 min 30</b> pour envoyer volontairement la deuxième capture.</li>
           <li>Après l’envoi de la deuxième capture, tu disposes de <b>10 minutes</b> pour valider ERAF.</li>
           <li>Un dépassement du délai EROP entraîne un blocage de <b>7 jours</b> ; un dépassement du délai ERAF entraîne un blocage de <b>10 jours</b>. Les 3 SCREEN sont à envoyer par le Spitta.</li>
-          <li>Les frais de garantie représentent <b>50 % du montant de la Target</b>. En cas de manquement sanctionné, ce montant est signalé comme dû ; son règlement doit être confirmé par l’administration.</li>
+          <li>Les frais de garantie représentent <b>50 % du montant de la TARGET</b>. En cas de manquement sanctionné, ce montant est signalé comme dû ; son règlement doit être confirmé par l’administration.</li>
         </ul>
       </div>
       <p style="margin:14px 0 8px">Pour accepter ce règlement, écris exactement <b>Garant</b> dans le champ ci-dessous.</p>
@@ -321,7 +321,7 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
   <div class="tabs" id="tabs">
     <div class="pill"></div>
     <button class="on" data-t="a">Services en ligne</button>
-    <button data-t="b">Targets physiques</button>
+    <button data-t="b">TARGETS physiques</button>
     <button data-t="e" id="spitta-tab">Mes publications</button>
     <button data-t="f">Messages</button>
 
@@ -335,10 +335,10 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
 
   <section id="c">
     <div id="gate"><p class="lead">Accès réservé au compte administrateur autorisé dans la configuration du serveur.</p><p class="lead" id="msg"></p></div>
-    <div id="panel" hidden><p class="lead">Catalogue complet des Targets : tu peux vérifier les publications, modifier leur prix ou leur pays, et les supprimer si nécessaire.</p>
+    <div id="panel" hidden><p class="lead">Catalogue complet des TARGETS : tu peux vérifier les publications, modifier leur prix ou leur pays, et les supprimer si nécessaire.</p>
       <p class="lead" id="pm"></p><div class="grid" id="mine"></div>
       <div id="adminchatlist" hidden>
-      <h3>Vue complète de RADARPAY</h3><p class="lead">Depuis cet espace, tu peux consulter toutes les publications de tous les Spitta, les Targets physiques, les inscriptions, les discussions des Lanceurs et des Spitta, ainsi que la liste noire. Le catalogue est dans l’onglet Catalogue.</p><button class="btn s" id="adminrefreshall" type="button">↻ Actualiser toutes les données</button><p class="lead" id="adminrefreshmsg" aria-live="polite"></p>
+      <h3>Vue complète de RADARPAY</h3><p class="lead">Depuis cet espace, tu peux consulter toutes les publications de tous les Spitta, les TARGETS physiques, les inscriptions, les discussions des Lanceurs et des Spitta, ainsi que la liste noire. Le catalogue est dans l’onglet Catalogue.</p><button class="btn s" id="adminrefreshall" type="button">↻ Actualiser toutes les données</button><p class="lead" id="adminrefreshmsg" aria-live="polite"></p>
       <h3>Inscriptions</h3><p class="lead">Historique des nouveaux comptes créés sur RADAR PAYMENT.</p>
       <button class="btn s" id="refreshregistrations">↻ Actualiser les inscriptions</button>
       <p class="lead" id="registrationsmsg"></p><div id="registrationslist"></div>
@@ -354,18 +354,18 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
   </section>
   <section id="d"><p class="lead">Tes discussions en tant que lanceur. Les discussions et leurs pièces jointes sont conservées pendant 24 heures.</p><h3>Chat privé avec l’administrateur</h3><p class="lead">Chaque site ouvert est enregistré automatiquement. Pour déclarer un paiement, indique le montant et la devise, puis joins une capture d’écran.</p><input class="inp" id="paymentamount" inputmode="decimal" placeholder="Montant payé (ex : 120,50)"><select class="inp" id="paymentcurrency"><option value="EUR">EUR (€)</option><option value="USD">USD ($)</option><option value="GBP">GBP (£)</option><option value="CHF">CHF</option></select><input type="file" id="paymentproof" accept="image/*" class="inp"><button class="btn s" id="paymentreport">Envoyer montant + preuve</button><p class="lead" id="paymentmsg"></p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
-    <p class="lead" id="publications-intro">Espace Spitta : publie tes Targets avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
-    <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une Target</button>
+    <p class="lead" id="publications-intro">Espace Spitta : publie tes TARGETS avec une grande photo et leurs informations. Les lanceurs pourront ensuite te contacter directement. Quand un lanceur te contacte, tu le vois ici et dans Chat direct.</p>
+    <button class="btn s" id="admin-publish-toggle" type="button" hidden aria-expanded="false">＋ Publier une TARGET</button>
     <div class="spitta-publish-card" id="spitta-publish-card">
-      <h3>Publier une Target</h3>
+      <h3>Publier une TARGET</h3>
       <p class="spitta-publish-help">Choisis l’un des trois prix proposés, indique ton pourcentage et sélectionne le pays concerné.</p>
-      <label class="spitta-field-label" for="spittaprice">Prix du Target</label>
+      <label class="spitta-field-label" for="spittaprice">Prix du TARGET</label>
       <select class="inp spitta-field" id="spittaprice" required><option value="">Choisir un prix</option><option value="2500 €">2 500 €</option><option value="5000 €">5 000 €</option><option value="9900 €">9 900 €</option></select>
       <label class="spitta-field-label" for="spittapercentage">Pourcentage souhaité (%)</label>
       <input class="inp spitta-field" id="spittapercentage" type="number" min="0" max="100" step="0.01" required inputmode="decimal" placeholder="Indique le pourcentage que tu souhaites (ex. : 15)">
       <label class="spitta-field-label" for="spittacountry">Pays</label>
       <select class="inp spitta-field" id="spittacountry"><option value="">Non précisé</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
-      <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du Target</span></button>
+      <button class="btn spitta-upload-btn" id="spittaadd" type="button"><span class="spitta-upload-icon">＋</span><span>Choisir une grande photo du TARGET</span></button>
       <input type="file" id="spittafile" accept="image/*" hidden>
       <p class="spitta-publish-help">Ta publication sera envoyée dès que tu auras sélectionné une photo.</p>
       <p class="lead" id="spittamsg" aria-live="polite"></p>
@@ -373,7 +373,7 @@ input::placeholder,textarea::placeholder{color:#8da3c4!important}
     <h3 id="publications-title">Mes publications</h3><div class="grid" id="spittamine"></div>
     <div id="spitta-requests"><h3>Demandes reçues</h3><div id="spittachatitems"></div></div>
   </section>
-  <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de Target. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
+  <section id="f"><p class="lead">Chat en direct : ouvre une discussion pour échanger avec ton interlocuteur. Les lanceurs discutent avec le spitta responsable de TARGET. Les discussions et leurs pièces jointes sont conservées pendant 24 heures après le dernier message.</p><div id="livechatitems"></div></section>
 </main>
 <div id="chatui" hidden><div style="display:flex;align-items:center;gap:10px"><b id="chatheading">Discussion</b><button class="btn s" id="chatclose" style="margin-left:auto">Fermer</button></div><p class="lead" id="chatstatus"></p><button class="btn" id="chaterop" hidden style="margin:8px 0;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff">EROP · Demander une 2e capture</button><button class="btn" id="chateraf" hidden style="margin:8px 0 4px;background:linear-gradient(135deg,#059669,#047857);color:#fff">✅ ERAF · Tout est OK</button><p class="lead" id="erafcountdown" hidden style="margin:0 0 10px;text-align:center;color:#9ee7c1;font-weight:600">⏱️ ERAF · 10:00</p><div id="chatmessages"></div><div id="erop-sender-proof" hidden style="margin:14px 0;padding:16px;border:1px solid var(--sweep);border-radius:16px;background:var(--bg2)"><b>Preuve d’envoi demandée par EROP</b><p class="lead" style="margin:8px 0 12px">Avant que le délai du Spitta commence, joins une photo lisible de ta preuve d’envoi. Si tu ne peux vraiment pas fournir de photo, déclare-le avec le bouton ci-dessous. Le délai de 3 min 30 du Spitta démarre seulement après ton choix et son enregistrement.</p><button class="btn" id="erop-sender-photo" type="button" style="width:100%">📷 Joindre une photo de preuve</button><button class="btn s" id="erop-sender-unavailable" type="button" style="width:100%;margin-top:8px">Je ne peux pas envoyer de photo</button><input type="file" id="erop-sender-file" accept="image/*" hidden></div><div id="chatproofstep" hidden style="margin:12px 0"><button class="btn" id="chataccept">✅ Accepter la vente — démarrer les 2 minutes</button><button class="btn" id="chatproofbutton" hidden>📸 Envoyer la capture d’écran</button><input type="file" id="chatprooffile" accept="image/*" hidden><p class="lead" id="chatcountdown"></p></div><div class="chatbar"><button class="btn s" id="chatattach" type="button" aria-label="Joindre un fichier">＋</button><input class="inp" id="chattext" placeholder="Ton message…" maxlength="1500"><button class="btn s" id="chatsend">Envoyer</button><input type="file" id="chatfile" accept="image/*,.pdf,application/pdf" hidden></div><p class="lead" id="chaterror"></p></div>
 <script type="application/json" id="state">{"photos":[],"maj":""}</script>
@@ -394,7 +394,7 @@ function renderServices(){
   list.innerHTML="";
   SERVICES.filter(function(s){return !(USER_ROLE==="spitta"&&s.gift)}).forEach(function(s){
     var a=document.createElement("a");a.className="row";a.href=s.u;
-    if(s.u!=="#"){a.target="_blank";a.rel="noopener"}
+    if(s.u!=="#"){a.TARGET="_blank";a.rel="noopener"}
     a.innerHTML='<div class="blip"></div><div><b>'+s.n+'</b><small>'+s.d+'</small></div><span class="go">›</span>';
     a.addEventListener("click",function(e){
       if(USER_ROLE!=="lanceur")return;
@@ -609,29 +609,29 @@ function showMe(r,fromCode){
 function loadSpittaItems(){
   if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
   var isAdmin=USER_ROLE==="owner";
-  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications actuellement enregistrées sur RADAR PAYMENT.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;var adminToggle=$("admin-publish-toggle");adminToggle.hidden=false;if(adminToggle.dataset.adminInitialized!=="1"){adminToggle.textContent="＋ Publier une Target";adminToggle.setAttribute("aria-expanded","false");$("spitta-publish-card").hidden=true;adminToggle.dataset.adminInitialized="1";}$("spitta-requests").hidden=true;}
+  if(isAdmin){$("publications-intro").textContent="Vue administrateur : toutes les publications actuellement enregistrées sur RADAR PAYMENT.";$("publications-title").textContent="Toutes les publications";$("spitta-publish-card").hidden=true;var adminToggle=$("admin-publish-toggle");adminToggle.hidden=false;if(adminToggle.dataset.adminInitialized!=="1"){adminToggle.textContent="＋ Publier une TARGET";adminToggle.setAttribute("aria-expanded","false");$("spitta-publish-card").hidden=true;adminToggle.dataset.adminInitialized="1";}$("spitta-requests").hidden=true;}
   call("/api/me",{}).then(function(r){
     var host=$("spittamine");if(!host)return;host.innerHTML="";
     var mine=(r.mine||[]);
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
-    if(!own.length){host.textContent=isAdmin?"Aucune publication enregistrée pour le moment.":"Tu n’as pas encore publié de Target.";return}
-    var groups=[{key:"2500",label:"Targets à 2 500"},{key:"5000",label:"Targets à 5 000"},{key:"9900",label:"Targets à 9 900"},{key:"other",label:"Autres Targets"}];
+    if(!own.length){host.textContent=isAdmin?"Aucune publication enregistrée pour le moment.":"Tu n’as pas encore publié de TARGET.";return}
+    var groups=[{key:"2500",label:"TARGETS à 2 500"},{key:"5000",label:"TARGETS à 5 000"},{key:"9900",label:"TARGETS à 9 900"},{key:"other",label:"Autres TARGETS"}];
     groups.forEach(function(group){
       var items=own.filter(function(p){return (p.categorie||"other")===group.key;});
       if(!items.length)return;
       var heading=document.createElement("h3");heading.className="spitta-category-heading";heading.textContent=group.label;host.appendChild(heading);
       items.forEach(function(p){
         var d=document.createElement("article");d.className="spitta-product-card";
-        var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée au Target";d.appendChild(im);
+        var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée au TARGET";d.appendChild(im);
         var info=document.createElement("div");info.className="spitta-product-info";
         var price=document.createElement("div");price.className="spitta-product-price";price.textContent=p.prix||"Prix non renseigné";info.appendChild(price);
         if(p.pourcentage){var pct=document.createElement("div");pct.className="spitta-product-hint";pct.textContent="Pourcentage souhaité : "+p.pourcentage+" %";info.appendChild(pct);}
         var country=document.createElement("div");country.className="spitta-product-hint";country.textContent="Pays : "+(p.pays||"Non précisé");info.appendChild(country);
         var actions=document.createElement("div");actions.className="spitta-product-actions";
-        var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent=isAdmin?"Publication visible dans l’espace administrateur.":"Target est publié sur ton espace.";actions.appendChild(hint);
+        var hint=document.createElement("p");hint.className="spitta-product-hint";hint.textContent=isAdmin?"Publication visible dans l’espace administrateur.":"TARGET est publié sur ton espace.";actions.appendChild(hint);
         if(!isAdmin){
-          var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer Target";
-          del.onclick=function(){if(!confirm("Supprimer définitivement Target ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer Target"})};
+          var del=document.createElement("button");del.className="btn spitta-delete";del.type="button";del.textContent="Supprimer TARGET";
+          del.onclick=function(){if(!confirm("Supprimer définitivement TARGET ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer TARGET"})};
           actions.appendChild(del);
         }
         info.appendChild(actions);d.appendChild(info);host.appendChild(d);
@@ -901,19 +901,19 @@ $("spittaadd").onclick=function(){
   if(!percentage||!Number.isFinite(Number(percentage))||Number(percentage)<0||Number(percentage)>100){$("spittamsg").textContent="Indique un pourcentage valide entre 0 et 100.";$("spittapercentage").focus();return}
   $("spittamsg").textContent="";$("spittafile").click();
 };
-$("admin-publish-toggle").onclick=function(){var card=$("spitta-publish-card");var opening=card.hidden;card.hidden=!opening;$("admin-publish-toggle").setAttribute("aria-expanded",String(opening));$("admin-publish-toggle").textContent=opening?"− Fermer le formulaire":"＋ Publier une Target";if(opening)card.scrollIntoView({behavior:"smooth",block:"start"});};
+$("admin-publish-toggle").onclick=function(){var card=$("spitta-publish-card");var opening=card.hidden;card.hidden=!opening;$("admin-publish-toggle").setAttribute("aria-expanded",String(opening));$("admin-publish-toggle").textContent=opening?"− Fermer le formulaire":"＋ Publier une TARGET";if(opening)card.scrollIntoView({behavior:"smooth",block:"start"});};
 $("spittafile").onchange=function(){
   var f=this.files[0];this.value="";if(!f)return;
   var uploadButton=$("spittaadd"),uploadLabel=uploadButton.querySelector("span:last-child");
   uploadButton.disabled=true;uploadLabel.textContent="Préparation et envoi…";$("spittamsg").textContent="Préparation de la photo…";
-  function finishUpload(){uploadButton.disabled=false;uploadLabel.textContent="Choisir une grande photo du Target";}
+  function finishUpload(){uploadButton.disabled=false;uploadLabel.textContent="Choisir une grande photo du TARGET";}
   shrink(f,function(src){
     $("spittamsg").textContent="Envoi de la publication…";
     var percentage=$("spittapercentage").value.trim().replace(",",".");
     var selectedPrice=$("spittaprice").value;
     var category={"2500 €":"2500","5000 €":"5000","9900 €":"9900"}[selectedPrice]||"";
     call("/api/add",{image:src,prix:selectedPrice,pourcentage:percentage,categorie:category,pays:$("spittacountry").value}).then(function(r){
-      if(!r.ok||!r.photo||!r.photo.id||!r.photo.image)throw new Error(r.error||"Le serveur n’a pas confirmé l’enregistrement de la Target.");
+      if(!r.ok||!r.photo||!r.photo.id||!r.photo.image)throw new Error(r.error||"Le serveur n’a pas confirmé l’enregistrement de la TARGET.");
       var p=r.photo;PHOTOS.unshift({id:p.id,src:"photos/"+p.image,prix:p.prix||"",pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""});
       $("spittaprice").value="";$("spittapercentage").value="";
       $("spittamsg").textContent="Publication enregistrée. Elle apparaît dans tes publications et sera visible dans le catalogue après actualisation.";
@@ -950,9 +950,9 @@ $("refresh").onclick=function(){
   Promise.all([fetch("photos.json?"+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){PHOTOS=(d.photos||[]).map(function(p){return {src:"photos/"+p.image,prix:p.prix||"",id:p.id,pays:p.pays||"",pourcentage:p.pourcentage||"",categorie:p.categorie||""}});ST.maj=d.maj||"";render()}),loadChatList()]);
   setTimeout(function(){$("refresh").textContent="↻ Actualiser"},1200);
 };
-$("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
+$("countryfilters").addEventListener("click",function(e){var b=e.TARGET.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
 tabs.addEventListener("click",function(e){
-  var b=e.target.closest("button");if(!b||b.hidden)return;
+  var b=e.TARGET.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c")adminOpen();
@@ -964,25 +964,25 @@ function arrangeTabs(){
   tabs.classList.toggle("admin-tabs",USER_ROLE==="owner");
 }
 function moveSectionContents(sourceId,targetId,headingText,prepend){
-  var source=$(sourceId),target=$(targetId);
-  if(!source||!target||source.dataset.contentsMoved==="1")return;
+  var source=$(sourceId),TARGET=$(targetId);
+  if(!source||!TARGET||source.dataset.contentsMoved==="1")return;
   var wrap=document.createElement("div");wrap.className="merged-area";
   var heading=document.createElement("h3");heading.textContent=headingText;wrap.appendChild(heading);
   while(source.firstChild)wrap.appendChild(source.firstChild);
-  if(prepend&&target.firstChild)target.insertBefore(wrap,target.firstChild);else target.appendChild(wrap);
+  if(prepend&&TARGET.firstChild)TARGET.insertBefore(wrap,TARGET.firstChild);else TARGET.appendChild(wrap);
   source.dataset.contentsMoved="1";
 }
 function simplifyWorkspaceTabs(){
   if(USER_ROLE==="lanceur"){
     moveSectionContents("d","f","Mes actions et paiements",true);
-    var names={"a":"Explorer","b":"Targets physiques","f":"Mes échanges"};
+    var names={"a":"Explorer","b":"TARGETS physiques","f":"Mes échanges"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
-    moveSectionContents("b","e","Targets physiques",true);
-    var names={"e":"Mes Targets","f":"Messages"};
+    moveSectionContents("b","e","TARGETS physiques",true);
+    var names={"e":"Mes TARGETS","f":"Messages"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
-    var names={"a":"Services en ligne","b":"Targets physiques","e":"Mes publications","f":"Messages","c":"Administration"};
+    var names={"a":"Services en ligne","b":"TARGETS physiques","e":"Mes publications","f":"Messages","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
 }
