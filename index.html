@@ -476,6 +476,19 @@ a{color:#7defff}
  body{background-attachment:scroll!important}
 }
 
+/* Présentation des publications : galerie photo plus équilibrée et fiche admin sans image */
+#grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#grid .slot{aspect-ratio:1/1;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+#grid .slot img{width:100%;height:auto;aspect-ratio:1/1;object-fit:cover}
+#grid .slot .photo-details{flex:1;align-content:flex-start;text-align:left;font-size:.78rem;padding:9px;gap:5px}
+.admin-publication{padding:15px;margin:10px 0;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,rgba(59,130,246,.12),transparent 65%),var(--bg2)}
+.admin-publication> b{display:block;font-size:1rem}
+.admin-publication-time{display:block;margin-top:4px;color:var(--mute);font-size:.78rem}
+.admin-publication-details{margin-top:10px;line-height:1.6;font-size:.9rem}
+.admin-publication-controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.admin-publication-controls .btn{flex:1;min-width:90px}
+@media(min-width:600px){#grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 </style>
 </head>
 <body>
@@ -694,20 +707,13 @@ function render(){
     if(COUNTRY!=="Tous" && (COUNTRY==="À classer"?!!p.pays:(p.pays||"")!==COUNTRY))return;
     var d=document.createElement("div");d.className="slot";
     var im=document.createElement("img");im.src=p.src;im.alt="";d.appendChild(im);
-    if(ADMIN){
-      var details=document.createElement("div");details.className="photo-details";details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé")+" · Auteur : "+(p.auteur||"Non renseigné");d.appendChild(details);
-      var c=document.createElement("div");c.className="ctl";
-      var x=document.createElement("button");x.type="button";x.title="Supprimer définitivement cette publication";x.textContent="✕";x.onclick=function(){if(!confirm("Supprimer définitivement cette publication ?"))return;x.disabled=true;call("/api/delete",{id:p.id}).then(function(r){if(!r.ok)throw new Error(r.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(item){return item.id!==p.id});render();if($("adminrefreshmsg"))$("adminrefreshmsg").textContent="Publication supprimée.";}).catch(function(e){x.disabled=false;if($("adminrefreshmsg"))$("adminrefreshmsg").textContent=e.message||"Suppression impossible."})};
-      c.appendChild(x);d.appendChild(c);
-    }else{
-      var details=document.createElement("div");details.className="photo-details";
-      var price=document.createElement("span");price.className="photo-price";price.textContent="Prix : "+(p.prix||"Non précisé");details.appendChild(price);
-      var pct=document.createElement("span");pct.textContent="Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé");details.appendChild(pct);
-      var country=document.createElement("span");country.textContent="Pays : "+(p.pays||"Non précisé");details.appendChild(country);
-      var author=document.createElement("span");author.textContent="Publié par : "+(p.auteur||"Auteur non renseigné");details.appendChild(author);
-      d.appendChild(details);
-      d.onclick=function(){openLb(p)};
-    }
+    var details=document.createElement("div");details.className="photo-details";
+    var price=document.createElement("span");price.className="photo-price";price.textContent="Prix : "+(p.prix||"Non précisé");details.appendChild(price);
+    var pct=document.createElement("span");pct.textContent="Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé");details.appendChild(pct);
+    var country=document.createElement("span");country.textContent="Pays : "+(p.pays||"Non précisé");details.appendChild(country);
+    var author=document.createElement("span");author.textContent="Publié par : "+(p.auteur||"Auteur non renseigné");details.appendChild(author);
+    d.appendChild(details);
+    if(!ADMIN)d.onclick=function(){openLb(p)};
     var countdown=document.createElement("small");countdown.className="physical-countdown";countdown.style.cssText="display:block;text-align:center;color:var(--text);font-size:.78rem;font-weight:700;letter-spacing:.04em;margin:9px auto 2px;padding:7px 10px;width:max-content;max-width:100%;border:1px solid var(--line);border-radius:999px;background:rgba(238,234,226,.07);font-variant-numeric:tabular-nums";countdown.textContent=physicalCountdownText();d.appendChild(countdown);
     grid.appendChild(d);
   });
@@ -882,21 +888,28 @@ function showMe(r,fromCode){
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
   loadChatList();loadRegistrations();loadMonitor();
-  PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1}).forEach(function(p){
-    var d=document.createElement("div");d.className="slot";
-    var im=document.createElement("img");im.src=p.src;d.appendChild(im);
-    var pr=document.createElement("div");pr.className="price";pr.textContent=p.prix||"";d.appendChild(pr);
-    var edit=document.createElement("div");edit.style.cssText="position:absolute;left:5px;right:5px;bottom:5px;display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,.88);padding:5px;border-radius:9px";
-    var country=document.createElement("select");country.className="inp";country.style.cssText="padding:6px;margin:0;font-size:.7rem";
+  var publications=PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1});
+  if(!publications.length){var empty=document.createElement("p");empty.className="lead";empty.textContent="Aucune publication enregistrée pour le moment.";m.appendChild(empty);return}
+  publications.forEach(function(p){
+    var d=document.createElement("article");d.className="admin-publication";
+    var title=document.createElement("b");title.textContent=p.auteur||"Auteur non renseigné";d.appendChild(title);
+    var time=document.createElement("small");time.className="admin-publication-time";
+    var stamp=Number(p.id);time.textContent=Number.isFinite(stamp)&&stamp>0?"Publié le "+new Date(stamp).toLocaleString("fr-FR"):"Heure de publication indisponible";d.appendChild(time);
+    var details=document.createElement("div");details.className="admin-publication-details";
+    details.textContent="Prix : "+(p.prix||"Non précisé")+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");d.appendChild(details);
+    var controls=document.createElement("div");controls.className="admin-publication-controls";
+    var country=document.createElement("select");country.className="inp";country.style.cssText="margin:0;min-width:0;flex:1";
     [["","À classer"],["Belgique","Belgique"],["Suisse","Suisse"],["Luxembourg","Luxembourg"],["France","France"]].forEach(function(o){var op=document.createElement("option");op.value=o[0];op.textContent=o[1];country.appendChild(op)});
     country.value=p.pays||"";
-    var price=document.createElement("input");price.className="inp";price.style.cssText="padding:6px;margin:0;font-size:.7rem";price.value=p.prix||"";price.placeholder="Prix";
+    var price=document.createElement("select");price.className="inp";price.style.cssText="margin:0;min-width:0;flex:1";
+    ["2500 €","5000 €","9900 €"].forEach(function(v){var op=document.createElement("option");op.value=v;op.textContent=v;price.appendChild(op)});
+    price.value=p.prix||"2500 €";
     var update=document.createElement("button");update.className="btn s";update.textContent="Enregistrer";
-    update.onclick=function(){update.disabled=true;call("/api/update",{id:p.id,pays:country.value,prix:price.value}).then(function(r){if(!r.ok)throw new Error(r.error||"Modification impossible.");p.pays=country.value;p.prix=price.value;$("pm").textContent="Pays et prix enregistrés.";render();adminOpen()}).catch(function(e){$("pm").textContent=e.message||"Erreur";update.disabled=false})};
-    edit.appendChild(country);edit.appendChild(price);edit.appendChild(update);d.appendChild(edit);
-    var x=document.createElement("button");x.className="btn s";x.textContent="Supprimer";x.style.cssText="position:absolute;top:8px;right:8px";
-    x.onclick=function(){x.disabled=true;call("/api/delete",{id:p.id}).then(function(r){if(!r.ok)throw new Error(r.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});render();adminOpen()}).catch(function(e){$("pm").textContent=e.message||"Suppression impossible.";x.disabled=false})};
-    d.appendChild(x);m.appendChild(d)});
+    update.onclick=function(){update.disabled=true;call("/api/update",{id:p.id,pays:country.value,prix:price.value}).then(function(a){if(!a.ok)throw new Error(a.error||"Modification impossible.");p.pays=country.value;p.prix=price.value;p.categorie=({"2500 €":"2500","5000 €":"5000","9900 €":"9900"})[price.value];details.textContent="Prix : "+p.prix+" · Pourcentage : "+(p.pourcentage?p.pourcentage+" %":"Non précisé")+" · Pays : "+(p.pays||"Non précisé");$("pm").textContent="Publication mise à jour."}).catch(function(e){$("pm").textContent=e.message||"Erreur";}).finally(function(){update.disabled=false})};
+    var del=document.createElement("button");del.className="btn s spitta-delete";del.textContent="Supprimer";
+    del.onclick=function(){if(!confirm("Supprimer définitivement cette publication ?"))return;del.disabled=true;call("/api/delete",{id:p.id}).then(function(a){if(!a.ok)throw new Error(a.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(q){return q.id!==p.id});d.remove();render();$("pm").textContent="Publication supprimée."}).catch(function(e){$("pm").textContent=e.message||"Suppression impossible.";del.disabled=false})};
+    controls.appendChild(country);controls.appendChild(price);controls.appendChild(update);controls.appendChild(del);d.appendChild(controls);m.appendChild(d);
+  });
 }
 var MONITOR_EVENTS=[];
 var MONITOR_RENDER_SIGNATURE="";
@@ -957,11 +970,6 @@ function loadSpittaItems(){
         var country=document.createElement("div");country.className="SPITTA-product-hint";country.textContent="Pays : "+(p.pays||"Non précisé");info.appendChild(country);
         var actions=document.createElement("div");actions.className="SPITTA-product-actions";
         var hint=document.createElement("p");hint.className="SPITTA-product-hint";hint.textContent=isAdmin?"Publication visible dans l’espace administrateur.":"TARGET est publié sur ton espace.";actions.appendChild(hint);
-        if(!isAdmin){
-          var del=document.createElement("button");del.className="btn SPITTA-delete";del.type="button";del.textContent="Supprimer TARGET";
-          del.onclick=function(){if(!confirm("Supprimer définitivement TARGET ?"))return;del.disabled=true;del.textContent="Suppression…";call("/api/delete",{id:p.id}).then(function(x){if(!x.ok)throw new Error(x.error||"Suppression impossible.");PHOTOS=PHOTOS.filter(function(z){return z.id!==p.id});render();loadSpittaItems()}).catch(function(e){$("spittamsg").textContent=e.message;del.disabled=false;del.textContent="Supprimer TARGET"})};
-          actions.appendChild(del);
-        }
         info.appendChild(actions);d.appendChild(info);host.appendChild(d);
       });
     });;
