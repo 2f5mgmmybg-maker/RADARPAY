@@ -344,6 +344,21 @@ def eraf_validation_pending(chat):
     return bool(chat.get("erop_photo_sent") and not chat.get("erop_confirmed"))
 
 
+def expire_erop_sender_step(chat, now):
+    """Clôture l'étape EROP du CALLER sans bloquer la discussion ni sanctionner le SPITTA."""
+    if (chat.get("status") != "erop_pending" or chat.get("erop_sender_proof_submitted")
+            or int(chat.get("erop_sender_deadline", 0)) <= 0
+            or now < int(chat.get("erop_sender_deadline", 0))):
+        return False
+    chat["status"] = chat.get("erop_previous_status") or "proof_received"
+    chat.pop("erop_previous_status", None)
+    chat.pop("erop_sender_deadline", None)
+    chat.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
+        "text": "⛔ Délai de 2 minutes dépassé : le CALLER n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée sans sanction pour le SPITTA. La discussion est de nouveau ouverte ; le CALLER peut relancer EROP si nécessaire.",
+        "time": now})
+    return True
+
+
 def chat_last_activity(chat):
     messages = chat.get("messages") or []
     last_message = messages[-1] if messages else {}
@@ -671,12 +686,7 @@ def process_pending_requests():
         changed = False
         now = int(time.time())
         for c in data.get("chats", []):
-            if (c.get("status") == "erop_pending" and not c.get("erop_sender_proof_submitted")
-                    and int(c.get("erop_sender_deadline", 0)) > 0
-                    and now >= int(c.get("erop_sender_deadline", 0))):
-                c["status"] = "erop_sender_expired"
-                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai de 2 minutes dépassé : le CALLER n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au SPITTA pour cette étape qui dépend du CALLER.", "time": now})
+            if expire_erop_sender_step(c, now):
                 changed = True
             if c.get("status") == "proof_pending" and int(c.get("proof_deadline", 0)) > 0 and now >= int(c.get("proof_deadline", 0)):
                 c["status"] = "proof_expired"
@@ -1537,12 +1547,7 @@ def api(path, b):
             if not c or (uid not in (c.get("client"), c.get("vendor")) and r != "owner"):
                 return {"error": "Discussion introuvable ou accès refusé."}
             changed = False
-            if (c.get("status") == "erop_pending" and not c.get("erop_sender_proof_submitted")
-                    and int(c.get("erop_sender_deadline", 0)) > 0
-                    and time.time() >= c.get("erop_sender_deadline", 0)):
-                c["status"] = "erop_sender_expired"
-                c.setdefault("messages", []).append({"from": 0, "name": "RADAR PAYMENT",
-                    "text": "⛔ Délai de 2 minutes dépassé : le CALLER n’a pas envoyé sa preuve EROP ni enregistré son indisponibilité. Cette demande EROP est clôturée. Aucune sanction n’est appliquée au SPITTA pour cette étape qui dépend du CALLER.", "time": int(time.time())})
+            if expire_erop_sender_step(c, int(time.time())):
                 changed = True
             if c.get("status") == "erop_pending" and int(c.get("erop_deadline", 0)) > 0 and time.time() >= c.get("erop_deadline", 0):
                 now = int(time.time())
