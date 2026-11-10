@@ -340,6 +340,40 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   #auth-choices .btn{min-height:54px}
 }
 
+
+/* Fond gris mat RADAR */
+:root{
+  color-scheme:dark;
+  --bg:#292b2e;
+  --bg2:#34373a;
+  --line:#505357;
+  --ink:#f2f1ed;
+  --mute:#b9b8b2;
+  --sweep:#c5b88f;
+  --blip:#d2c49a;
+}
+body{
+  background:#292b2e!important;
+  color:var(--ink);
+}
+#welcome{
+  background:#292b2e!important;
+}
+.rings{opacity:.12!important;background:repeating-radial-gradient(circle at 50% 18%,transparent 0 46px,rgba(220,216,205,.12) 47px 48px)!important}
+.rings::after{background:conic-gradient(from 0deg,transparent 0 78%,rgba(197,184,143,.18) 95%,rgba(197,184,143,.02) 100%)!important}
+.rings::before{background:#c5b88f!important;box-shadow:0 0 12px 3px rgba(197,184,143,.28)!important}
+.spitta-product-card,.spitta-publish-card,.row,.slot,.chatitem,.inp{
+  background:#34373a!important;
+  border-color:#505357!important;
+}
+.spitta-product-photo{background:#292b2e!important}
+#chatui{background:#292b2e!important}
+#lb{background:rgba(28,30,32,.97)!important}
+.refresh,.countryfilters button,.ctl input{
+  background:#3a3d40!important;
+  border-color:#5a5d60!important;
+}
+
 </style>
 </head>
 <body>
