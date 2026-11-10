@@ -940,7 +940,7 @@ function loadMonitor(){
   return call("/api/admin/monitor",{}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Journal indisponible.");
     MONITOR_EVENTS=r.events||[];var stats=r.counts||{},service=r.service||{};
-    $("monitorstats").textContent="Service : "+(service.status==="ok"?"opérationnel":"état inconnu")+" · Temps de fonctionnement : "+Math.floor((service.uptime_seconds||0)/3600)+" h · Journal : "+(stats.total||0)+" événements conservés · "+(stats.critical||0)+" critiques · "+(stats.warning||0)+" avertissements";
+    $("monitorstats").textContent="Service : "+(service.status==="ok"?"opérationnel":"état inconnu")+" · Stockage : "+(service.storage||"non précisé")+" · Uptime : "+Math.floor((service.uptime_seconds||0)/3600)+" h · Journal : "+(stats.total||0)+" événements · "+(stats.critical||0)+" alertes";
     renderMonitorEvents();
     $("monitorstatus").textContent="Contrôle serveur réussi à "+new Date(Number(r.server_time||0)*1000).toLocaleTimeString("fr-FR");
   }).catch(function(e){$("monitorstatus").textContent="⚠ Supervision indisponible : "+(e.message||"Erreur serveur.");});
