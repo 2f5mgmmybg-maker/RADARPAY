@@ -1665,7 +1665,9 @@ def api(path, b):
         public_chat = {k: c.get(k) for k in ("id", "client", "vendor", "price", "client_name", "status", "proof_deadline")}
         public_chat["messages"] = [dict(item) for item in (c.get("messages") or [])]
         return {"ok": True, "chat": public_chat}
-    if path in ("/api/add", "/api/update", "/api/delete") and r not in ("owner", "spitta"):
+    if path == "/api/add" and r != "spitta":
+        return {"error": "Seuls les comptes Spitta peuvent publier une TARGET."}
+    if path in ("/api/update", "/api/delete") and r not in ("owner", "spitta"):
         return {"error": "Accès réservé."}
     if path == "/api/add":
         try:
