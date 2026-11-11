@@ -2132,7 +2132,11 @@ $("back-auth-login").onclick=function(){setAuthView("auth-choices");$("role-mess
 $("check-approval").onclick=function(){
   $("check-approval").disabled=true;$("role-message").textContent="Vérification de ton autorisation…";
   call("/api/me",{}).then(function(r){
-    if(r.role==="owner"){enterApp(r);return;}
+    if(r.role==="owner"){
+      $("show-register").hidden=true;$("show-login").hidden=true;$("back-auth-login").hidden=true;
+      setAuthView("auth-choices");$("role-message").textContent="Compte propriétaire détecté. Appuie sur ADMIN puis saisis ton code administrateur.";
+      return;
+    }
     if(r.pending){showPending("Ton inscription est toujours en attente. Tu n’as pas besoin de recommencer. Appuie à nouveau sur Vérifier mon accès après validation.");return;}
     if(r.role){if(r.has_pin){setAuthView("login-panel");$("role-message").textContent="Ton compte est autorisé. Connecte-toi avec ton code secret.";}else{setAuthView("legacy-pin-panel");$("role-message").textContent="Ton compte est autorisé. Crée ton code secret une seule fois.";}return;}
     setAuthView("auth-choices");$("role-message").textContent="Aucune inscription approuvée n’a été trouvée.";
