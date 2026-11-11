@@ -27,8 +27,8 @@ VARIABLES D'ENVIRONNEMENT
   Si vide, le code utilise RENDER_EXTERNAL_URL fourni par Render.
 - NOWPAYMENTS_API_KEY : clé API privée du compte NOWPayments (secret).
 - NOWPAYMENTS_IPN_SECRET : secret IPN configuré dans NOWPayments (secret).
-- URL IPN à enregistrer dans NOWPayments : https://radarpay-90js.onrender.com/nowpayments/ipn
-  (ou API_BASE_URL + /nowpayments/ipn si l'URL Render change).
+- URL IPN envoyée automatiquement à chaque facture : https://radarpay-90js.onrender.com/nowpayments/ipn
+  (ou API_BASE_URL + /nowpayments/ipn si l'URL Render change; aucune saisie globale supplémentaire n'est nécessaire).
 - Le catalogue TARGET NUMÉRIQUE facture 25 EUR; le CALLER choisit la cryptomonnaie
   sur la page de paiement hébergée NOWPayments. Seul un IPN signé avec le statut
   payment_status=finished passe automatiquement la commande à paid.
