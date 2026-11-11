@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" role="img" aria-label="RADAR PAYMENT">
+<defs>
+ <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d9ff78"/><stop offset=".48" stop-color="#39ff14"/><stop offset="1" stop-color="#00a83a"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<g transform="translate(8 8)" fill="none" stroke="url(#g)" filter="url(#glow)">
+ <circle cx="82" cy="82" r="68" stroke-width="5"/><circle cx="82" cy="82" r="45" stroke-width="2" opacity=".75"/><circle cx="82" cy="82" r="21" stroke-width="2" opacity=".65"/>
+ <path d="M14 82h136M82 14v136M82 82l48-48" stroke-width="2.5"/><circle cx="82" cy="82" r="6" fill="#39ff14"/>
+</g>
+<text x="180" y="104" fill="#f4f7fb" font-family="Arial,Helvetica,sans-serif" font-size="78" font-weight="900" letter-spacing="-4">RADAR</text>
+<text x="493" y="104" fill="url(#g)" font-family="Arial,Helvetica,sans-serif" font-size="70" font-weight="900" font-style="italic" letter-spacing="1">PAY</text>
+<text x="184" y="145" fill="#9eb2c5" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" letter-spacing="9">PAYMENT NETWORK</text>
+</svg>
