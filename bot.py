@@ -235,6 +235,7 @@ def _decode_private(encrypted):
     data.setdefault("site_clicks", {})
     data.setdefault("payment_reports", [])
     data.setdefault("digital_targets", [])
+    data.setdefault("digital_orders", [])
     data.setdefault("monitor_events", [])
     return data, migrated
 
@@ -245,6 +246,7 @@ def private_load():
         PRIVATE_CACHE.setdefault("blacklist", {})
         PRIVATE_CACHE.setdefault("registrations", [])
         PRIVATE_CACHE.setdefault("digital_targets", [])
+        PRIVATE_CACHE.setdefault("digital_orders", [])
         PRIVATE_CACHE.setdefault("monitor_events", [])
         return PRIVATE_CACHE
 
@@ -1145,6 +1147,143 @@ def api(path, b):
         with LOCK:
             items = list(private_load().setdefault("digital_targets", []))
         return {"ok": True, "items": [{k: item.get(k) for k in ("id", "title", "description", "price", "created")} for item in items]}
+
+    if path == "/api/digital/order":
+        if role(user) != "lanceur":
+            return {"error": "Seuls les CALLER peuvent commander un TARGET NUMÉRIQUE."}
+        target_id = str(b.get("id", ""))[:40]
+        with LOCK:
+            state = private_load()
+            target = next((x for x in state.setdefault("digital_targets", []) if x.get("id") == target_id), None)
+            if not target:
+                return {"error": "Ce TARGET NUMÉRIQUE n'est plus disponible."}
+            existing = next((x for x in state.setdefault("digital_orders", []) if str(x.get("caller_id")) == str(uid) and x.get("target_id") == target_id and x.get("status") not in ("delivered", "cancelled")), None)
+            if existing:
+                return {"ok": True, "order": existing, "existing": True}
+            regs = state.setdefault("registrations", [])
+            profile = next((x for x in regs if str(x.get("user_id")) == str(uid)), {})
+            order = {"id": secrets.token_hex(8), "target_id": target_id, "title": target.get("title", ""),
+                     "price": target.get("price", ""), "caller_id": str(uid),
+                     "caller_name": str(profile.get("pseudo") or user.get("first_name") or "CALLER")[:60],
+                     "status": "awaiting_instructions", "created": int(time.time()), "updated": int(time.time())}
+            state["digital_orders"].insert(0, order)
+            state["digital_orders"] = state["digital_orders"][:500]
+            private_save()
+        try:
+            say(OWNER, "🛒 Nouvelle demande TARGET NUMÉRIQUE\\nCALLER : " + order["caller_name"] + " (ID " + str(uid) + ")\\nTARGET : " + order["title"] + "\\nPrix : " + order["price"] + "\\nCommande : " + order["id"])
+        except Exception as e:
+            print("notification commande numérique:", repr(e))
+        monitor_event("digital_order", "Nouvelle commande numérique", order["caller_name"] + " · " + order["title"] + " · " + order["price"], "info", False)
+        return {"ok": True, "order": order}
+
+    if path == "/api/digital/my-orders":
+        if role(user) != "lanceur":
+            return {"error": "Réservé aux CALLER."}
+        with LOCK:
+            orders = [dict(x) for x in private_load().setdefault("digital_orders", []) if str(x.get("caller_id")) == str(uid)]
+        return {"ok": True, "orders": orders[:30]}
+
+    if path == "/api/digital/orders":
+        if uid != OWNER:
+            return {"error": "Gestion réservée au propriétaire."}
+        with LOCK:
+            orders = [dict(x) for x in private_load().setdefault("digital_orders", [])]
+        return {"ok": True, "orders": orders[:100]}
+
+    if path == "/api/digital/instructions":
+        if uid != OWNER:
+            return {"error": "Seul le propriétaire peut envoyer les instructions."}
+        order_id = str(b.get("id", ""))[:40]
+        instructions = str(b.get("instructions", "")).strip()[:3000]
+        if not instructions:
+            return {"error": "Ajoute les instructions de paiement crypto."}
+        with LOCK:
+            state = private_load()
+            order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
+            if not order or order.get("status") in ("delivered", "cancelled"):
+                return {"error": "Commande introuvable ou terminée."}
+            order["payment_instructions"] = instructions
+            order["status"] = "awaiting_payment"
+            order["updated"] = int(time.time())
+            private_save()
+        say(int(order["caller_id"]), "💳 Instructions de paiement pour ton TARGET NUMÉRIQUE\\n" + order["title"] + " — " + order["price"] + "\\n\\n" + instructions + "\\n\\nAprès ton transfert, retourne dans l'onglet TARGET NUMÉRIQUE et clique sur « J'ai effectué le paiement ». N'envoie jamais plus que le montant indiqué.")
+        return {"ok": True}
+
+    if path == "/api/digital/paid":
+        if role(user) != "lanceur":
+            return {"error": "Action réservée aux CALLER."}
+        order_id = str(b.get("id", ""))[:40]
+        with LOCK:
+            state = private_load()
+            order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id and str(x.get("caller_id")) == str(uid)), None)
+            if not order or order.get("status") != "awaiting_payment":
+                return {"error": "Commande non disponible pour une déclaration de paiement."}
+            order["status"] = "payment_reported"
+            order["updated"] = int(time.time())
+            private_save()
+        say(OWNER, "🔔 Paiement déclaré par le CALLER\\n" + order.get("caller_name", "CALLER") + " (ID " + str(uid) + ")\\nTARGET : " + order.get("title", "") + "\\nPrix : " + order.get("price", "") + "\\nCommande : " + order_id + "\\nVérifie la transaction avant de confirmer.")
+        monitor_event("digital_payment_reported", "Paiement numérique déclaré", order.get("caller_name", "CALLER") + " · " + order.get("title", ""), "warning", False)
+        return {"ok": True}
+
+    if path == "/api/digital/order-status":
+        if uid != OWNER:
+            return {"error": "Action réservée au propriétaire."}
+        order_id = str(b.get("id", ""))[:40]
+        action = str(b.get("action", ""))
+        if action not in ("received", "retry"):
+            return {"error": "Action invalide."}
+        with LOCK:
+            state = private_load()
+            order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
+            if not order or order.get("status") != "payment_reported":
+                return {"error": "Commande introuvable ou paiement non déclaré."}
+            order["status"] = "paid" if action == "received" else "awaiting_payment"
+            order["updated"] = int(time.time())
+            private_save()
+        if action == "received":
+            say(int(order["caller_id"]), "✅ L'administration a confirmé la réception de ton paiement. La photo de ton TARGET NUMÉRIQUE va être envoyée séparément.")
+        else:
+            say(int(order["caller_id"]), "⚠️ Paiement non confirmé. Vérifie le réseau, le montant et l'adresse, puis réessaie. Contacte l'administration si besoin.")
+        return {"ok": True}
+
+    if path == "/api/digital/deliver":
+        if uid != OWNER:
+            return {"error": "Envoi réservé au propriétaire."}
+        order_id = str(b.get("id", ""))[:40]
+        raw_image = str(b.get("image", ""))
+        if not raw_image.startswith("data:image/") or "," not in raw_image:
+            return {"error": "Sélectionne une photo valide."}
+        try:
+            header, encoded = raw_image.split(",", 1)
+            image_bytes = base64.b64decode(encoded, validate=True)
+        except Exception:
+            return {"error": "Photo invalide."}
+        if len(image_bytes) > 4_000_000:
+            return {"error": "Photo trop volumineuse (maximum 4 Mo)."}
+        mime = header[5:].split(";", 1)[0]
+        if mime not in ("image/jpeg", "image/png", "image/webp"):
+            return {"error": "Format accepté : JPG, PNG ou WEBP."}
+        with LOCK:
+            state = private_load()
+            order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
+            if not order or order.get("status") != "paid":
+                return {"error": "Confirme d'abord le paiement de cette commande."}
+            caller_id = int(order["caller_id"])
+        response = requests.post(f"{API}/sendPhoto", data={"chat_id": caller_id, "caption": "🎁 Voici ton TARGET NUMÉRIQUE : " + order.get("title", "")},
+                                 files={"photo": ("target-numerique", image_bytes, mime)}, timeout=60)
+        response.raise_for_status()
+        result = response.json()
+        if not result.get("ok"):
+            raise RuntimeError(result.get("description", "Telegram n'a pas envoyé la photo."))
+        with LOCK:
+            state = private_load()
+            order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
+            if order and order.get("status") == "paid":
+                order["status"] = "delivered"
+                order["delivered"] = int(time.time())
+                order["updated"] = int(time.time())
+                private_save()
+        return {"ok": True}
 
     if path == "/api/digital/admin":
         if uid != OWNER:
