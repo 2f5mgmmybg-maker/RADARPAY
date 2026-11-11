@@ -1156,9 +1156,9 @@ def api(path, b):
     if path == "/api/digital/create":
         if uid != OWNER or r != "owner":
             return {"error": "Seul le propriétaire peut publier un TARGET NUMÉRIQUE."}
-        title = re.sub(r"\\s+", " ", str(b.get("title", "")).strip())[:90]
+        title = re.sub(r"\s+", " ", str(b.get("title", "")).strip())[:90]
         description = str(b.get("description", "")).strip()[:500]
-        price = re.sub(r"\\s+", " ", str(b.get("price", "")).strip())[:60]
+        price = re.sub(r"\s+", " ", str(b.get("price", "")).strip())[:60]
         if not title or not price:
             return {"error": "Le nom et le prix sont obligatoires."}
         item = {"id": secrets.token_hex(8), "title": title, "description": description,
