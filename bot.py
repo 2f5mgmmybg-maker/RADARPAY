@@ -2879,7 +2879,7 @@ if __name__ == "__main__":
                     else:
                         target_chat = None
                 if target_chat is not None:
-                    say(target_chat, "🔔 RADAR PAYMENT — TEST\\n\\nCeci est un message automatique de test.\\n✅ Le bot fonctionne correctement.\\n🕒 Prochain message dans 1 heure.")
+                    say(target_chat, "🔔 RADAR PAYMENT — TEST\n\nCeci est un message automatique de test.\n✅ Le bot fonctionne correctement.\n🕒 Prochain message dans 1 heure.")
             except Exception as e:
                 print("message automatique horaire:", repr(e))
             time.sleep(20)
