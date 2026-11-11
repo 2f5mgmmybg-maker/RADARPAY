@@ -1261,8 +1261,8 @@ def api(path, b):
         if len(image_bytes) > 4_000_000:
             return {"error": "Photo trop volumineuse (maximum 4 Mo)."}
         mime = header[5:].split(";", 1)[0]
-        if mime not in ("image/jpeg", "image/png", "image/webp"):
-            return {"error": "Format accepté : JPG, PNG ou WEBP."}
+        if mime not in ("image/jpeg", "image/png"):
+            return {"error": "Format accepté : JPG ou PNG."}
         with LOCK:
             state = private_load()
             order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
