@@ -1032,8 +1032,15 @@ function $(i){return document.getElementById(i)}
 function ask(){return new Promise(function(res){var t=setTimeout(res,8000);try{if(tgw&&tgw.requestWriteAccess){tgw.requestWriteAccess(function(){clearTimeout(t);res()})}else{clearTimeout(t);res()}}catch(e){clearTimeout(t);res()}})}
 function showMe(r,fromCode){
   var ok=r.role==="owner";ADMIN=ok;$("gate").hidden=ok;$("panel").hidden=!ok;
-  $("admin-tab").hidden=!ok;
+  $("admin-tab").hidden=!ok;$("digital-tab").hidden=!ok;
   if(!ok){$("msg").textContent=r.error||"Accès administrateur réservé au propriétaire.";return}
+  var digitalTab=$("g");
+  var digitalManager=document.querySelector("#panel > details.admin-rubric:has(> summary)");
+  if(digitalTab&&digitalManager&&digitalManager.querySelector("#digital-add")){
+    digitalTab.querySelectorAll("#digital-catalogue,#digital-my-orders").forEach(function(n){n.hidden=true;});
+    var intro=digitalTab.querySelector(".lead");if(intro)intro.hidden=true;
+    digitalTab.appendChild(digitalManager);
+  }
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
   loadChatList();loadAdminChats();loadRegistrations();loadMonitor();loadDigitalAdmin();
@@ -1711,7 +1718,7 @@ tabs.addEventListener("click",function(e){
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c"){adminOpen();loadAdminPaymentReports();}
-  if(b.dataset.t==="g"&&USER_ROLE==="lanceur"){loadDigitalCatalogue();loadDigitalMyOrders();}
+  if(b.dataset.t==="g"){if(USER_ROLE==="lanceur"){loadDigitalCatalogue();loadDigitalMyOrders();}else if(USER_ROLE==="owner"){loadDigitalAdmin();}}
   if(["d","e","f"].indexOf(b.dataset.t)>-1||(USER_ROLE==="spitta"&&b.dataset.t==="b"))loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
@@ -1739,7 +1746,7 @@ function simplifyWorkspaceTabs(){
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
     var spittaTab=$("spitta-tab");if(spittaTab)spittaTab.hidden=true;
-    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"Messages","c":"Administration"};
+    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"Messages","g":"TARGET NUMÉRIQUE","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
 }
