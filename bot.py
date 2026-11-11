@@ -954,7 +954,7 @@ def _nowpayments_sort(value):
 def nowpayments_signature_valid(payload, signature):
     if not NOWPAYMENTS_IPN_SECRET or not signature:
         return False
-    canonical = json.dumps(_nowpayments_sort(payload), ensure_ascii=False, separators=(",", ":"))
+    canonical = json.dumps(_nowpayments_sort(payload), separators=(",", ":"))
     expected = hmac.new(NOWPAYMENTS_IPN_SECRET.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha512).hexdigest()
     return hmac.compare_digest(expected.lower(), str(signature).strip().lower())
 
