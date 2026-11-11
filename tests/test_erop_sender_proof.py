@@ -38,6 +38,7 @@ class EropSenderProofTests(unittest.TestCase):
             patch.object(bot, "chats_load", side_effect=lambda: ({"chats": [self.chat]}, None)),
             patch.object(bot, "chats_save", side_effect=self.save_chats),
             patch.object(bot, "say_async"),
+            patch.object(bot, "say"),
             patch.object(bot, "gh_put"),
             patch.object(bot, "gh_del"),
             patch.object(bot, "decode_jpeg_data_uri", return_value=b"\xff\xd8\xffimage-bytes"),
@@ -107,8 +108,8 @@ class EropSenderProofTests(unittest.TestCase):
         bot.process_pending_requests()
         self.assertEqual(self.chat["status"], "proof_expired")
         self.assertIn("Délai de 2 minutes dépassé", self.chat["messages"][-1]["text"])
-        bot.say_async.assert_any_call(self.client["id"], "⏰ Le délai de 2 minutes pour la capture est dépassé. La vente est bloquée.")
-        bot.say_async.assert_any_call(self.vendor["id"], "⏰ Le délai de 2 minutes pour envoyer la capture est dépassé. La vente est bloquée.")
+        bot.say.assert_any_call(self.client["id"], "⏰ Le délai de 2 minutes pour la capture est dépassé. La vente est bloquée.")
+        bot.say.assert_any_call(self.vendor["id"], "⏰ Le délai de 2 minutes pour envoyer la capture est dépassé. La vente est bloquée.")
 
     def test_sender_stage_timeout_restores_chat_without_blacklisting_spitta(self):
         self.chat["erop_sender_deadline"] = int(time.time()) - 1
