@@ -30,6 +30,7 @@ class PublicationOwnershipTests(unittest.TestCase):
             patch.object(bot, "verify", side_effect=lambda _data: dict(self.user)),
             patch.object(bot, "rate_allowed", return_value=True),
             patch.object(bot, "is_blacklisted", return_value=False),
+            patch.object(bot, "_has_owner_admin_session", return_value=True),
             patch.object(bot, "role", side_effect=lambda u: "owner" if u["id"] == bot.OWNER else self.private["roles"].get(str(u["id"]))),
             patch.object(bot, "_has_valid_app_session", return_value=True),
             patch.object(bot, "private_load", side_effect=lambda: self.private),
