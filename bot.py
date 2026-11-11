@@ -118,11 +118,20 @@ def monitor_event(kind, title, detail="", level="info", notify=False, lock_held=
 
 
 def _notify_registration(event):
-    try:
-        stamp = datetime.fromtimestamp(event["time"], ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y %H:%M:%S")
-        say(OWNER, "🔔 RADARPAY — " + event["title"] + "\n" + event["detail"] + "\n" + stamp + "\nOuvre Administration > Supervision.")
-    except Exception as e:
-        print("alerte inscription Telegram non envoyée:", repr(e))
+    stamp = datetime.fromtimestamp(event["time"], ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y %H:%M:%S")
+    message = ("🆕 RADAR PAYMENT — NOUVELLE INSCRIPTION À CONFIRMER\n"
+               + event["detail"] + "\nReçue le : " + stamp
+               + "\nOuvre la mini-app > Administration > Inscriptions et comptes.")
+    for attempt in range(3):
+        try:
+            say(OWNER, message)
+            print("notification inscription envoyée à l'administrateur:", event.get("id", ""))
+            return True
+        except Exception as e:
+            print("alerte inscription Telegram, tentative", attempt + 1, ":", repr(e))
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+    return False
 
 
 def today():
@@ -1209,7 +1218,16 @@ def api(path, b):
                     profile["guarantee_accepted"] = True
                     profile["guarantee_acceptance_word"] = "Garant"
                     profile["guarantee_accepted_at"] = int(time.time())
+                    now = int(time.time())
+                    event = {"id": secrets.token_hex(8), "time": now, "kind": "registration",
+                             "title": "Inscription à confirmer",
+                             "detail": "Profil : " + chosen + " · Pseudo : " + str(profile.get("pseudo") or pseudo),
+                             "level": "info"}
+                    events = state.setdefault("monitor_events", [])
+                    events.append(event)
+                    del events[:-500]
                     private_save()
+                    threading.Thread(target=_notify_registration, args=(event,), daemon=True).start()
                     return {"ok": True, "pending": True}
                 return {"error": "Ce compte existe déjà. Utilise Se connecter."}
             now = int(time.time())
