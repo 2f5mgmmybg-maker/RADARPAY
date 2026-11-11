@@ -1362,29 +1362,39 @@ function loadSpittaItems(){
     });
   }).catch(function(e){$("spittamsg").textContent=e.message||"Chargement impossible."});
 }
+var REGISTRATIONS_LOADING=false;
+var REGISTRATIONS_SIGNATURE="";
 function loadRegistrations(){
-  var host=$("registrationslist"),msg=$("registrationsmsg");if(!host||!msg||!ADMIN)return;
-  msg.textContent="Chargement des inscriptions…";host.innerHTML="";
+  var host=$("registrationslist"),msg=$("registrationsmsg");if(!host||!msg||!ADMIN||REGISTRATIONS_LOADING)return;
+  REGISTRATIONS_LOADING=true;
   return call("/api/admin/registrations",{}).then(function(r){
     if(!r.ok)throw new Error(r.error||"Historique indisponible.");
     var items=r.registrations||[];
-    if(!items.length){msg.textContent="Aucune nouvelle inscription pour le moment.";return}
-    msg.textContent=items.length+" inscription(s) enregistrée(s).";
+    var signature=JSON.stringify(items);
+    msg.textContent=items.length+" inscription(s) enregistrée(s) · actualisation automatique toutes les 5 secondes.";
+    if(signature===REGISTRATIONS_SIGNATURE)return;
+    REGISTRATIONS_SIGNATURE=signature;
+    host.innerHTML="";
+    if(!items.length){msg.textContent="Aucune inscription pour le moment · actualisation automatique toutes les 5 secondes.";return}
     items.forEach(function(x){
       var card=document.createElement("div");card.className="chatitem";
       var title=document.createElement("b");title.textContent=x.pseudo+" · "+(x.role==="lanceur"?"CALLER":"SPITTA");card.appendChild(title);
       var detail=document.createElement("small");
-      detail.textContent=(x.status==="approved"?"Accès autorisé":"En attente d’autorisation")+" · "+new Date(x.created*1000).toLocaleString("fr-FR")+(x.telegram_username?" · @"+x.telegram_username:"")+(x.first_name?" · "+x.first_name:"")+(x.last_seen?" · Dernière connexion : "+new Date(x.last_seen*1000).toLocaleString("fr-FR"):"");
+      detail.textContent=(x.status==="approved"?"Accès autorisé":"À CONFIRMER")+" · "+new Date(x.created*1000).toLocaleString("fr-FR")+(x.telegram_username?" · @"+x.telegram_username:"")+(x.first_name?" · "+x.first_name:"")+(x.last_seen?" · Dernière connexion : "+new Date(x.last_seen*1000).toLocaleString("fr-FR"):"");
       card.appendChild(detail);
       if(x.status!=="approved"){
         var approve=document.createElement("button");approve.className="btn s";approve.type="button";approve.textContent="Autoriser l’accès";
-        approve.onclick=function(){approve.disabled=true;approve.textContent="Validation…";call("/api/admin/approve-registration",{user_id:x.user_id}).then(function(a){if(!a.ok)throw new Error(a.error||"Autorisation impossible.");loadRegistrations()}).catch(function(e){approve.disabled=false;approve.textContent="Autoriser l’accès";msg.textContent=e.message||"Erreur d’autorisation."})};
+        approve.onclick=function(){approve.disabled=true;approve.textContent="Validation…";call("/api/admin/approve-registration",{user_id:x.user_id}).then(function(a){if(!a.ok)throw new Error(a.error||"Autorisation impossible.");REGISTRATIONS_SIGNATURE="";loadRegistrations()}).catch(function(e){approve.disabled=false;approve.textContent="Autoriser l’accès";msg.textContent=e.message||"Erreur d’autorisation."})};
         card.appendChild(approve);
       }
       host.appendChild(card);
     });
-  }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."});
+  }).catch(function(e){msg.textContent=e.message||"Impossible de charger les inscriptions."})
+    .finally(function(){REGISTRATIONS_LOADING=false});
 }
+setInterval(function(){
+  if(ADMIN&&document.visibilityState==="visible"&&$("c")&&$("c").classList.contains("on"))loadRegistrations();
+},5000);
 $("resetregistrations").onclick=function(){
   var msg=$("resetregistrationsmsg");
   if(!ADMIN){msg.textContent="Action réservée à l’administrateur.";return}
