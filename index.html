@@ -2074,7 +2074,7 @@ function selectSignupRole(role){
 function registerRole(role){
   var pseudo=$("signup-pseudo").value.trim();
   var pin=$("signup-pin").value;
-  if(!pseudo||pseudo.length<3||pseudo.length>24||!/^[\\p{L}\\p{N}_ .@-]+$/u.test(pseudo)){$("role-message").textContent="Le pseudo doit contenir 3 à 24 caractères : lettres, chiffres, espaces, point, tiret ou @.";return;}
+  if(!pseudo||pseudo.length<3||pseudo.length>24||!/^[\p{L}\p{N}_ .@-]+$/u.test(pseudo)){$("role-message").textContent="Le pseudo doit contenir 3 à 24 caractères : lettres, chiffres, espaces, point, tiret ou @.";return;}
   if(!/^\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Entre deux fois le même code secret de 4 chiffres.";return;}
   if(role!==SIGNUP_ROLE||$("signup-guarantee-word").value.trim()!=="Garant"){$("role-message").textContent='Pour continuer, lis le règlement et écris exactement « Garant ». ';return;}
   $("role-message").textContent="Envoi de ton inscription…";
@@ -2145,7 +2145,7 @@ $("check-approval").onclick=function(){
 };
 $("signup-next").onclick=function(){
   var pseudo=$("signup-pseudo").value.trim(),pin=$("signup-pin").value;
-  if(pseudo.length<3||pseudo.length>24||!/^[\\p{L}\\p{N}_ .@-]+$/u.test(pseudo)){$("role-message").textContent="Le pseudo doit contenir 3 à 24 caractères : lettres, chiffres, espaces, point, tiret ou @.";return;}
+  if(pseudo.length<3||pseudo.length>24||!/^[\p{L}\p{N}_ .@-]+$/u.test(pseudo)){$("role-message").textContent="Le pseudo doit contenir 3 à 24 caractères : lettres, chiffres, espaces, point, tiret ou @.";return;}
   if(!/^\d{4}$/.test(pin)||pin!==$("signup-pin-confirm").value){$("role-message").textContent="Le code doit comporter 4 chiffres identiques dans les deux champs.";return;}
   $("signup-step-account").hidden=true;$("signup-step-role").hidden=false;
   $("role-message").textContent="Étape 2 : choisis ton profil."; 
