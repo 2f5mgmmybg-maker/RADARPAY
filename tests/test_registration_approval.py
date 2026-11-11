@@ -23,6 +23,7 @@ class RegistrationAndPinLoginTests(unittest.TestCase):
             patch.object(bot, "private_load", side_effect=lambda: self.state),
             patch.object(bot, "private_save"),
             patch.object(bot, "is_blacklisted", return_value=False),
+            patch.object(bot, "_has_owner_admin_session", return_value=True),
             patch.object(bot, "load", return_value=({"photos": []}, None)),
             patch.object(bot, "chats_load", return_value=({"chats": []}, None)),
         ]
