@@ -16,6 +16,7 @@ os.environ["DATA_ENCRYPTION_KEY"] = "test-encryption-key"
 os.environ["NOWPAYMENTS_IPN_SECRET"] = "test-nowpayments-ipn-secret"
 
 import bot
+bot.NOWPAYMENTS_IPN_SECRET = os.environ["NOWPAYMENTS_IPN_SECRET"]
 
 
 class SecurityTests(unittest.TestCase):
