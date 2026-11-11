@@ -511,7 +511,7 @@ a{color:#7defff}
 @keyframes presenceBlink{0%,100%{opacity:1;box-shadow:0 0 9px rgba(57,244,119,.95);transform:scale(1)}50%{opacity:.3;box-shadow:0 0 2px rgba(57,244,119,.2);transform:scale(.78)}}
 @keyframes presenceGlow{0%,100%{border-color:rgba(57,244,119,.22);box-shadow:0 0 8px rgba(57,244,119,.05)}50%{border-color:rgba(57,244,119,.62);box-shadow:0 0 17px rgba(57,244,119,.16)}}
 @media(max-width:420px){.brand-header{gap:7px}.presence-wrap{padding:6px 8px;gap:6px;font-size:.59rem}.brand-header .refresh{padding:7px 9px}}
- .digital-catalogue{display:grid;gap:12px}.digital-price{font-weight:800;font-size:1.05rem;margin:8px 0;color:var(--ink)}
+ .digital-catalogue{display:grid;gap:12px}.digital-price{font-weight:800;font-size:1.05rem;margin:8px 0;color:var(--ink)}.digital-country-heading{margin:22px 0 4px;padding:12px;border-bottom:1px solid var(--line);font-size:1.12rem;color:var(--sweep)}.digital-category-heading{margin:12px 0 2px;padding:8px 12px;border-left:3px solid var(--sweep);background:rgba(59,130,246,.08);font-size:.98rem}.digital-meta{color:var(--mute);font-size:.82rem;margin:6px 0}
 </style>
 </head>
 <body>
@@ -649,6 +649,10 @@ a{color:#7defff}
         <div style="display:grid;gap:9px;margin:12px 0">
           <input class="inp" id="digital-title" maxlength="90" placeholder="Nom du TARGET NUMÉRIQUE">
           <textarea class="inp" id="digital-description" maxlength="500" rows="3" placeholder="Description (facultatif)"></textarea>
+          <label class="spitta-field-label" for="digital-country">Pays</label>
+          <select class="inp" id="digital-country"><option value="">Choisir un pays</option><option>Belgique</option><option>Suisse</option><option>Luxembourg</option><option>France</option></select>
+          <label class="spitta-field-label" for="digital-category">Catégorie</label>
+          <input class="inp" id="digital-category" maxlength="50" placeholder="Ex. : Compte, accès, service…">
           <input class="inp" id="digital-price" value="25 € par TARGET" readonly aria-readonly="true">
           <button class="btn s" id="digital-add" type="button">＋ Publier le TARGET NUMÉRIQUE</button>
           <p class="lead" id="digital-admin-message" aria-live="polite"></p>
@@ -1563,21 +1567,35 @@ function loadDigitalCatalogue(){
   return call("/api/digital/list",{}).then(function(r){
     host.innerHTML="";
     if(!r.items||!r.items.length){host.appendChild(digitalNode("p","lead","Aucun TARGET NUMÉRIQUE disponible pour le moment."));return}
+    var countries={};
     r.items.forEach(function(item){
-      var card=digitalNode("article","admin-publication");
-      card.appendChild(digitalNode("b","",item.title||"TARGET NUMÉRIQUE"));
-      if(item.description)card.appendChild(digitalNode("p","lead",item.description));
-      card.appendChild(digitalNode("div","digital-price","Prix : "+(item.price||"À confirmer")));
-      var buy=digitalNode("button","btn s","Acheter ce TARGET");buy.type="button";
-      buy.addEventListener("click",function(){
-        if(!window.confirm("Créer une commande pour « "+item.title+" » au prix de "+item.price+" ?"))return;
-        buy.disabled=true;buy.textContent="Création de la commande…";
-        call("/api/digital/order",{id:item.id}).then(function(r){
-          window.alert(r.existing?"Tu as déjà une commande en cours pour ce TARGET.":"Commande créée. L'administration va t'envoyer les instructions de paiement crypto.");
-          return loadDigitalMyOrders();
-        }).catch(function(e){window.alert(e.message||"Commande impossible.");}).finally(function(){buy.disabled=false;buy.textContent="Acheter ce TARGET"});
+      var country=item.country||"À classer",category=item.category||"À classer";
+      if(!countries[country])countries[country]={};
+      if(!countries[country][category])countries[country][category]=[];
+      countries[country][category].push(item);
+    });
+    Object.keys(countries).sort(function(a,b){return a.localeCompare(b,"fr")}).forEach(function(country){
+      host.appendChild(digitalNode("h3","digital-country-heading","🌍 "+country));
+      Object.keys(countries[country]).sort(function(a,b){return a.localeCompare(b,"fr")}).forEach(function(category){
+        host.appendChild(digitalNode("h4","digital-category-heading",category));
+        countries[country][category].forEach(function(item){
+          var card=digitalNode("article","admin-publication");
+          card.appendChild(digitalNode("b","",item.title||"TARGET NUMÉRIQUE"));
+          if(item.description)card.appendChild(digitalNode("p","lead",item.description));
+          card.appendChild(digitalNode("div","digital-meta","Pays : "+country+" · Catégorie : "+category));
+          card.appendChild(digitalNode("div","digital-price","Prix : "+(item.price||"25 €")));
+          var buy=digitalNode("button","btn s","Acheter ce TARGET");buy.type="button";
+          buy.addEventListener("click",function(){
+            if(!window.confirm("Créer une commande pour « "+item.title+" » au prix de "+item.price+" ?"))return;
+            buy.disabled=true;buy.textContent="Création de la commande…";
+            call("/api/digital/order",{id:item.id}).then(function(r){
+              window.alert(r.existing?"Tu as déjà une commande en cours pour ce TARGET.":"Commande créée. L'administration va t'envoyer les instructions de paiement crypto.");
+              return loadDigitalMyOrders();
+            }).catch(function(e){window.alert(e.message||"Commande impossible.");}).finally(function(){buy.disabled=false;buy.textContent="Acheter ce TARGET"});
+          });
+          card.appendChild(buy);host.appendChild(card);
+        });
       });
-      card.appendChild(buy);host.appendChild(card);
     });
   }).catch(function(e){host.textContent=e.message||"Impossible de charger les TARGET NUMÉRIQUE."});
 }
@@ -1616,6 +1634,7 @@ function loadDigitalAdmin(){
         var card=digitalNode("article","admin-publication");
         card.appendChild(digitalNode("b","",item.title));
         if(item.description)card.appendChild(digitalNode("p","lead",item.description));
+        card.appendChild(digitalNode("div","digital-meta","Pays : "+(item.country||"À classer")+" · Catégorie : "+(item.category||"À classer")));
         card.appendChild(digitalNode("div","digital-price","Prix : "+item.price));
         var remove=digitalNode("button","btn s spitta-delete","Supprimer");remove.type="button";
         remove.addEventListener("click",function(){
@@ -1676,11 +1695,13 @@ function loadDigitalAdmin(){
   }).catch(function(e){var msg=$("digital-admin-message");if(msg)msg.textContent=e.message||"Chargement admin impossible."});
 }
 if($("digital-add"))$("digital-add").addEventListener("click",function(){
-  var title=$("digital-title").value.trim(),description=$("digital-description").value.trim(),msg=$("digital-admin-message"),btn=$("digital-add");
+  var title=$("digital-title").value.trim(),description=$("digital-description").value.trim(),country=$("digital-country").value,category=$("digital-category").value.trim(),msg=$("digital-admin-message"),btn=$("digital-add");
   if(!title){msg.textContent="Indique le nom du TARGET NUMÉRIQUE.";return}
+  if(!country){msg.textContent="Choisis le pays du TARGET.";return}
+  if(!category){msg.textContent="Indique sa catégorie.";return}
   btn.disabled=true;msg.textContent="Publication…";
-  call("/api/digital/create",{title:title,description:description}).then(function(){
-    $("digital-title").value="";$("digital-description").value="";
+  call("/api/digital/create",{title:title,description:description,country:country,category:category}).then(function(){
+    $("digital-title").value="";$("digital-description").value="";$("digital-country").value="";$("digital-category").value="";
     msg.textContent="TARGET NUMÉRIQUE publié.";return loadDigitalAdmin();
   }).catch(function(e){msg.textContent=e.message||"Publication impossible."}).finally(function(){btn.disabled=false});
 });
