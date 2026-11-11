@@ -16,6 +16,9 @@ LINK = os.environ.get("MINIAPP_LINK") or SITE
 # URL publique du Web Service Render. API_BASE_URL permet une valeur explicite
 # si RENDER_EXTERNAL_URL n'est pas disponible.
 API_URL = (os.environ.get("API_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
+NOWPAYMENTS_API_KEY = os.environ.get("NOWPAYMENTS_API_KEY", "").strip()
+NOWPAYMENTS_IPN_SECRET = os.environ.get("NOWPAYMENTS_IPN_SECRET", "").strip()
+NOWPAYMENTS_API = "https://api.nowpayments.io/v1"
 LOCK = threading.Lock()
 # Le catalogue GitHub a son propre verrou : ses appels réseau ne doivent jamais bloquer les chats.
 CATALOG_LOCK = threading.Lock()
@@ -938,6 +941,154 @@ def handle_cb(cb):
         say(c["client"], "❌ Le SPITTA indique que le produit n'est plus disponible. Tu peux refaire une demande si tu le souhaites.")
 
 
+
+def _nowpayments_sort(value):
+    """Trie récursivement les clés comme l'exige la signature IPN NOWPayments."""
+    if isinstance(value, dict):
+        return {key: _nowpayments_sort(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        return [_nowpayments_sort(item) for item in value]
+    return value
+
+
+def nowpayments_signature_valid(payload, signature):
+    if not NOWPAYMENTS_IPN_SECRET or not signature:
+        return False
+    canonical = json.dumps(_nowpayments_sort(payload), ensure_ascii=False, separators=(",", ":"))
+    expected = hmac.new(NOWPAYMENTS_IPN_SECRET.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha512).hexdigest()
+    return hmac.compare_digest(expected.lower(), str(signature).strip().lower())
+
+
+def create_nowpayments_invoice(order):
+    """Crée une facture hébergée de 25 EUR. La crypto est choisie sur la page NOWPayments."""
+    if not NOWPAYMENTS_API_KEY or not NOWPAYMENTS_IPN_SECRET:
+        raise RuntimeError("Configuration NOWPayments incomplète sur Render.")
+    if not API_URL.startswith("https://"):
+        raise RuntimeError("URL publique HTTPS du serveur Render introuvable.")
+    payload = {
+        "price_amount": 25,
+        "price_currency": "eur",
+        "order_id": str(order["id"]),
+        "order_description": ("RADAR PAYMENT - " + str(order.get("title", "TARGET NUMÉRIQUE")))[:200],
+        "ipn_callback_url": API_URL + "/nowpayments/ipn",
+        "success_url": (SITE or LINK or API_URL),
+        "cancel_url": (SITE or LINK or API_URL),
+    }
+    response = requests.post(
+        NOWPAYMENTS_API + "/invoice",
+        headers={"x-api-key": NOWPAYMENTS_API_KEY, "Content-Type": "application/json"},
+        json=payload,
+        timeout=25,
+    )
+    try:
+        data = response.json()
+    except ValueError:
+        data = {}
+    if not response.ok or not data.get("invoice_url") or not data.get("id"):
+        detail = str(data.get("message") or data.get("status") or "réponse NOWPayments invalide")[:240]
+        raise RuntimeError("Création de facture impossible : " + detail)
+    invoice_url = str(data["invoice_url"])
+    if not invoice_url.startswith("https://"):
+        raise RuntimeError("NOWPayments a renvoyé une URL de paiement non sécurisée.")
+    return {"invoice_url": invoice_url, "invoice_id": str(data["id"])}
+
+
+def apply_nowpayments_ipn(payload):
+    """Applique une IPN vérifiée une seule fois; seul le statut finished valide le paiement."""
+    payment_status = str(payload.get("payment_status", "")).lower()
+    order_id = str(payload.get("order_id", ""))[:40]
+    if not order_id:
+        raise ValueError("IPN sans identifiant de commande.")
+    if str(payload.get("price_currency", "")).lower() != "eur":
+        raise ValueError("Devise de facture inattendue.")
+    try:
+        if Decimal(str(payload.get("price_amount", "0"))) != Decimal("25"):
+            raise ValueError("Montant de facture inattendu.")
+    except (InvalidOperation, ValueError):
+        raise ValueError("Montant de facture invalide.")
+
+    notify_caller = None
+    notify_owner = False
+    with LOCK:
+        state = private_load()
+        order = next((x for x in state.setdefault("digital_orders", []) if str(x.get("id")) == order_id), None)
+        if not order:
+            raise ValueError("Commande inconnue.")
+        expected_invoice = str(order.get("nowpayments_invoice_id", ""))
+        received_invoice = str(payload.get("invoice_id", ""))
+        if expected_invoice and received_invoice and expected_invoice != received_invoice:
+            raise ValueError("Facture différente de celle de la commande.")
+        if order.get("payment_provider") != "nowpayments":
+            raise ValueError("Commande non liée à NOWPayments.")
+        if payment_status == "finished":
+            if order.get("status") in ("paid", "delivering", "delivered"):
+                return {"ok": True, "duplicate": True}
+            if order.get("status") in ("cancelled",):
+                raise ValueError("Commande annulée.")
+            order["status"] = "paid"
+            order["nowpayments_payment_id"] = str(payload.get("payment_id", ""))[:100]
+            order["nowpayments_invoice_id"] = received_invoice or expected_invoice
+            order["payment_status"] = "finished"
+            order["payment_currency"] = str(payload.get("pay_currency", ""))[:24]
+            order["payment_amount"] = str(payload.get("actually_paid", payload.get("pay_amount", "")))[:50]
+            order["paid_at"] = int(time.time())
+            order["updated"] = int(time.time())
+            notify_caller = int(order["caller_id"])
+            notify_owner = True
+        elif payment_status in ("waiting", "confirming", "confirmed", "sending"):
+            order["payment_status"] = payment_status
+            order["updated"] = int(time.time())
+        elif payment_status in ("failed", "expired", "refunded"):
+            order["payment_status"] = payment_status
+            order["updated"] = int(time.time())
+        else:
+            # Statuts inconnus : accusés réception, mais jamais considérés comme payés.
+            order["payment_status"] = payment_status[:40] or "unknown"
+            order["updated"] = int(time.time())
+        private_save()
+
+    if notify_caller:
+        say_async(notify_caller, "✅ Paiement crypto confirmé automatiquement par NOWPayments. Ton TARGET NUMÉRIQUE est validé. L'administration prépare l'envoi de ta photo.")
+    if notify_owner:
+        say_async(OWNER, "💰 PAIEMENT NOWPAYMENTS CONFIRMÉ\\nCommande : " + order_id + "\\nCALLER : " + str(order.get("caller_name", "")) + "\\nTARGET : " + str(order.get("title", "")) + "\\nMontant : 25 EUR\\nCrypto reçue : " + str(order.get("payment_amount", "")) + " " + str(order.get("payment_currency", "")) + "\\nTu peux maintenant envoyer la photo depuis l'admin.")
+        threading.Thread(target=monitor_event, args=("digital_payment_confirmed", "Paiement crypto confirmé", order.get("caller_name", "CALLER") + " · " + order.get("title", ""), "success", False), daemon=True).start()
+    return {"ok": True}
+
+
+def create_order_invoice(order_id, caller_id):
+    with LOCK:
+        state = private_load()
+        order = next((x for x in state.setdefault("digital_orders", []) if str(x.get("id")) == str(order_id) and str(x.get("caller_id")) == str(caller_id)), None)
+        if not order:
+            raise ValueError("Commande introuvable.")
+        if order.get("status") in ("paid", "delivering", "delivered", "cancelled"):
+            raise ValueError("Cette commande ne nécessite plus de paiement.")
+        if order.get("invoice_url") and order.get("payment_status") not in ("failed", "expired", "refunded"):
+            return dict(order)
+        if int(order.get("invoice_creating_until", 0)) > int(time.time()):
+            raise RuntimeError("La facture est en cours de création. Réessaie dans quelques secondes.")
+        order["invoice_creating_until"] = int(time.time()) + 45
+        private_save()
+        snapshot = dict(order)
+
+    invoice = create_nowpayments_invoice(snapshot)
+    with LOCK:
+        state = private_load()
+        order = next((x for x in state.setdefault("digital_orders", []) if str(x.get("id")) == str(order_id)), None)
+        if not order:
+            raise ValueError("Commande introuvable après création de la facture.")
+        order.update(invoice)
+        order["payment_provider"] = "nowpayments"
+        order["payment_status"] = "waiting"
+        order["status"] = "awaiting_payment"
+        order.pop("invoice_creating_until", None)
+        order.pop("invoice_error", None)
+        order["updated"] = int(time.time())
+        private_save()
+        return dict(order)
+
+
+
 def api(path, b):
     user = verify(b.get("initData", ""))
     if not user:
@@ -1161,30 +1312,53 @@ def api(path, b):
         if role(user) != "lanceur":
             return {"error": "Seuls les CALLER peuvent commander un TARGET NUMÉRIQUE."}
         target_id = str(b.get("id", ""))[:40]
+        created = False
         with LOCK:
             state = private_load()
             target = next((x for x in state.setdefault("digital_targets", []) if x.get("id") == target_id), None)
             if not target:
                 return {"error": "Ce TARGET NUMÉRIQUE n'est plus disponible."}
-            existing = next((x for x in state.setdefault("digital_orders", []) if str(x.get("caller_id")) == str(uid) and x.get("target_id") == target_id and x.get("status") not in ("delivered", "cancelled")), None)
-            if existing:
-                return {"ok": True, "order": existing, "existing": True}
-            regs = state.setdefault("registrations", [])
-            profile = next((x for x in regs if str(x.get("user_id")) == str(uid)), {})
-            order = {"id": secrets.token_hex(8), "target_id": target_id, "title": target.get("title", ""),
-                     "country": target.get("country") or "À classer", "category": target.get("category") or "À classer",
-                     "price": "25 €", "caller_id": str(uid),
-                     "caller_name": str(profile.get("pseudo") or user.get("first_name") or "CALLER")[:60],
-                     "status": "awaiting_instructions", "created": int(time.time()), "updated": int(time.time())}
-            state["digital_orders"].insert(0, order)
-            state["digital_orders"] = state["digital_orders"][:500]
-            private_save()
+            order = next((x for x in state.setdefault("digital_orders", []) if str(x.get("caller_id")) == str(uid) and x.get("target_id") == target_id and x.get("status") not in ("delivered", "cancelled")), None)
+            if not order:
+                regs = state.setdefault("registrations", [])
+                profile = next((x for x in regs if str(x.get("user_id")) == str(uid)), {})
+                order = {"id": secrets.token_hex(8), "target_id": target_id, "title": target.get("title", ""),
+                         "country": target.get("country") or "À classer", "category": target.get("category") or "À classer",
+                         "price": "25 €", "caller_id": str(uid),
+                         "caller_name": str(profile.get("pseudo") or user.get("first_name") or "CALLER")[:60],
+                         "status": "awaiting_instructions", "created": int(time.time()), "updated": int(time.time())}
+                state["digital_orders"].insert(0, order)
+                state["digital_orders"] = state["digital_orders"][:500]
+                private_save()
+                created = True
+        if created:
+            say_async(OWNER, "🛒 Nouvelle commande TARGET NUMÉRIQUE\\nCALLER : " + order["caller_name"] + " (ID " + str(uid) + ")\\nTARGET : " + order["title"] + "\\nPrix : 25 €\\nCommande : " + order["id"])
+            threading.Thread(target=monitor_event, args=("digital_order", "Nouvelle commande numérique", order["caller_name"] + " · " + order["title"] + " · 25 €", "info", False), daemon=True).start()
         try:
-            say_async(OWNER, "🛒 Nouvelle demande TARGET NUMÉRIQUE\\nCALLER : " + order["caller_name"] + " (ID " + str(uid) + ")\\nTARGET : " + order["title"] + "\\nPrix : " + order["price"] + "\\nCommande : " + order["id"])
+            order = create_order_invoice(order["id"], uid)
         except Exception as e:
-            print("notification commande numérique:", repr(e))
-        threading.Thread(target=monitor_event, args=("digital_order", "Nouvelle commande numérique", order["caller_name"] + " · " + order["title"] + " · " + order["price"], "info", False), daemon=True).start()
-        return {"ok": True, "order": order}
+            print("NOWPayments facture:", repr(e))
+            with LOCK:
+                state = private_load()
+                failed_order = next((x for x in state.setdefault("digital_orders", []) if str(x.get("id")) == str(order["id"])), None)
+                if failed_order:
+                    failed_order.pop("invoice_creating_until", None)
+                    failed_order["invoice_error"] = str(e)[:240]
+                    failed_order["updated"] = int(time.time())
+                    private_save()
+            return {"error": "Le paiement crypto n'a pas pu être préparé. Réessaie dans quelques instants. Aucun paiement n'a été effectué."}
+        return {"ok": True, "existing": not created, "order": order, "invoice_url": order.get("invoice_url")}
+
+    if path == "/api/digital/retry-payment":
+        if role(user) != "lanceur":
+            return {"error": "Action réservée aux CALLER."}
+        order_id = str(b.get("id", ""))[:40]
+        try:
+            order = create_order_invoice(order_id, uid)
+        except Exception as e:
+            print("NOWPayments nouvelle facture:", repr(e))
+            return {"error": "Impossible de créer le nouveau lien crypto. Réessaie dans quelques instants."}
+        return {"ok": True, "order": order, "invoice_url": order.get("invoice_url")}
 
     if path == "/api/digital/my-orders":
         if role(user) != "lanceur":
@@ -2522,6 +2696,17 @@ class Ping(BaseHTTPRequestHandler):
             payload = json.loads(raw)
             if not isinstance(payload, dict):
                 return self._s({"error": "Objet JSON attendu."})
+            if self.path == "/nowpayments/ipn":
+                signature = self.headers.get("x-nowpayments-sig", "")
+                if not nowpayments_signature_valid(payload, signature):
+                    print("NOWPayments IPN rejetée : signature invalide.")
+                    return self._s({"error": "Signature IPN invalide."})
+                try:
+                    self._s(apply_nowpayments_ipn(payload))
+                except ValueError as e:
+                    print("NOWPayments IPN ignorée:", str(e))
+                    self._s({"error": str(e)})
+                return
             self._s(api(self.path, payload))
         except Exception as e:
             print("api:", e)
