@@ -2696,16 +2696,18 @@ class Ping(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/health", "/healthz"):
             health = {"ok": True, "service": "RADARPAY"}
+            admin_code = os.environ.get("ADMIN_ACCESS_CODE", "").strip().strip(chr(34)).strip(chr(39)).strip()
             configuration = {
                 "api_url": bool(API_URL.startswith("https://")),
                 "mini_app_url": bool((SITE or LINK).startswith("https://")),
+                "admin_access_code": bool(re.fullmatch(r"\\d{6}", admin_code)),
                 "nowpayments": bool(NOWPAYMENTS_API_KEY and NOWPAYMENTS_IPN_SECRET),
             }
             health["configuration"] = configuration
             health["payments"] = "NOWPayments configuré" if configuration["nowpayments"] else "Paiement crypto non configuré"
-            if not configuration["api_url"] or not configuration["mini_app_url"]:
+            if not configuration["api_url"] or not configuration["mini_app_url"] or not configuration["admin_access_code"]:
                 health.update({"ok": False, "unhealthy": True,
-                               "configuration_error": "API_BASE_URL/RENDER_EXTERNAL_URL ou SITE_URL/MINIAPP_LINK absent ou non HTTPS"})
+                               "configuration_error": "Vérifie API_BASE_URL/RENDER_EXTERNAL_URL, SITE_URL/MINIAPP_LINK et ADMIN_ACCESS_CODE (6 chiffres)."})
             if DATABASE_URL:
                 try:
                     pool = ensure_db()
