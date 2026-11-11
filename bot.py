@@ -234,6 +234,7 @@ def _decode_private(encrypted):
     data.setdefault("admin_chats", {})
     data.setdefault("site_clicks", {})
     data.setdefault("payment_reports", [])
+    data.setdefault("digital_targets", [])
     data.setdefault("monitor_events", [])
     return data, migrated
 
@@ -243,6 +244,7 @@ def private_load():
     if PRIVATE_CACHE is not None:
         PRIVATE_CACHE.setdefault("blacklist", {})
         PRIVATE_CACHE.setdefault("registrations", [])
+        PRIVATE_CACHE.setdefault("digital_targets", [])
         PRIVATE_CACHE.setdefault("monitor_events", [])
         return PRIVATE_CACHE
 
@@ -1137,6 +1139,51 @@ def api(path, b):
             return {"error": "Inscris-toi ou connecte-toi avec ton compte RADARPAY."}
         if not _has_valid_app_session(profile, b.get("sessionToken", "")):
             return {"error": "Session fermée. Clique sur Se connecter et entre ton code secret à 4 chiffres."}
+    if path == "/api/digital/list":
+        if r != "lanceur":
+            return {"error": "Cet onglet est réservé aux comptes CALLER."}
+        with LOCK:
+            items = list(private_load().setdefault("digital_targets", []))
+        return {"ok": True, "items": [{k: item.get(k) for k in ("id", "title", "description", "price", "created")} for item in items]}
+
+    if path == "/api/digital/admin":
+        if uid != OWNER or r != "owner":
+            return {"error": "Gestion réservée au propriétaire."}
+        with LOCK:
+            items = list(private_load().setdefault("digital_targets", []))
+        return {"ok": True, "items": items}
+
+    if path == "/api/digital/create":
+        if uid != OWNER or r != "owner":
+            return {"error": "Seul le propriétaire peut publier un TARGET NUMÉRIQUE."}
+        title = re.sub(r"\\s+", " ", str(b.get("title", "")).strip())[:90]
+        description = str(b.get("description", "")).strip()[:500]
+        price = re.sub(r"\\s+", " ", str(b.get("price", "")).strip())[:60]
+        if not title or not price:
+            return {"error": "Le nom et le prix sont obligatoires."}
+        item = {"id": secrets.token_hex(8), "title": title, "description": description,
+                "price": price, "created": int(time.time()), "created_by": str(uid)}
+        with LOCK:
+            state = private_load()
+            state.setdefault("digital_targets", []).insert(0, item)
+            private_save()
+        monitor_event("digital_target", "TARGET NUMÉRIQUE publié", "Nom : " + title + " · Prix : " + price, "info", False)
+        return {"ok": True, "item": item}
+
+    if path == "/api/digital/delete":
+        if uid != OWNER or r != "owner":
+            return {"error": "Seul le propriétaire peut supprimer un TARGET NUMÉRIQUE."}
+        target_id = str(b.get("id", ""))[:40]
+        with LOCK:
+            state = private_load()
+            items = state.setdefault("digital_targets", [])
+            item = next((x for x in items if x.get("id") == target_id), None)
+            if not item:
+                return {"error": "TARGET NUMÉRIQUE introuvable."}
+            items.remove(item)
+            private_save()
+        return {"ok": True}
+
     if path == "/api/want":
         if role(user) != "lanceur":
             return {"error": "Seuls les comptes CALLER peuvent contacter un SPITTA. Choisis le rôle CALLER."}
