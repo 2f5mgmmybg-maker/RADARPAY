@@ -1864,7 +1864,7 @@ function loadDigitalMyOrders(){
           });
           card.appendChild(retry);
         }
-      }else if(order.payment_provider==="nowpayments"||order.invoice_error||order.status==="awaiting_instructions"){
+      }else if(order.payment_provider==="nowpayments"||order.invoice_error){
         if(order.invoice_error)card.appendChild(digitalNode("p","lead","Le lien crypto n’a pas pu être créé. Aucun paiement n’a été effectué. Tu peux réessayer ci-dessous."));
         var retryInvoice=digitalNode("button","btn s","Réessayer le paiement crypto");retryInvoice.type="button";
         retryInvoice.addEventListener("click",function(){
