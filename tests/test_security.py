@@ -222,5 +222,93 @@ class SecurityTests(unittest.TestCase):
             self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["status"], "awaiting_payment")
 
 
+    def test_nowpayments_ipn_requires_exact_invoice_id(self):
+        bot.PRIVATE_CACHE = {
+            "digital_targets": [],
+            "digital_orders": [{
+                "id": "order-test-invoice",
+                "caller_id": "987654321",
+                "status": "awaiting_payment",
+                "payment_provider": "nowpayments",
+                "nowpayments_invoice_id": "invoice-required",
+            }],
+        }
+        bot.STORAGE_READY = True
+        base = {
+            "order_id": "order-test-invoice",
+            "payment_status": "finished",
+            "price_amount": 25,
+            "price_currency": "eur",
+        }
+        with unittest.mock.patch.object(bot, "private_save"):
+            with self.assertRaisesRegex(ValueError, "Identifiant de facture"):
+                bot.apply_nowpayments_ipn(dict(base))
+            with self.assertRaisesRegex(ValueError, "Identifiant de facture"):
+                bot.apply_nowpayments_ipn(dict(base, invoice_id=""))
+            with self.assertRaisesRegex(ValueError, "Identifiant de facture"):
+                bot.apply_nowpayments_ipn(dict(base, invoice_id="invoice-other"))
+        self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["status"], "awaiting_payment")
+
+    def test_nowpayments_orders_cannot_use_manual_payment_confirmation(self):
+        import unittest.mock
+        now = int(time.time())
+        user_id = 987654321
+        session_token = "test-session-token"
+        salt = "00112233445566778899aabbccddeeff"
+        bot.PRIVATE_CACHE = {
+            "roles": {str(user_id): "lanceur"},
+            "blacklist": {},
+            "registrations": [{
+                "user_id": str(user_id), "role": "lanceur", "status": "approved",
+                "pin_salt": salt, "pin_hash": "not-used",
+                "session_hash": hashlib.sha256(session_token.encode()).hexdigest(),
+                "session_expires": now + 3600,
+            }],
+            "digital_orders": [{
+                "id": "order-locked",
+                "caller_id": str(user_id),
+                "status": "awaiting_payment",
+                "payment_provider": "nowpayments",
+                "nowpayments_invoice_id": "invoice-locked",
+                "title": "TARGET test", "price": "25 €",
+            }],
+        }
+        bot.STORAGE_READY = True
+        user = {"id": user_id, "first_name": "Caller Test"}
+        data = {
+            "auth_date": str(now),
+            "user": json.dumps(user, separators=(",", ":")),
+        }
+        check = "\\n".join(f"{key}={value}" for key, value in sorted(data.items()))
+        secret = hmac.new(b"WebAppData", os.environ["BOT_TOKEN"].encode(), hashlib.sha256).digest()
+        data["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+        init_data = urlencode(data)
+        with unittest.mock.patch.object(bot, "private_save"), unittest.mock.patch.object(bot, "say_async"):
+            caller_result = bot.api("/api/digital/paid", {
+                "initData": init_data, "sessionToken": session_token, "id": "order-locked"
+            })
+            self.assertIn("automatiquement", caller_result.get("error", ""))
+
+            owner_data = {
+                "auth_date": str(now),
+                "user": json.dumps({"id": int(os.environ["OWNER_ID"]), "first_name": "Owner"}, separators=(",", ":")),
+            }
+            owner_check = "\\n".join(f"{key}={value}" for key, value in sorted(owner_data.items()))
+            owner_data["hash"] = hmac.new(secret, owner_check.encode(), hashlib.sha256).hexdigest()
+            owner_init = urlencode(owner_data)
+            instructions_result = bot.api("/api/digital/instructions", {
+                "initData": owner_init, "id": "order-locked", "instructions": "wallet"
+            })
+            self.assertIn("NOWPayments", instructions_result.get("error", ""))
+
+            bot.PRIVATE_CACHE["digital_orders"][0]["status"] = "payment_reported"
+            admin_result = bot.api("/api/digital/order-status", {
+                "initData": owner_init, "id": "order-locked", "action": "received"
+            })
+            self.assertIn("IPN signée", admin_result.get("error", ""))
+        self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["status"], "payment_reported")
+
+
+
 if __name__ == "__main__":
     unittest.main()
