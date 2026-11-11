@@ -13,6 +13,7 @@ os.environ["OWNER_ID"] = "123456789"
 os.environ["GITHUB_TOKEN"] = "test-github-token"
 os.environ["GITHUB_REPO"] = "test-owner/test-repo"
 os.environ["DATA_ENCRYPTION_KEY"] = "test-encryption-key"
+os.environ["NOWPAYMENTS_IPN_SECRET"] = "test-nowpayments-ipn-secret"
 
 import bot
 
@@ -139,6 +140,87 @@ class SecurityTests(unittest.TestCase):
         now = int(time.time())
         chat = {"created": now - 3 * 24 * 60 * 60, "messages": [{"time": now - 60}]}
         self.assertEqual(bot.chat_last_activity(chat), now - 60)
+
+
+    def test_nowpayments_ipn_signature_uses_sorted_compact_json(self):
+        payload = {
+            "z": "fin",
+            "nested": {"b": 2, "a": "été"},
+            "a": [{"y": 1, "x": True}],
+        }
+        canonical = json.dumps(bot._nowpayments_sort(payload), separators=(",", ":"))
+        expected = hmac.new(
+            os.environ["NOWPAYMENTS_IPN_SECRET"].encode(),
+            canonical.encode(),
+            hashlib.sha512,
+        ).hexdigest()
+        self.assertTrue(bot.nowpayments_signature_valid(payload, expected))
+        self.assertFalse(bot.nowpayments_signature_valid(payload, "0" * 128))
+        self.assertFalse(bot.nowpayments_signature_valid(payload, ""))
+
+    def test_nowpayments_ipn_confirms_only_matching_order_and_is_idempotent(self):
+        import unittest.mock
+        bot.PRIVATE_CACHE = {
+            "digital_targets": [],
+            "digital_orders": [{
+                "id": "order-test-1",
+                "caller_id": "987654321",
+                "caller_name": "Caller Test",
+                "title": "Target test",
+                "price": "25 €",
+                "status": "awaiting_payment",
+                "payment_provider": "nowpayments",
+                "nowpayments_invoice_id": "invoice-test-1",
+            }],
+        }
+        bot.STORAGE_READY = True
+        payload = {
+            "order_id": "order-test-1",
+            "invoice_id": "invoice-test-1",
+            "payment_id": "payment-test-1",
+            "payment_status": "finished",
+            "price_amount": 25,
+            "price_currency": "eur",
+            "pay_currency": "btc",
+            "actually_paid": "0.0001",
+        }
+        with unittest.mock.patch.object(bot, "private_save"), \\
+             unittest.mock.patch.object(bot, "say_async") as notify, \\
+             unittest.mock.patch.object(bot.threading, "Thread"):
+            result = bot.apply_nowpayments_ipn(payload)
+            self.assertTrue(result["ok"])
+            self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["status"], "paid")
+            self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["payment_status"], "finished")
+            self.assertEqual(notify.call_count, 2)
+            duplicate = bot.apply_nowpayments_ipn(payload)
+            self.assertTrue(duplicate["duplicate"])
+            self.assertEqual(notify.call_count, 2)
+
+    def test_nowpayments_ipn_rejects_wrong_invoice_or_amount(self):
+        import unittest.mock
+        bot.PRIVATE_CACHE = {
+            "digital_targets": [],
+            "digital_orders": [{
+                "id": "order-test-2",
+                "caller_id": "987654321",
+                "status": "awaiting_payment",
+                "payment_provider": "nowpayments",
+                "nowpayments_invoice_id": "invoice-correct",
+            }],
+        }
+        bot.STORAGE_READY = True
+        with unittest.mock.patch.object(bot, "private_save"):
+            with self.assertRaises(ValueError):
+                bot.apply_nowpayments_ipn({
+                    "order_id": "order-test-2", "invoice_id": "invoice-wrong",
+                    "payment_status": "finished", "price_amount": 25, "price_currency": "eur",
+                })
+            with self.assertRaises(ValueError):
+                bot.apply_nowpayments_ipn({
+                    "order_id": "order-test-2", "invoice_id": "invoice-correct",
+                    "payment_status": "finished", "price_amount": 24, "price_currency": "eur",
+                })
+            self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["status"], "awaiting_payment")
 
 
 if __name__ == "__main__":
