@@ -185,9 +185,7 @@ class SecurityTests(unittest.TestCase):
             "pay_currency": "btc",
             "actually_paid": "0.0001",
         }
-        with unittest.mock.patch.object(bot, "private_save"), \\
-             unittest.mock.patch.object(bot, "say_async") as notify, \\
-             unittest.mock.patch.object(bot.threading, "Thread"):
+        with unittest.mock.patch.object(bot, "private_save"), unittest.mock.patch.object(bot, "say_async") as notify, unittest.mock.patch.object(bot.threading, "Thread"):
             result = bot.apply_nowpayments_ipn(payload)
             self.assertTrue(result["ok"])
             self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["status"], "paid")
