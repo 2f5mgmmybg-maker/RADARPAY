@@ -647,6 +647,69 @@ input[type=file].inp{height:auto;min-height:50px;padding:10px}
   main button:not(#tabs button):hover,main .btn:hover{filter:none}
 }
 
+
+/* En-tête RADAR : logo, présence et actualisation sur des lignes distinctes */
+.brand-header{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) auto;
+ grid-template-areas:"logo refresh" "presence presence";
+ align-items:center!important;
+ column-gap:14px!important;row-gap:12px!important;
+ width:100%;margin:0 0 22px!important;padding:4px 0 16px;
+ border-bottom:1px solid rgba(90,150,175,.22);
+}
+.brand-header .brand-logo{
+ grid-area:logo!important;display:block;width:min(100%,245px)!important;
+ max-width:245px;height:52px!important;max-height:52px!important;
+ object-fit:contain!important;object-position:left center!important;
+ margin:0!important;
+}
+.brand-header .refresh-wrap{
+ grid-area:refresh;display:flex;flex-direction:column;align-items:flex-end;
+ justify-self:end;gap:4px;width:auto;max-width:180px;margin:0!important;
+}
+.brand-header .refresh{min-height:42px;padding:9px 14px;border-radius:12px;font-size:.8rem}
+.brand-header .refresh-help{max-width:180px;text-align:right;font-size:.63rem;line-height:1.3}
+.brand-header .presence-wrap{
+ grid-area:presence;display:flex!important;align-items:center;justify-content:center;
+ flex-wrap:wrap;gap:12px;width:100%;max-width:none;min-width:0;
+ padding:10px 12px;border:1px solid rgba(57,244,119,.25);border-radius:14px;
+ background:linear-gradient(100deg,rgba(24,120,62,.13),rgba(15,70,40,.06));
+ color:#c9fbd5;white-space:normal;animation:none;text-shadow:none;
+}
+.presence-live-label{display:inline-flex;align-items:center;gap:7px;color:#8bffad;font-size:.68rem;font-weight:850;letter-spacing:.09em}
+.presence-dot{width:8px;height:8px;flex:0 0 8px}
+#presence-live-text{display:inline-flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:9px;font-size:.78rem}
+.presence-count{display:inline-flex;align-items:center;gap:5px;color:#e7f4eb;font-weight:650}
+.presence-count b{display:inline-grid;place-items:center;min-width:25px;height:25px;padding:0 6px;border-radius:8px;background:rgba(57,244,119,.13);color:#76ff9a;font-size:.82rem;font-variant-numeric:tabular-nums}
+.presence-separator{color:#5d8068}
+.brand-header>span{display:none!important}
+/* Titres et textes : hiérarchie visuelle constante */
+main section{min-width:0}
+main section>h3:first-child{margin:4px 0 8px;font-size:1.22rem;line-height:1.3;color:#f5f7fa}
+main section>.lead:first-child{margin:0 0 20px;padding:0 0 15px;border-bottom:1px solid rgba(90,150,175,.18);color:#b8c6d4;font-size:.9rem;line-height:1.65}
+main section .lead{max-width:68ch}
+main section h3:not(:first-child){margin:22px 0 10px;padding-bottom:7px;border-bottom:1px solid rgba(90,150,175,.17);font-size:1.05rem;line-height:1.35}
+.admin-rubric>summary{line-height:1.4;font-weight:750}
+.spitta-publish-card h3{border:0!important;padding:0!important;margin:0 0 8px!important;font-size:1.25rem!important}
+.spitta-publish-help{font-size:.91rem;line-height:1.6;color:#c0ccd7}
+@media(max-width:420px){
+ .brand-header{column-gap:8px!important;row-gap:10px!important;padding-bottom:13px}
+ .brand-header .brand-logo{width:min(100%,190px)!important;height:42px!important;max-height:42px!important}
+ .brand-header .refresh-wrap{max-width:145px}
+ .brand-header .refresh-help{max-width:145px;font-size:.59rem}
+ .brand-header .presence-wrap{gap:8px;padding:9px 7px}
+ #presence-live-text{gap:6px;font-size:.7rem}
+ .presence-count{gap:4px}
+ .presence-count b{min-width:23px;height:23px}
+ main section>.lead:first-child{font-size:.86rem;line-height:1.58;margin-bottom:16px}
+}
+@media(min-width:600px){
+ .brand-header{margin-bottom:26px!important}
+ .brand-header .brand-logo{width:260px!important;height:58px!important;max-height:58px!important}
+ .brand-header .presence-wrap{justify-content:flex-start;padding:11px 16px}
+}
+
 </style>
 </head>
 <body>
@@ -747,7 +810,7 @@ input[type=file].inp{height:auto;min-height:50px;padding:10px}
 </div>
 
 <main>
-  <header class="brand-header"><img class="brand-logo" src="assets/radarpay-logo.svg" alt="Radar"><div class="presence-wrap" aria-live="polite"><i class="presence-dot" aria-hidden="true"></i><span id="presence-live-text">0 CALLER actifs · 0 SPITTA actifs</span></div><div class="refresh-wrap"><button class="refresh" id="refresh">↻ Actualiser</button><small class="refresh-help">Si ça bug, ferme cette page puis rouvre RADAR PAYMENT pour actualiser.</small></div><span>en direct</span></header>
+  <header class="brand-header"><img class="brand-logo" src="assets/radarpay-header.svg" alt="RADAR PAYMENT"><div class="refresh-wrap"><button class="refresh" id="refresh">↻ Actualiser</button><small class="refresh-help">En cas de bug, ferme puis rouvre l’application.</small></div><div class="presence-wrap" aria-live="polite"><span class="presence-live-label"><i class="presence-dot" aria-hidden="true"></i> EN LIGNE</span><span id="presence-live-text"><span class="presence-count"><b>0</b> CALLER</span><span class="presence-separator">·</span><span class="presence-count"><b>0</b> SPITTA</span></span></div></header>
 
   <div class="tabs" id="tabs">
     <div class="pill"></div>
@@ -1925,7 +1988,7 @@ function renderPresence(counts){
   counts=counts||{};
   var caller=Math.max(0,Number(counts.caller)||0),spitta=Math.max(0,Number(counts.spitta)||0);
   var line=$("presence-live-text");
-  if(line)line.textContent=caller+" CALLER actifs · "+spitta+" SPITTA actifs";
+  if(line)line.innerHTML='<span class="presence-count"><b>'+caller+'</b> CALLER</span><span class="presence-separator">·</span><span class="presence-count"><b>'+spitta+'</b> SPITTA</span>';
 }
 var PRESENCE_TIMER=null;
 function refreshPresence(){
