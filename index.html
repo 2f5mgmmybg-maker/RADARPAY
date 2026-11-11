@@ -653,7 +653,7 @@ a{color:#7defff}
           <button class="btn s" id="digital-add" type="button">＋ Publier le TARGET NUMÉRIQUE</button>
           <p class="lead" id="digital-admin-message" aria-live="polite"></p>
         </div>
-        <div id="digital-admin-list"></div>
+        <div id="digital-admin-list"></div><details class="admin-rubric" open><summary>🛒 Commandes et paiements numériques</summary><p class="lead">Envoie les instructions crypto, vérifie le transfert, confirme ou refuse le paiement, puis envoie la photo après confirmation.</p><div id="digital-orders"></div></details>
       </details>
       <details class="admin-rubric">
         <summary>💳 Paiements LINK</summary>
@@ -680,8 +680,8 @@ a{color:#7defff}
     <div class="grid" id="grid"></div>
   </section>
   <section id="g">
-    <p class="lead">Catalogue des TARGET NUMÉRIQUE publiées exclusivement par l’administration. Les paiements en cryptomonnaies seront activés après la configuration sécurisée de NOWPayments. N’envoie aucun crypto tant que le paiement n’est pas activé dans l’application.</p>
-    <div id="digital-catalogue" class="digital-catalogue"><p class="lead">Chargement du catalogue…</p></div>
+    <p class="lead">Choisis un TARGET NUMÉRIQUE disponible et appuie sur Acheter. L’administration t’enverra les instructions de paiement crypto. Après ton transfert, déclare-le dans l’application. La photo est envoyée uniquement après vérification et confirmation du paiement par l’administration. Le paiement automatique NOWPayments sera activé après configuration.</p>
+    <div id="digital-catalogue" class="digital-catalogue"><p class="lead">Chargement du catalogue…</p></div><details class="admin-rubric" open><summary>🧾 Mes commandes numériques</summary><div id="digital-my-orders"></div></details>
   </section>
   <section id="d"><p class="lead">Tes discussions en tant que CALLER. Les déclarations de paiement et les raisons de non-paiement sont suivies dans cet espace.</p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
@@ -1551,8 +1551,11 @@ $("refresh").onclick=function(){
 };
 $("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
 
-/* TARGET NUMÉRIQUE — catalogue réservé à l’Admin, consultation CALLER */
+/* TARGET NUMÉRIQUE — achats CALLER, validation ADMIN */
 function digitalNode(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
+function digitalStatus(st){
+  return ({awaiting_instructions:"En attente des instructions de paiement",awaiting_payment:"En attente du paiement",payment_reported:"Paiement déclaré — à vérifier",paid:"Paiement confirmé — photo à envoyer",delivered:"Photo envoyée",cancelled:"Annulée"})[st]||st;
+}
 function loadDigitalCatalogue(){
   if(USER_ROLE!=="lanceur")return Promise.resolve();
   var host=$("digital-catalogue");if(!host)return Promise.resolve();
@@ -1565,34 +1568,110 @@ function loadDigitalCatalogue(){
       card.appendChild(digitalNode("b","",item.title||"TARGET NUMÉRIQUE"));
       if(item.description)card.appendChild(digitalNode("p","lead",item.description));
       card.appendChild(digitalNode("div","digital-price","Prix : "+(item.price||"À confirmer")));
-      var note=digitalNode("p","lead","Paiement en cryptomonnaies bientôt disponible. N’effectue aucun transfert pour le moment.");
-      card.appendChild(note);
-      var buy=digitalNode("button","btn s","Paiement bientôt disponible");buy.type="button";buy.disabled=true;buy.setAttribute("aria-disabled","true");card.appendChild(buy);
-      host.appendChild(card);
+      var buy=digitalNode("button","btn s","Acheter ce TARGET");buy.type="button";
+      buy.addEventListener("click",function(){
+        if(!window.confirm("Créer une commande pour « "+item.title+" » au prix de "+item.price+" ?"))return;
+        buy.disabled=true;buy.textContent="Création de la commande…";
+        call("/api/digital/order",{id:item.id}).then(function(r){
+          window.alert(r.existing?"Tu as déjà une commande en cours pour ce TARGET.":"Commande créée. L'administration va t'envoyer les instructions de paiement crypto.");
+          return loadDigitalMyOrders();
+        }).catch(function(e){window.alert(e.message||"Commande impossible.");}).finally(function(){buy.disabled=false;buy.textContent="Acheter ce TARGET"});
+      });
+      card.appendChild(buy);host.appendChild(card);
     });
   }).catch(function(e){host.textContent=e.message||"Impossible de charger les TARGET NUMÉRIQUE."});
 }
+function loadDigitalMyOrders(){
+  if(USER_ROLE!=="lanceur")return Promise.resolve();
+  var host=$("digital-my-orders");if(!host)return Promise.resolve();
+  return call("/api/digital/my-orders",{}).then(function(r){
+    host.innerHTML="";
+    if(!r.orders||!r.orders.length){host.appendChild(digitalNode("p","lead","Aucune commande pour le moment."));return}
+    r.orders.forEach(function(order){
+      var card=digitalNode("article","admin-publication");
+      card.appendChild(digitalNode("b","",order.title+" — "+order.price));
+      card.appendChild(digitalNode("p","lead","Statut : "+digitalStatus(order.status)));
+      if(order.payment_instructions)card.appendChild(digitalNode("p","lead", "Instructions : "+order.payment_instructions));
+      if(order.status==="awaiting_payment"){
+        var paid=digitalNode("button","btn s","J’ai effectué le paiement");paid.type="button";
+        paid.addEventListener("click",function(){
+          if(!window.confirm("As-tu réellement envoyé le montant exact sur le réseau et l'adresse indiqués ?"))return;
+          paid.disabled=true;
+          call("/api/digital/paid",{id:order.id}).then(loadDigitalMyOrders).catch(function(e){window.alert(e.message||"Déclaration impossible.");paid.disabled=false});
+        });
+        card.appendChild(paid);
+      }
+      host.appendChild(card);
+    });
+  }).catch(function(e){host.textContent=e.message||"Impossible de charger tes commandes."});
+}
 function loadDigitalAdmin(){
   if(!ADMIN)return Promise.resolve();
-  return call("/api/digital/admin",{}).then(function(r){
-    var host=$("digital-admin-list");if(!host)return;
-    host.innerHTML="";
-    if(!r.items||!r.items.length){host.appendChild(digitalNode("p","lead","Aucun TARGET NUMÉRIQUE publié."));return}
-    r.items.forEach(function(item){
-      var card=digitalNode("article","admin-publication");
-      card.appendChild(digitalNode("b","",item.title));
-      if(item.description)card.appendChild(digitalNode("p","lead",item.description));
-      card.appendChild(digitalNode("div","digital-price","Prix : "+item.price));
-      var remove=digitalNode("button","btn s spitta-delete","Supprimer");remove.type="button";
-      remove.addEventListener("click",function(){
-        if(!window.confirm("Supprimer ce TARGET NUMÉRIQUE du catalogue ?"))return;
-        remove.disabled=true;
-        call("/api/digital/delete",{id:item.id}).then(loadDigitalAdmin).catch(function(e){
-          var msg=$("digital-admin-message");if(msg)msg.textContent=e.message||"Suppression impossible.";
-          remove.disabled=false;
+  return Promise.all([call("/api/digital/admin",{}),call("/api/digital/orders",{})]).then(function(results){
+    var r=results[0],orders=results[1].orders||[],host=$("digital-admin-list");
+    if(host){
+      host.innerHTML="";
+      if(!r.items||!r.items.length)host.appendChild(digitalNode("p","lead","Aucun TARGET NUMÉRIQUE publié."));
+      (r.items||[]).forEach(function(item){
+        var card=digitalNode("article","admin-publication");
+        card.appendChild(digitalNode("b","",item.title));
+        if(item.description)card.appendChild(digitalNode("p","lead",item.description));
+        card.appendChild(digitalNode("div","digital-price","Prix : "+item.price));
+        var remove=digitalNode("button","btn s spitta-delete","Supprimer");remove.type="button";
+        remove.addEventListener("click",function(){
+          if(!window.confirm("Supprimer ce TARGET NUMÉRIQUE du catalogue ?"))return;
+          remove.disabled=true;
+          call("/api/digital/delete",{id:item.id}).then(loadDigitalAdmin).catch(function(e){
+            var msg=$("digital-admin-message");if(msg)msg.textContent=e.message||"Suppression impossible.";
+            remove.disabled=false;
+          });
         });
+        card.appendChild(remove);host.appendChild(card);
       });
-      card.appendChild(remove);host.appendChild(card);
+    }
+    var oh=$("digital-orders");if(!oh)return;
+    oh.innerHTML="";
+    if(!orders.length){oh.appendChild(digitalNode("p","lead","Aucune commande numérique."));return}
+    orders.forEach(function(order){
+      var card=digitalNode("article","admin-publication");
+      card.appendChild(digitalNode("b","",order.title+" — "+order.price));
+      card.appendChild(digitalNode("p","lead","CALLER : "+order.caller_name+" · ID Telegram : "+order.caller_id));
+      card.appendChild(digitalNode("p","lead","Commande : "+order.id+" · "+digitalStatus(order.status)));
+      if(order.status==="awaiting_instructions"||order.status==="awaiting_payment"){
+        var instructions=document.createElement("textarea");instructions.className="inp";instructions.rows=3;instructions.maxLength=3000;instructions.placeholder="Adresse du wallet, réseau, montant exact et éventuel mémo";
+        instructions.value=order.payment_instructions||"";
+        var send=digitalNode("button","btn s","Envoyer / mettre à jour les instructions crypto");send.type="button";
+        send.addEventListener("click",function(){
+          send.disabled=true;
+          call("/api/digital/instructions",{id:order.id,instructions:instructions.value}).then(loadDigitalAdmin).catch(function(e){window.alert(e.message||"Envoi impossible.");send.disabled=false});
+        });
+        card.appendChild(instructions);card.appendChild(send);
+      }
+      if(order.status==="payment_reported"){
+        var yes=digitalNode("button","btn s","Paiement reçu — confirmer");yes.type="button";
+        yes.addEventListener("click",function(){
+          if(!window.confirm("As-tu vérifié la transaction sur la blockchain et confirmé le montant, le réseau et l'adresse ?"))return;
+          yes.disabled=true;
+          call("/api/digital/order-status",{id:order.id,action:"received"}).then(loadDigitalAdmin).catch(function(e){window.alert(e.message||"Validation impossible.");yes.disabled=false});
+        });
+        var no=digitalNode("button","btn s spitta-delete","Paiement non reçu — recommencer");no.type="button";
+        no.addEventListener("click",function(){no.disabled=true;call("/api/digital/order-status",{id:order.id,action:"retry"}).then(loadDigitalAdmin).catch(function(e){window.alert(e.message||"Action impossible.");no.disabled=false})});
+        card.appendChild(yes);card.appendChild(no);
+      }
+      if(order.status==="paid"){
+        var file=document.createElement("input");file.type="file";file.accept="image/jpeg,image/png,image/webp";file.className="inp";
+        var sendPhoto=digitalNode("button","btn s","Envoyer la photo au CALLER");sendPhoto.type="button";
+        sendPhoto.addEventListener("click",function(){
+          var selected=file.files&&file.files[0];if(!selected){window.alert("Choisis la photo du TARGET.");return}
+          if(selected.size>4*1024*1024){window.alert("Photo trop volumineuse : maximum 4 Mo.");return}
+          var reader=new FileReader();sendPhoto.disabled=true;sendPhoto.textContent="Envoi de la photo…";
+          reader.onload=function(){call("/api/digital/deliver",{id:order.id,image:reader.result}).then(loadDigitalAdmin).catch(function(e){window.alert(e.message||"Envoi impossible.");sendPhoto.disabled=false;sendPhoto.textContent="Envoyer la photo au CALLER"})};
+          reader.onerror=function(){window.alert("Lecture de la photo impossible.");sendPhoto.disabled=false;sendPhoto.textContent="Envoyer la photo au CALLER"};
+          reader.readAsDataURL(selected);
+        });
+        card.appendChild(file);card.appendChild(sendPhoto);
+      }
+      oh.appendChild(card);
     });
   }).catch(function(e){var msg=$("digital-admin-message");if(msg)msg.textContent=e.message||"Chargement admin impossible."});
 }
@@ -1611,7 +1690,7 @@ tabs.addEventListener("click",function(e){
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c"){adminOpen();loadAdminPaymentReports();}
-  if(b.dataset.t==="g"&&USER_ROLE==="lanceur")loadDigitalCatalogue();
+  if(b.dataset.t==="g"&&USER_ROLE==="lanceur"){loadDigitalCatalogue();loadDigitalMyOrders();}
   if(["d","e","f"].indexOf(b.dataset.t)>-1||(USER_ROLE==="spitta"&&b.dataset.t==="b"))loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
