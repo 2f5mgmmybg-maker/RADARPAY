@@ -1010,6 +1010,7 @@ function call(path,body){
   body=body||{};body.initData=INIT;body.sessionToken=SESSION_TOKEN;
   var controller=(typeof AbortController!=="undefined")?new AbortController():null;
   var timer=controller?setTimeout(function(){controller.abort()},90000):null;
+  var latencyTimer=setTimeout(function(){showRecoveryNotice("L’application est ralentie. Si elle reste bloquée, ferme cette page puis rouvre RADAR PAYMENT pour actualiser.")},8000);
   return fetch(API.replace(/\/$/,"")+path,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -1056,7 +1057,7 @@ function call(path,body){
     else if(e && /Erreur HTTP 5\d\d|Réponse API invalide/i.test(e.message||"")) friendly="Le serveur a rencontré une erreur temporaire.";
     if(friendly){showRecoveryNotice(friendly);throw new Error(friendly+" Suis les étapes affichées en bas de l’écran.");}
     throw e;
-  }).finally(function(){if(timer)clearTimeout(timer)});
+  }).finally(function(){if(timer)clearTimeout(timer);if(latencyTimer)clearTimeout(latencyTimer)});
 }
 function showRecoveryNotice(reason){
   var panel=document.getElementById("radar-recovery"),label=document.getElementById("radar-recovery-reason");
