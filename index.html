@@ -511,6 +511,7 @@ a{color:#7defff}
 @keyframes presenceBlink{0%,100%{opacity:1;box-shadow:0 0 9px rgba(57,244,119,.95);transform:scale(1)}50%{opacity:.3;box-shadow:0 0 2px rgba(57,244,119,.2);transform:scale(.78)}}
 @keyframes presenceGlow{0%,100%{border-color:rgba(57,244,119,.22);box-shadow:0 0 8px rgba(57,244,119,.05)}50%{border-color:rgba(57,244,119,.62);box-shadow:0 0 17px rgba(57,244,119,.16)}}
 @media(max-width:420px){.brand-header{gap:7px}.presence-wrap{padding:6px 8px;gap:6px;font-size:.59rem}.brand-header .refresh{padding:7px 9px}}
+ .digital-catalogue{display:grid;gap:12px}.digital-price{font-weight:800;font-size:1.05rem;margin:8px 0;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -605,6 +606,7 @@ a{color:#7defff}
     <button data-t="b">TARGET DISPONIBLE</button>
     <button data-t="e" id="spitta-tab">TARGET DISPONIBLE</button>
     <button data-t="f">Messages</button>
+    <button data-t="g" id="digital-tab" hidden>TARGET NUMÉRIQUE</button>
 
     <button data-t="c" id="admin-tab" hidden>Admin</button>
   </div>
@@ -641,6 +643,18 @@ a{color:#7defff}
         <p class="lead">Les conversations peuvent être consultées par l’administrateur pour la sécurité et le suivi.</p>
         <div id="adminchatitems"></div>
       </details>
+      <details class="admin-rubric" open>
+        <summary>🪙 Gestion TARGET NUMÉRIQUE</summary>
+        <p class="lead">Seul le propriétaire peut publier ou retirer les TARGET NUMÉRIQUE. Le paiement crypto sera activé après la configuration NOWPayments.</p>
+        <div style="display:grid;gap:9px;margin:12px 0">
+          <input class="inp" id="digital-title" maxlength="90" placeholder="Nom du TARGET NUMÉRIQUE">
+          <textarea class="inp" id="digital-description" maxlength="500" rows="3" placeholder="Description (facultatif)"></textarea>
+          <input class="inp" id="digital-price" maxlength="60" placeholder="Prix (ex. 150 € ou 0,002 BTC)">
+          <button class="btn s" id="digital-add" type="button">＋ Publier le TARGET NUMÉRIQUE</button>
+          <p class="lead" id="digital-admin-message" aria-live="polite"></p>
+        </div>
+        <div id="digital-admin-list"></div>
+      </details>
       <details class="admin-rubric">
         <summary>💳 Paiements LINK</summary>
         <p class="lead">Déclarations de paiement, justificatifs, retards et raisons de non-paiement. Choisis si la raison est valable ou non valable.</p>
@@ -664,6 +678,10 @@ a{color:#7defff}
     <div class="countryfilters" id="countryfilters"><button class="on" data-country="Tous">Tous</button><button data-country="Belgique">Belgique</button><button data-country="Suisse">Suisse</button><button data-country="Luxembourg">Luxembourg</button><button data-country="France">France</button><button data-country="À classer">À classer</button></div>
     <div class="adm" id="adm"><button class="btn s" id="add">Ajouter une photo</button><button class="btn s" id="save">Enregistrer</button><input type="file" id="file" accept="image/*" hidden></div>
     <div class="grid" id="grid"></div>
+  </section>
+  <section id="g">
+    <p class="lead">Catalogue des TARGET NUMÉRIQUE publiées exclusivement par l’administration. Les paiements en cryptomonnaies seront activés après la configuration sécurisée de NOWPayments. N’envoie aucun crypto tant que le paiement n’est pas activé dans l’application.</p>
+    <div id="digital-catalogue" class="digital-catalogue"><p class="lead">Chargement du catalogue…</p></div>
   </section>
   <section id="d"><p class="lead">Tes discussions en tant que CALLER. Les déclarations de paiement et les raisons de non-paiement sont suivies dans cet espace.</p><button class="btn s" id="openadminchat">Ouvrir le chat avec l’admin</button><div id="userchatitems"></div></section>
   <section id="e">
@@ -1014,7 +1032,7 @@ function showMe(r,fromCode){
   if(!ok){$("msg").textContent=r.error||"Accès administrateur réservé au propriétaire.";return}
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
-  loadChatList();loadAdminChats();loadRegistrations();loadMonitor();
+  loadChatList();loadAdminChats();loadRegistrations();loadMonitor();loadDigitalAdmin();
   var publications=PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1});
   if(!publications.length){var empty=document.createElement("p");empty.className="lead";empty.textContent="Aucune publication enregistrée pour le moment.";m.appendChild(empty);return}
   publications.forEach(function(p){
@@ -1532,11 +1550,68 @@ $("refresh").onclick=function(){
   Promise.all(tasks).then(function(){var msg=$("adminrefreshmsg");if(ADMIN&&msg)msg.textContent="Données actualisées.";}).catch(function(e){var msg=$("adminrefreshmsg");if(msg)msg.textContent=e.message||"Actualisation impossible.";}).finally(function(){button.disabled=false;button.textContent="↻ Actualiser"});
 };
 $("countryfilters").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;COUNTRY=b.dataset.country;$("countryfilters").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});render()});
+
+/* TARGET NUMÉRIQUE — catalogue réservé à l’Admin, consultation CALLER */
+function digitalNode(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
+function loadDigitalCatalogue(){
+  if(USER_ROLE!=="lanceur")return Promise.resolve();
+  var host=$("digital-catalogue");if(!host)return Promise.resolve();
+  host.textContent="Chargement du catalogue…";
+  return call("/api/digital/list",{}).then(function(r){
+    host.innerHTML="";
+    if(!r.items||!r.items.length){host.appendChild(digitalNode("p","lead","Aucun TARGET NUMÉRIQUE disponible pour le moment."));return}
+    r.items.forEach(function(item){
+      var card=digitalNode("article","admin-publication");
+      card.appendChild(digitalNode("b","",item.title||"TARGET NUMÉRIQUE"));
+      if(item.description)card.appendChild(digitalNode("p","lead",item.description));
+      card.appendChild(digitalNode("div","digital-price","Prix : "+(item.price||"À confirmer")));
+      var note=digitalNode("p","lead","Paiement en cryptomonnaies bientôt disponible. N’effectue aucun transfert pour le moment.");
+      card.appendChild(note);
+      var buy=digitalNode("button","btn s","Paiement bientôt disponible");buy.type="button";buy.disabled=true;buy.setAttribute("aria-disabled","true");card.appendChild(buy);
+      host.appendChild(card);
+    });
+  }).catch(function(e){host.textContent=e.message||"Impossible de charger les TARGET NUMÉRIQUE."});
+}
+function loadDigitalAdmin(){
+  if(!ADMIN)return Promise.resolve();
+  return call("/api/digital/admin",{}).then(function(r){
+    var host=$("digital-admin-list");if(!host)return;
+    host.innerHTML="";
+    if(!r.items||!r.items.length){host.appendChild(digitalNode("p","lead","Aucun TARGET NUMÉRIQUE publié."));return}
+    r.items.forEach(function(item){
+      var card=digitalNode("article","admin-publication");
+      card.appendChild(digitalNode("b","",item.title));
+      if(item.description)card.appendChild(digitalNode("p","lead",item.description));
+      card.appendChild(digitalNode("div","digital-price","Prix : "+item.price));
+      var remove=digitalNode("button","btn s spitta-delete","Supprimer");remove.type="button";
+      remove.addEventListener("click",function(){
+        if(!window.confirm("Supprimer ce TARGET NUMÉRIQUE du catalogue ?"))return;
+        remove.disabled=true;
+        call("/api/digital/delete",{id:item.id}).then(loadDigitalAdmin).catch(function(e){
+          var msg=$("digital-admin-message");if(msg)msg.textContent=e.message||"Suppression impossible.";
+          remove.disabled=false;
+        });
+      });
+      card.appendChild(remove);host.appendChild(card);
+    });
+  }).catch(function(e){var msg=$("digital-admin-message");if(msg)msg.textContent=e.message||"Chargement admin impossible."});
+}
+if($("digital-add"))$("digital-add").addEventListener("click",function(){
+  var title=$("digital-title").value.trim(),description=$("digital-description").value.trim(),price=$("digital-price").value.trim(),msg=$("digital-admin-message"),btn=$("digital-add");
+  if(!title||!price){msg.textContent="Indique au minimum le nom et le prix.";return}
+  btn.disabled=true;msg.textContent="Publication…";
+  call("/api/digital/create",{title:title,description:description,price:price}).then(function(){
+    $("digital-title").value="";$("digital-description").value="";$("digital-price").value="";
+    msg.textContent="TARGET NUMÉRIQUE publié.";return loadDigitalAdmin();
+  }).catch(function(e){msg.textContent=e.message||"Publication impossible."}).finally(function(){btn.disabled=false});
+});
+
 tabs.addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||b.hidden)return;
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c"){adminOpen();loadAdminPaymentReports();}
+  if(b.dataset.t==="g"&&USER_ROLE==="lanceur")loadDigitalCatalogue();
   if(["d","e","f"].indexOf(b.dataset.t)>-1||(USER_ROLE==="spitta"&&b.dataset.t==="b"))loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
@@ -1556,7 +1631,7 @@ function moveSectionContents(sourceId,targetId,headingText,prepend){
 function simplifyWorkspaceTabs(){
   if(USER_ROLE==="lanceur"){
     moveSectionContents("d","f","Mes actions et paiements",true);
-    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"CHAT EN DIRECT AVEC SPITTA"};
+    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"CHAT EN DIRECT AVEC SPITTA","g":"TARGET NUMÉRIQUE"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
     moveSectionContents("e","b","Espace SPITTA",false);
@@ -1610,7 +1685,7 @@ function enterApp(response){
   }
   if(USER_ROLE==="spitta")loadSpittaItems();
   arrangeTabs();loadChatList();
-  if(USER_ROLE==="lanceur")setTimeout(resumePaymentFollowup,700);
+  if(USER_ROLE==="lanceur")setTimeout(resumePaymentFollowup,700);if(USER_ROLE==="lanceur")loadDigitalCatalogue();
   if(USER_ROLE==="spitta"){
     $("tabs").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.t==="b");});
     document.querySelectorAll("main section").forEach(function(x){x.classList.toggle("on",x.id==="b");});
