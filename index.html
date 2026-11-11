@@ -1792,7 +1792,12 @@ $("countryfilters").addEventListener("click",function(e){var b=e.target.closest(
 /* TARGET NUMÉRIQUE — achats CALLER, validation ADMIN */
 function digitalNode(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
 function digitalStatus(st){
-  return ({awaiting_instructions:"En attente des instructions de paiement",awaiting_payment:"En attente du paiement",payment_reported:"Paiement déclaré — à vérifier",paid:"Paiement confirmé — photo à envoyer",delivering:"Envoi de la photo en cours…",delivered:"Photo envoyée",cancelled:"Annulée"})[st]||st;
+  return ({awaiting_instructions:"Préparation du paiement crypto",awaiting_payment:"En attente du paiement crypto",payment_reported:"Paiement déclaré — à vérifier",paid:"Paiement confirmé — photo à envoyer",delivering:"Envoi de la photo en cours…",delivered:"Photo envoyée",cancelled:"Annulée"})[st]||st;
+}
+function openDigitalInvoice(url){
+  if(!/^https:\/\//i.test(String(url||""))){window.alert("Lien de paiement invalide.");return}
+  if(tgw&&typeof tgw.openLink==="function")tgw.openLink(url);
+  else window.open(url,"_blank","noopener");
 }
 function loadDigitalCatalogue(){
   if(USER_ROLE!=="lanceur"&&!ADMIN)return Promise.resolve();
@@ -1824,7 +1829,7 @@ function loadDigitalCatalogue(){
             if(!window.confirm("Créer une commande pour « "+item.title+" » au prix de "+item.price+" ?"))return;
             buy.disabled=true;buy.textContent="Création de la commande…";
             call("/api/digital/order",{id:item.id}).then(function(r){
-              window.alert(r.existing?"Tu as déjà une commande en cours pour ce TARGET.":"Commande créée. L'administration va t'envoyer les instructions de paiement crypto.");
+              if(r.invoice_url)openDigitalInvoice(r.invoice_url);
               return loadDigitalMyOrders();
             }).catch(function(e){window.alert(e.message||"Commande impossible.");}).finally(function(){buy.disabled=false;buy.textContent="Acheter ce TARGET"});
           });
@@ -1846,8 +1851,20 @@ function loadDigitalMyOrders(){
       var card=digitalNode("article","admin-publication");
       card.appendChild(digitalNode("b","",order.title+" — "+order.price));
       card.appendChild(digitalNode("p","lead","Statut : "+digitalStatus(order.status)));
-      if(order.payment_instructions)card.appendChild(digitalNode("p","lead", "Instructions : "+order.payment_instructions));
-      if(order.status==="awaiting_payment"){
+      if(order.payment_provider!=="nowpayments"&&order.payment_instructions)card.appendChild(digitalNode("p","lead", "Instructions : "+order.payment_instructions));
+      if(order.status==="awaiting_payment"&&order.invoice_url){
+        var pay=digitalNode("button","btn s","Payer maintenant en cryptomonnaie");pay.type="button";
+        pay.addEventListener("click",function(){openDigitalInvoice(order.invoice_url)});
+        card.appendChild(pay);
+        if(["failed","expired","refunded"].indexOf(order.payment_status)>=0){
+          var retry=digitalNode("button","btn s spitta-delete","Créer un nouveau lien de paiement");retry.type="button";
+          retry.addEventListener("click",function(){
+            retry.disabled=true;retry.textContent="Création du lien…";
+            call("/api/digital/retry-payment",{id:order.id}).then(function(r){if(r.invoice_url)openDigitalInvoice(r.invoice_url);return loadDigitalMyOrders()}).catch(function(e){window.alert(e.message||"Nouveau lien impossible.");retry.disabled=false;retry.textContent="Créer un nouveau lien de paiement"});
+          });
+          card.appendChild(retry);
+        }
+      }else if(order.status==="awaiting_payment"){
         var paid=digitalNode("button","btn s","J’ai effectué le paiement");paid.type="button";
         paid.addEventListener("click",function(){
           if(!window.confirm("As-tu réellement envoyé le montant exact sur le réseau et l'adresse indiqués ?"))return;
@@ -1893,7 +1910,8 @@ function loadDigitalAdmin(){
       card.appendChild(digitalNode("b","",order.title+" — "+order.price));
       card.appendChild(digitalNode("p","lead","CALLER : "+order.caller_name+" · ID Telegram : "+order.caller_id));
       card.appendChild(digitalNode("p","lead","Commande : "+order.id+" · "+digitalStatus(order.status)));
-      if(order.status==="awaiting_instructions"||order.status==="awaiting_payment"){
+      if(order.payment_provider==="nowpayments")card.appendChild(digitalNode("p","lead","NOWPayments : "+(order.payment_status||"en attente")+" · Facture : "+(order.nowpayments_invoice_id||"créée")));
+      if((order.status==="awaiting_instructions"||order.status==="awaiting_payment")&&order.payment_provider!=="nowpayments"){
         var instructions=document.createElement("textarea");instructions.className="inp";instructions.rows=3;instructions.maxLength=3000;instructions.placeholder="Adresse du wallet, réseau, montant exact et éventuel mémo";
         instructions.value=order.payment_instructions||"";
         var send=digitalNode("button","btn s","Envoyer / mettre à jour les instructions crypto");send.type="button";
