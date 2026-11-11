@@ -25,6 +25,13 @@ VARIABLES D'ENVIRONNEMENT
 - SITE_URL : URL HTTPS publique de la mini-app GitHub Pages.
 - API_BASE_URL : facultatif; URL HTTPS publique du Web Service Render, sans slash final.
   Si vide, le code utilise RENDER_EXTERNAL_URL fourni par Render.
+- NOWPAYMENTS_API_KEY : clé API privée du compte NOWPayments (secret).
+- NOWPAYMENTS_IPN_SECRET : secret IPN configuré dans NOWPayments (secret).
+- URL IPN à enregistrer dans NOWPayments : https://radarpay-90js.onrender.com/nowpayments/ipn
+  (ou API_BASE_URL + /nowpayments/ipn si l'URL Render change).
+- Le catalogue TARGET NUMÉRIQUE facture 25 EUR; le CALLER choisit la cryptomonnaie
+  sur la page de paiement hébergée NOWPayments. Seul un IPN signé avec le statut
+  payment_status=finished passe automatiquement la commande à paid.
 - DATA_ENCRYPTION_KEY : recommandé; secret aléatoire stable utilisé pour chiffrer
   radar_private.enc, les captures privées et les vocaux.
   À générer une seule fois avec :
