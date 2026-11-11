@@ -1014,10 +1014,14 @@ def apply_nowpayments_ipn(payload):
         order = next((x for x in state.setdefault("digital_orders", []) if str(x.get("id")) == order_id), None)
         if not order:
             raise ValueError("Commande inconnue.")
-        expected_invoice = str(order.get("nowpayments_invoice_id", ""))
-        received_invoice = str(payload.get("invoice_id", ""))
-        if expected_invoice and received_invoice and expected_invoice != received_invoice:
-            raise ValueError("Facture différente de celle de la commande.")
+        expected_invoice = str(order.get("nowpayments_invoice_id", "")).strip()
+        received_invoice = str(payload.get("invoice_id", "")).strip()
+        if order.get("payment_provider") != "nowpayments":
+            raise ValueError("Commande non liée à NOWPayments.")
+        # Une IPN doit toujours identifier exactement la facture attendue.
+        # Ne jamais accepter un callback sans invoice_id ou avant l'enregistrement de la facture.
+        if not expected_invoice or not received_invoice or not hmac.compare_digest(expected_invoice, received_invoice):
+            raise ValueError("Identifiant de facture absent ou différent de la commande.")
         if order.get("payment_provider") != "nowpayments":
             raise ValueError("Commande non liée à NOWPayments.")
         if payment_status == "finished":
@@ -1357,6 +1361,14 @@ def api(path, b):
             order = create_order_invoice(order_id, uid)
         except Exception as e:
             print("NOWPayments nouvelle facture:", repr(e))
+            with LOCK:
+                state = private_load()
+                failed_order = next((x for x in state.setdefault("digital_orders", []) if str(x.get("id")) == order_id and str(x.get("caller_id")) == str(uid)), None)
+                if failed_order:
+                    failed_order.pop("invoice_creating_until", None)
+                    failed_order["invoice_error"] = str(e)[:240]
+                    failed_order["updated"] = int(time.time())
+                    private_save()
             return {"error": "Impossible de créer le nouveau lien crypto. Réessaie dans quelques instants."}
         return {"ok": True, "order": order, "invoice_url": order.get("invoice_url")}
 
@@ -1386,6 +1398,8 @@ def api(path, b):
             order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
             if not order or order.get("status") in ("delivered", "cancelled"):
                 return {"error": "Commande introuvable ou terminée."}
+            if order.get("payment_provider") == "nowpayments":
+                return {"error": "Cette commande est réglée par facture NOWPayments. Les instructions manuelles sont désactivées."}
             order["payment_instructions"] = instructions
             order["status"] = "awaiting_payment"
             order["updated"] = int(time.time())
@@ -1402,6 +1416,8 @@ def api(path, b):
             order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id and str(x.get("caller_id")) == str(uid)), None)
             if not order or order.get("status") != "awaiting_payment":
                 return {"error": "Commande non disponible pour une déclaration de paiement."}
+            if order.get("payment_provider") == "nowpayments":
+                return {"error": "Le paiement NOWPayments est confirmé automatiquement. Une déclaration manuelle est désactivée."}
             order["status"] = "payment_reported"
             order["updated"] = int(time.time())
             private_save()
@@ -1421,6 +1437,8 @@ def api(path, b):
             order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
             if not order or order.get("status") != "payment_reported":
                 return {"error": "Commande introuvable ou paiement non déclaré."}
+            if order.get("payment_provider") == "nowpayments":
+                return {"error": "Une commande NOWPayments ne peut être validée que par une IPN signée et vérifiée."}
             order["status"] = "paid" if action == "received" else "awaiting_payment"
             order["updated"] = int(time.time())
             private_save()
