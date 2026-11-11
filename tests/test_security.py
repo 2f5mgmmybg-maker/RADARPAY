@@ -310,5 +310,48 @@ class SecurityTests(unittest.TestCase):
 
 
 
+    def test_owner_admin_access_requires_code_and_server_session(self):
+        now = int(time.time())
+        owner_id = int(os.environ["OWNER_ID"])
+        user = {"id": owner_id, "first_name": "Owner"}
+        data = {
+            "auth_date": str(now),
+            "user": json.dumps(user, separators=(",", ":")),
+        }
+        check = "\n".join(f"{key}={value}" for key, value in sorted(data.items()))
+        secret = hmac.new(b"WebAppData", os.environ["BOT_TOKEN"].encode(), hashlib.sha256).digest()
+        data["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+        init_data = urlencode(data)
+        bot.PRIVATE_CACHE = {"digital_targets": [], "digital_orders": [], "blacklist": {}}
+        bot.STORAGE_READY = True
+        bot.OWNER_ADMIN_SESSIONS.clear()
+        os.environ["ADMIN_ACCESS_CODE"] = "134679"
+
+        with unittest.mock.patch.object(bot, "private_save"):
+            blocked = bot.api("/api/digital/admin", {"initData": init_data})
+            self.assertIn("Session administrateur fermée", blocked.get("error", ""))
+
+            wrong = bot.api("/api/admin/access", {"initData": init_data, "code": "000000"})
+            self.assertIn("Code incorrect", wrong.get("error", ""))
+
+            opened = bot.api("/api/admin/access", {"initData": init_data, "code": "134679"})
+            self.assertTrue(opened.get("session_token"))
+            allowed = bot.api("/api/digital/admin", {
+                "initData": init_data, "sessionToken": opened["session_token"]
+            })
+            self.assertTrue(allowed.get("ok"))
+
+            bot.OWNER_ADMIN_SESSIONS[owner_id]["expires"] = now - 1
+            expired = bot.api("/api/digital/admin", {
+                "initData": init_data, "sessionToken": opened["session_token"]
+            })
+            self.assertIn("Session administrateur fermée", expired.get("error", ""))
+
+        self.assertIn("ADMIN", bot.api("/api/login", {"initData": init_data, "pin": "1234"}).get("error", ""))
+        self.assertIn("ADMIN", bot.api("/api/register", {"initData": init_data, "role": "lanceur"}).get("error", ""))
+        self.assertIn("ADMIN", bot.api("/api/pin/setup", {"initData": init_data, "pin": "1234"}).get("error", ""))
+
+
+
 if __name__ == "__main__":
     unittest.main()
