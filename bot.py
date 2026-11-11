@@ -609,7 +609,8 @@ def rate_allowed(uid, path):
     now = time.time()
     key = (int(uid), str(path))
     limits = {"/api/chat/messages": 35, "/api/chat/list": 20,
-              "/api/adminchat/messages": 35, "/api/adminchat/list": 20}
+              "/api/adminchat/messages": 35, "/api/adminchat/list": 20,
+              "/api/admin/access": 5}
     maximum = limits.get(path, RATE_MAX)
     with RATE_LOCK:
         hits = [t for t in RATE_LIMITS.get(key, []) if now - t < RATE_WINDOW]
@@ -721,6 +722,7 @@ def role(user, code=None):
 
 PIN_ITERATIONS = 310000
 APP_SESSION_SECONDS = 12 * 60 * 60
+OWNER_ADMIN_SESSIONS = {}
 
 def _pin_digest(pin, salt_hex):
     return hashlib.pbkdf2_hmac("sha256", str(pin).encode("utf-8"), bytes.fromhex(salt_hex), PIN_ITERATIONS).hex()
@@ -736,6 +738,23 @@ def _has_valid_app_session(profile, token):
         return False
     supplied = hashlib.sha256(str(token).encode("utf-8")).hexdigest()
     return hmac.compare_digest(str(profile.get("session_hash", "")), supplied)
+
+
+def _new_owner_admin_session():
+    token = secrets.token_urlsafe(32)
+    OWNER_ADMIN_SESSIONS[OWNER] = {
+        "hash": hashlib.sha256(token.encode("utf-8")).hexdigest(),
+        "expires": int(time.time()) + APP_SESSION_SECONDS,
+    }
+    return token
+
+
+def _has_owner_admin_session(token):
+    session = OWNER_ADMIN_SESSIONS.get(OWNER) or {}
+    if not token or int(session.get("expires", 0)) <= int(time.time()):
+        return False
+    supplied = hashlib.sha256(str(token).encode("utf-8")).hexdigest()
+    return hmac.compare_digest(str(session.get("hash", "")), supplied)
 
 
 def owner_of(p):
@@ -1156,7 +1175,7 @@ def api(path, b):
         return {"ok": True, "active_counts": active_counts}
     if path == "/api/register":
         if uid == OWNER:
-            return {"ok": True, "role": "owner"}
+            return {"error": "Utilise le bouton ADMIN et le code administrateur pour accéder à ton espace."}
         if is_blacklisted(uid):
             return {"error": "Ton compte est temporairement blacklisté. Contacte l’administration."}
         chosen = str(b.get("role", ""))
@@ -1219,7 +1238,7 @@ def api(path, b):
         return {"ok": True, "pending": True}
     if path == "/api/login":
         if uid == OWNER:
-            return {"ok": True, "role": "owner"}
+            return {"error": "Utilise le bouton ADMIN et le code administrateur pour accéder à ton espace."}
         pin = str(b.get("pin", ""))
         if not re.fullmatch(r"\d{4}", pin):
             return {"error": "Entre ton code secret à 4 chiffres."}
@@ -1255,7 +1274,7 @@ def api(path, b):
             return {"ok": True, "role": existing_role, "session_token": token}
     if path == "/api/pin/setup":
         if uid == OWNER:
-            return {"ok": True, "role": "owner"}
+            return {"error": "Utilise le bouton ADMIN et le code administrateur pour accéder à ton espace."}
         existing_role = role(user)
         if existing_role not in ("lanceur", "spitta"):
             return {"error": "Ton compte doit être approuvé avant de créer un code secret."}
@@ -1289,10 +1308,15 @@ def api(path, b):
             return {"error": "La variable ADMIN_ACCESS_CODE dans Render doit contenir exactement 6 chiffres, sans espace ni guillemets."}
         if not re.fullmatch(r"\d{6}", supplied_code) or not hmac.compare_digest(supplied_code, configured_code):
             return {"error": "Code incorrect. Vérifie la valeur de ADMIN_ACCESS_CODE dans le service Render qui héberge l’API RADARPAY."}
-        return {"ok": True, "role": "owner"}
+        return {"ok": True, "role": "owner", "session_token": _new_owner_admin_session()}
 
-    # Toutes les routes de l’application exigent une session ouverte par PIN.
-    # Le propriétaire Telegram est reconnu directement par OWNER_ID.
+    # Les routes propriétaire exigent aussi le code ADMIN, vérifié côté serveur.
+    # /api/me reste accessible pour afficher l'écran d'accueil sans ouvrir la session.
+    if uid == OWNER and path not in ("/api/me", "/api/admin/access", "/api/role"):
+        if not _has_owner_admin_session(b.get("sessionToken", "")):
+            return {"error": "Session administrateur fermée. Appuie sur ADMIN et saisis le code administrateur."}
+
+    # Toutes les routes des comptes CALLER/SPITTA exigent une session ouverte par PIN.
     if uid != OWNER and path not in ("/api/me", "/api/register", "/api/login", "/api/pin/setup"):
         state = private_load()
         profile = next((x for x in state.setdefault("registrations", []) if str(x.get("user_id")) == str(uid)), None)
