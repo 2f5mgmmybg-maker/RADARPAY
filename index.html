@@ -1658,7 +1658,7 @@ $("countryfilters").addEventListener("click",function(e){var b=e.target.closest(
 /* TARGET NUMÉRIQUE — achats CALLER, validation ADMIN */
 function digitalNode(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
 function digitalStatus(st){
-  return ({awaiting_instructions:"En attente des instructions de paiement",awaiting_payment:"En attente du paiement",payment_reported:"Paiement déclaré — à vérifier",paid:"Paiement confirmé — photo à envoyer",delivered:"Photo envoyée",cancelled:"Annulée"})[st]||st;
+  return ({awaiting_instructions:"En attente des instructions de paiement",awaiting_payment:"En attente du paiement",payment_reported:"Paiement déclaré — à vérifier",paid:"Paiement confirmé — photo à envoyer",delivering:"Envoi de la photo en cours…",delivered:"Photo envoyée",cancelled:"Annulée"})[st]||st;
 }
 function loadDigitalCatalogue(){
   if(USER_ROLE!=="lanceur"&&!ADMIN)return Promise.resolve();
