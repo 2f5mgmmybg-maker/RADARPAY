@@ -2168,7 +2168,16 @@ $("login-submit").onclick=doLogin;
 $("legacy-pin-submit").onclick=setupLegacyPin;
 if(INIT){
   call("/api/me",{}).then(function(r){
-    if(r.role==="owner"){enterApp(r);return;}
+    if(r.role==="owner"){
+      // Le compte propriétaire est reconnu par Telegram, mais l'espace Admin
+      // reste verrouillé jusqu'à la saisie volontaire du code administrateur.
+      $("show-register").hidden=true;
+      $("show-login").hidden=true;
+      $("back-auth-login").hidden=true;
+      setAuthView("auth-choices");
+      $("role-message").textContent="Compte propriétaire reconnu. Appuie sur ADMIN puis saisis ton code administrateur.";
+      return;
+    }
     if(r.pending){showPending("Ton inscription est en attente de validation par l’administrateur. Une fois validée, utilise Se connecter avec ton code secret.");return;}
     if(r.role){
       $("show-register").hidden=true;
