@@ -251,7 +251,6 @@ class SecurityTests(unittest.TestCase):
 
     def test_nowpayments_orders_cannot_use_manual_payment_confirmation(self):
         import unittest.mock
-        import unittest.mock
         now = int(time.time())
         user_id = 987654321
         session_token = "test-session-token"
@@ -280,7 +279,7 @@ class SecurityTests(unittest.TestCase):
             "auth_date": str(now),
             "user": json.dumps(user, separators=(",", ":")),
         }
-        check = "\\n".join(f"{key}={value}" for key, value in sorted(data.items()))
+        check = "\n".join(f"{key}={value}" for key, value in sorted(data.items()))
         secret = hmac.new(b"WebAppData", os.environ["BOT_TOKEN"].encode(), hashlib.sha256).digest()
         data["hash"] = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
         init_data = urlencode(data)
@@ -294,7 +293,7 @@ class SecurityTests(unittest.TestCase):
                 "auth_date": str(now),
                 "user": json.dumps({"id": int(os.environ["OWNER_ID"]), "first_name": "Owner"}, separators=(",", ":")),
             }
-            owner_check = "\\n".join(f"{key}={value}" for key, value in sorted(owner_data.items()))
+            owner_check = "\n".join(f"{key}={value}" for key, value in sorted(owner_data.items()))
             owner_data["hash"] = hmac.new(secret, owner_check.encode(), hashlib.sha256).hexdigest()
             owner_init = urlencode(owner_data)
             instructions_result = bot.api("/api/digital/instructions", {
