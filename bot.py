@@ -1022,8 +1022,6 @@ def apply_nowpayments_ipn(payload):
         # Ne jamais accepter un callback sans invoice_id ou avant l'enregistrement de la facture.
         if not expected_invoice or not received_invoice or not hmac.compare_digest(expected_invoice, received_invoice):
             raise ValueError("Identifiant de facture absent ou différent de la commande.")
-        if order.get("payment_provider") != "nowpayments":
-            raise ValueError("Commande non liée à NOWPayments.")
         if payment_status == "finished":
             if order.get("status") in ("paid", "delivering", "delivered"):
                 return {"ok": True, "duplicate": True}
