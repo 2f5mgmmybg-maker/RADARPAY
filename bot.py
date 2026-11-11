@@ -535,6 +535,25 @@ def handle(msg):
         send_menu(chat, private)
         return
 
+    # Activation du message de test horaire : seul le propriétaire peut l'activer dans un groupe.
+    if cmd == "testauto" and not private:
+        if not is_owner:
+            return
+        state = private_load()
+        state["hourly_group_test"] = {"chat_id": chat, "enabled": True,
+            "next_send": int(time.time()) + 3600}
+        private_save()
+        say(chat, "✅ Message automatique de test activé. Le premier sera envoyé dans 1 heure, puis toutes les heures. Pour arrêter : /stoptestauto")
+        return
+    if cmd == "stoptestauto" and not private:
+        if not is_owner:
+            return
+        state = private_load()
+        state["hourly_group_test"] = {"enabled": False}
+        private_save()
+        say(chat, "⏹️ Message automatique de test désactivé.")
+        return
+
     if not (is_owner and private):
         return
 
@@ -2842,6 +2861,29 @@ if __name__ == "__main__":
                 print("scheduler demandes:", repr(e))
             time.sleep(2)
     threading.Thread(target=request_scheduler, daemon=True).start()
+    def hourly_group_scheduler():
+        while True:
+            try:
+                with LOCK:
+                    state = private_load()
+                    config = state.get("hourly_group_test") or {}
+                    now = int(time.time())
+                    due = bool(config.get("enabled") and config.get("chat_id")
+                               and int(config.get("next_send", 0)) <= now)
+                    if due:
+                        # Avancer l'échéance avant l'envoi pour éviter les doublons après redémarrage.
+                        config["next_send"] = now + 3600
+                        state["hourly_group_test"] = config
+                        private_save()
+                        target_chat = config["chat_id"]
+                    else:
+                        target_chat = None
+                if target_chat is not None:
+                    say(target_chat, "🔔 RADAR PAYMENT — TEST\\n\\nCeci est un message automatique de test.\\n✅ Le bot fonctionne correctement.\\n🕒 Prochain message dans 1 heure.")
+            except Exception as e:
+                print("message automatique horaire:", repr(e))
+            time.sleep(20)
+    threading.Thread(target=hourly_group_scheduler, daemon=True).start()
     startup()
     offset = 0
     while True:
