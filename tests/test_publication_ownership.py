@@ -39,7 +39,7 @@ class PublicationOwnershipTests(unittest.TestCase):
             patch.object(bot, "gh_put"),
             patch.object(bot, "gh_del"),
             patch.object(bot, "decode_jpeg_data_uri", return_value=b"\xff\xd8\xffimage-bytes"),
-            patch.object(bot, "say"),
+            patch.object(bot, "say_async"),
             patch.object(bot, "chats_load", return_value=({"chats": []}, None)),
             patch.object(bot, "chats_save")
         ]
@@ -57,14 +57,14 @@ class PublicationOwnershipTests(unittest.TestCase):
         result = self.call_as(self.lanceur_id, "lanceur", "/api/want",
                               id="target-1", client_offer="2000 €")
         self.assertIn("propre publication", result["error"])
-        bot.say.assert_not_called()
+        bot.say_async.assert_not_called()
 
     def test_lanceur_can_offer_on_another_users_listing(self):
         result = self.call_as(self.lanceur_id, "lanceur", "/api/want",
                               id="target-1", client_offer="2300 €")
         self.assertTrue(result["ok"])
         self.assertEqual(self.photos["photos"][0]["id"], "target-1")
-        bot.say.assert_called_once()
+        bot.say_async.assert_called_once()
 
     def test_publication_stores_signup_pseudo_and_notifies_admin(self):
         result = self.call_as(self.spitta_id, "spitta", "/api/add",
@@ -75,9 +75,9 @@ class PublicationOwnershipTests(unittest.TestCase):
         saved_photo = self.photos["photos"][0]
         self.assertEqual(saved_photo["auteur"], "Vendeur Test")
         self.assertEqual(result["photo"]["auteur"], "Vendeur Test")
-        bot.say.assert_called_once()
-        self.assertIn("Vendeur Test", bot.say.call_args.args[1])
-        self.assertIn(str(self.spitta_id), bot.say.call_args.args[1])
+        bot.say_async.assert_called_once()
+        self.assertIn("Vendeur Test", bot.say_async.call_args.args[1])
+        self.assertIn(str(self.spitta_id), bot.say_async.call_args.args[1])
 
     def test_spitta_cannot_change_another_users_price(self):
         self.user = {"id": self.spitta_id, "first_name": "Vendeur"}
