@@ -74,6 +74,15 @@ def say(chat, text, **k):
     tg("sendMessage", chat_id=chat, text=text, **k)
 
 
+def say_async(chat, text, **k):
+    def send():
+        try:
+            say(chat, text, **k)
+        except Exception as e:
+            print("notification Telegram asynchrone impossible:", repr(e))
+    threading.Thread(target=send, daemon=True).start()
+
+
 PROCESS_STARTED_AT = int(time.time())
 
 
@@ -1171,10 +1180,10 @@ def api(path, b):
             state["digital_orders"] = state["digital_orders"][:500]
             private_save()
         try:
-            say(OWNER, "🛒 Nouvelle demande TARGET NUMÉRIQUE\\nCALLER : " + order["caller_name"] + " (ID " + str(uid) + ")\\nTARGET : " + order["title"] + "\\nPrix : " + order["price"] + "\\nCommande : " + order["id"])
+            say_async(OWNER, "🛒 Nouvelle demande TARGET NUMÉRIQUE\\nCALLER : " + order["caller_name"] + " (ID " + str(uid) + ")\\nTARGET : " + order["title"] + "\\nPrix : " + order["price"] + "\\nCommande : " + order["id"])
         except Exception as e:
             print("notification commande numérique:", repr(e))
-        monitor_event("digital_order", "Nouvelle commande numérique", order["caller_name"] + " · " + order["title"] + " · " + order["price"], "info", False)
+        threading.Thread(target=monitor_event, args=("digital_order", "Nouvelle commande numérique", order["caller_name"] + " · " + order["title"] + " · " + order["price"], "info", False), daemon=True).start()
         return {"ok": True, "order": order}
 
     if path == "/api/digital/my-orders":
@@ -1207,7 +1216,7 @@ def api(path, b):
             order["status"] = "awaiting_payment"
             order["updated"] = int(time.time())
             private_save()
-        say(int(order["caller_id"]), "💳 Instructions de paiement pour ton TARGET NUMÉRIQUE\\n" + order["title"] + " — " + order["price"] + "\\n\\n" + instructions + "\\n\\nAprès ton transfert, retourne dans l'onglet TARGET NUMÉRIQUE et clique sur « J'ai effectué le paiement ». N'envoie jamais plus que le montant indiqué.")
+        say_async(int(order["caller_id"]), "💳 Instructions de paiement pour ton TARGET NUMÉRIQUE\\n" + order["title"] + " — " + order["price"] + "\\n\\n" + instructions + "\\n\\nAprès ton transfert, retourne dans l'onglet TARGET NUMÉRIQUE et clique sur « J'ai effectué le paiement ». N'envoie jamais plus que le montant indiqué.")
         return {"ok": True}
 
     if path == "/api/digital/paid":
@@ -1222,8 +1231,8 @@ def api(path, b):
             order["status"] = "payment_reported"
             order["updated"] = int(time.time())
             private_save()
-        say(OWNER, "🔔 Paiement déclaré par le CALLER\\n" + order.get("caller_name", "CALLER") + " (ID " + str(uid) + ")\\nTARGET : " + order.get("title", "") + "\\nPrix : " + order.get("price", "") + "\\nCommande : " + order_id + "\\nVérifie la transaction avant de confirmer.")
-        monitor_event("digital_payment_reported", "Paiement numérique déclaré", order.get("caller_name", "CALLER") + " · " + order.get("title", ""), "warning", False)
+        say_async(OWNER, "🔔 Paiement déclaré par le CALLER\\n" + order.get("caller_name", "CALLER") + " (ID " + str(uid) + ")\\nTARGET : " + order.get("title", "") + "\\nPrix : " + order.get("price", "") + "\\nCommande : " + order_id + "\\nVérifie la transaction avant de confirmer.")
+        threading.Thread(target=monitor_event, args=("digital_payment_reported", "Paiement numérique déclaré", order.get("caller_name", "CALLER") + " · " + order.get("title", ""), "warning", False), daemon=True).start()
         return {"ok": True}
 
     if path == "/api/digital/order-status":
@@ -1271,7 +1280,7 @@ def api(path, b):
                 return {"error": "Confirme d'abord le paiement de cette commande."}
             caller_id = int(order["caller_id"])
         response = requests.post(f"{API}/sendPhoto", data={"chat_id": caller_id, "caption": "🎁 Voici ton TARGET NUMÉRIQUE : " + order.get("title", "")},
-                                 files={"photo": ("target-numerique", image_bytes, mime)}, timeout=60)
+                                 files={"photo": ("target-numerique", image_bytes, mime)}, timeout=45)
         response.raise_for_status()
         result = response.json()
         if not result.get("ok"):
@@ -1299,7 +1308,7 @@ def api(path, b):
         title = re.sub(r"\s+", " ", str(b.get("title", "")).strip())[:90]
         description = str(b.get("description", "")).strip()[:500]
         country = str(b.get("country", "")).strip()
-        category = re.sub(r"\\s+", " ", str(b.get("category", "")).strip())[:50]
+        category = re.sub(r"\s+", " ", str(b.get("category", "")).strip())[:50]
         price = "25 €"
         if not title:
             return {"error": "Le nom du TARGET NUMÉRIQUE est obligatoire."}
@@ -1314,7 +1323,7 @@ def api(path, b):
             state = private_load()
             state.setdefault("digital_targets", []).insert(0, item)
             private_save()
-        monitor_event("digital_target", "TARGET NUMÉRIQUE publié", "Nom : " + title + " · Pays : " + country + " · Catégorie : " + category + " · Prix : " + price, "info", False)
+        threading.Thread(target=monitor_event, args=("digital_target", "TARGET NUMÉRIQUE publié", "Nom : " + title + " · Pays : " + country + " · Catégorie : " + category + " · Prix : " + price, "info", False), daemon=True).start()
         return {"ok": True, "item": item}
 
     if path == "/api/digital/delete":
@@ -2392,11 +2401,11 @@ def api(path, b):
             # Conserver l'image évite de casser une publication qui aurait été enregistrée.
             print("enregistrement TARGET non confirmé:", repr(e))
             return {"error": "Enregistrement non confirmé. Actualise la galerie avant de réessayer pour éviter un doublon."}
-        monitor_event("publication", "Nouvelle TARGET publiée", "SPITTA : " + display_name + " · Prix : " + photo["prix"] + " · Pays : " + (photo["pays"] or "Non précisé"), "info", False)
+        threading.Thread(target=monitor_event, args=("publication", "Nouvelle TARGET publiée", "SPITTA : " + display_name + " · Prix : " + photo["prix"] + " · Pays : " + (photo["pays"] or "Non précisé"), "info", False), daemon=True).start()
         notification = True
         try:
             who = display_name + " (ID Telegram " + str(uid) + ")"
-            say(OWNER, "📢 NOUVELLE PUBLICATION RADAR PAYMENT\n"
+            say_async(OWNER, "📢 NOUVELLE PUBLICATION RADAR PAYMENT\n"
                 + "Publié par : " + who + "\n"
                 + "Prix : " + photo["prix"] + "\n"
                 + "Pays : " + (photo["pays"] or "Non précisé") + "\n"
