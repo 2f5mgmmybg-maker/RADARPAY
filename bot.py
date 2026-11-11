@@ -1251,9 +1251,9 @@ def api(path, b):
             order["updated"] = int(time.time())
             private_save()
         if action == "received":
-            say(int(order["caller_id"]), "✅ L'administration a confirmé la réception de ton paiement. La photo de ton TARGET NUMÉRIQUE va être envoyée séparément.")
+            say_async(int(order["caller_id"]), "✅ L'administration a confirmé la réception de ton paiement. La photo de ton TARGET NUMÉRIQUE va être envoyée séparément.")
         else:
-            say(int(order["caller_id"]), "⚠️ Paiement non confirmé. Vérifie le réseau, le montant et l'adresse, puis réessaie. Contacte l'administration si besoin.")
+            say_async(int(order["caller_id"]), "⚠️ Paiement non confirmé. Vérifie le réseau, le montant et l'adresse, puis réessaie. Contacte l'administration si besoin.")
         return {"ok": True}
 
     if path == "/api/digital/deliver":
@@ -1277,18 +1277,32 @@ def api(path, b):
             state = private_load()
             order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
             if not order or order.get("status") != "paid":
-                return {"error": "Confirme d'abord le paiement de cette commande."}
+                return {"error": "Confirme d\'abord le paiement de cette commande."}
+            order["status"] = "delivering"
+            order["updated"] = int(time.time())
             caller_id = int(order["caller_id"])
-        response = requests.post(f"{API}/sendPhoto", data={"chat_id": caller_id, "caption": "🎁 Voici ton TARGET NUMÉRIQUE : " + order.get("title", "")},
-                                 files={"photo": ("target-numerique", image_bytes, mime)}, timeout=45)
-        response.raise_for_status()
-        result = response.json()
-        if not result.get("ok"):
-            raise RuntimeError(result.get("description", "Telegram n'a pas envoyé la photo."))
+            target_title = order.get("title", "")
+            private_save()
+        try:
+            response = requests.post(f"{API}/sendPhoto", data={"chat_id": caller_id, "caption": "🎁 Voici ton TARGET NUMÉRIQUE : " + target_title},
+                                     files={"photo": ("target-numerique", image_bytes, mime)}, timeout=45)
+            response.raise_for_status()
+            result = response.json()
+            if not result.get("ok"):
+                raise RuntimeError(result.get("description", "Telegram n\'a pas envoyé la photo."))
+        except Exception:
+            with LOCK:
+                state = private_load()
+                order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
+                if order and order.get("status") == "delivering":
+                    order["status"] = "paid"
+                    order["updated"] = int(time.time())
+                    private_save()
+            raise
         with LOCK:
             state = private_load()
             order = next((x for x in state.setdefault("digital_orders", []) if x.get("id") == order_id), None)
-            if order and order.get("status") == "paid":
+            if order and order.get("status") == "delivering":
                 order["status"] = "delivered"
                 order["delivered"] = int(time.time())
                 order["updated"] = int(time.time())
@@ -1393,7 +1407,7 @@ def api(path, b):
                 [{"text": "💬 Ouvrir la discussion", "web_app": {"url": SITE + "?chat=" + rid}}] if SITE else [{"text": "💬 Parler au client", "url": url}],
                 [{"text": "✅ Je confirme", "callback_data": "y:" + rid},
                  {"text": "❌ Pas disponible", "callback_data": "n:" + rid}]]}
-            say(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\nProposition du CALLER : {client_offer}.\n"
+            say_async(vendor, f"🚨🚨 NOUVELLE DEMANDE 🚨🚨\nProduit : {prix}.\nProposition du CALLER : {client_offer}.\n"
                         f"Réponse attendue sous 50 secondes.\nClient : {who}", reply_markup=markup)
         except Exception as e:
             print("notification SPITTA impossible:", repr(e))
@@ -1419,7 +1433,7 @@ def api(path, b):
         notified = True
         try:
             who = user.get("username") and ("@" + user["username"]) or user.get("first_name", "CALLER")
-            say(OWNER, "🌐 CLIC SUR UN SITE — RADAR PAYMENT\\nCALLER : " + who + " (ID " + str(uid) + ")\\nSite : " + site + "\\nLien : " + url + "\\nHeure : " + datetime.fromtimestamp(now, ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y à %H:%M:%S") + "\\nUne discussion privée a été ouverte dans l’espace Admin.")
+            say_async(OWNER, "🌐 CLIC SUR UN SITE — RADAR PAYMENT\\nCALLER : " + who + " (ID " + str(uid) + ")\\nSite : " + site + "\\nLien : " + url + "\\nHeure : " + datetime.fromtimestamp(now, ZoneInfo("Europe/Brussels")).strftime("%d/%m/%Y à %H:%M:%S") + "\\nUne discussion privée a été ouverte dans l’espace Admin.")
         except Exception as e:
             notified = False
             print("notification clic site admin:", repr(e))
@@ -1483,7 +1497,7 @@ def api(path, b):
             private_save()
         other = int(target) if r == "owner" else OWNER
         try:
-            say(other, "💬 Nouveau message dans ton chat RADAR PAYMENT avec l’administrateur. Ouvre la mini-app.")
+            say_async(other, "💬 Nouveau message dans ton chat RADAR PAYMENT avec l’administrateur. Ouvre la mini-app.")
         except Exception as e:
             print("notification chat admin:", repr(e))
         with LOCK:
@@ -1563,7 +1577,7 @@ def api(path, b):
             "Site : " + str(click.get("site", "")) + " · CALLER : " + str(uid) + (" · Hors délai" if late else ""),
             "warning", False)
         try:
-            say(OWNER, "❌ PAIEMENT NON EFFECTUÉ — raison à examiner\\nCALLER : " + str(uid) +
+            say_async(OWNER, "❌ PAIEMENT NON EFFECTUÉ — raison à examiner\\nCALLER : " + str(uid) +
                 "\\nSite : " + str(click.get("site", "")) + "\\nRaison : " + reason +
                 ("\\nRéponse hors délai." if late else "") + "\\nOuvre Administration > Suivi des paiements.")
         except Exception as e:
@@ -1631,7 +1645,7 @@ def api(path, b):
                 "time": now})
             private_save()
         try:
-            say(int(launcher), "L’administration a répondu : " + decision_label +
+            say_async(int(launcher), "L’administration a répondu : " + decision_label +
                 ". Tu peux retourner à l’accueil de RADARPAY pour effectuer un nouvel achat.")
         except Exception as e:
             print("notification décision paiement:", repr(e))
@@ -1718,7 +1732,7 @@ def api(path, b):
             return {"error": str(e) if isinstance(e, ValueError) else "Impossible d’enregistrer la déclaration."}
         monitor_event("payment", "Paiement déclaré — à vérifier" + (" (tardif)" if late else ""), "Site : " + click_snapshot["site"] + " · Article : " + article + " · Montant : " + amount + " " + currency + " · Compte : " + str(uid), "critical", False)
         try:
-            say(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)" + (" — DÉCLARATION TARDIVE" if late else "") + "\nCALLER : " + str(uid) +
+            say_async(OWNER, "💳 PAIEMENT DÉCLARÉ (NON VÉRIFIÉ)" + (" — DÉCLARATION TARDIVE" if late else "") + "\nCALLER : " + str(uid) +
                 "\nSite : " + click_snapshot["site"] + "\nMontant : " + amount + " " + currency +
                 "\nCapture jointe dans le chat admin de la mini-app.")
         except Exception as e:
@@ -2041,7 +2055,7 @@ def api(path, b):
             return {"error": "La discussion a changé d’état. Le fichier n’a pas été envoyé."}
         def notify_attachment():
             try:
-                say(other, "📎 Nouveau fichier reçu dans ta discussion RADAR PAYMENT.")
+                say_async(other, "📎 Nouveau fichier reçu dans ta discussion RADAR PAYMENT.")
             except Exception as e:
                 print("notification fichier impossible:", repr(e))
         threading.Thread(target=notify_attachment, daemon=True).start()
@@ -2061,7 +2075,7 @@ def api(path, b):
             c["proof_deadline"] = int(time.time()) + 120
             chats_save(chats_data, None)
         try:
-            say(c["vendor"], "⏱️ Le CALLER a accepté la vente. Tu as 2 minutes pour envoyer la capture d’écran dans la discussion RADAR PAYMENT.")
+            say_async(c["vendor"], "⏱️ Le CALLER a accepté la vente. Tu as 2 minutes pour envoyer la capture d’écran dans la discussion RADAR PAYMENT.")
         except Exception as e:
             print("notification délai preuve impossible:", repr(e))
         return {"ok": True}
@@ -2088,7 +2102,7 @@ def api(path, b):
             chats_save(chats_data, None)
             vendor_id = c.get("vendor")
         try:
-            say(vendor_id, "📸 EROP — étape 1/2 : le CALLER doit envoyer sa photo de preuve ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du SPITTA (3 min 30) ne démarre qu’après cette étape. Aucune capture n’est prise à distance.")
+            say_async(vendor_id, "📸 EROP — étape 1/2 : le CALLER doit envoyer sa photo de preuve ou déclarer qu’il ne peut pas fournir de photo dans les 2 minutes. Le délai du SPITTA (3 min 30) ne démarre qu’après cette étape. Aucune capture n’est prise à distance.")
         except Exception as e:
             print("notification EROP impossible:", repr(e))
         return {"ok": True}
@@ -2163,7 +2177,7 @@ def api(path, b):
                 PROOF_CACHE.pop(proof_file, None)
             return {"error": "La demande EROP a changé d’état. La preuve n’a pas été enregistrée."}
         try:
-            say(vendor_id, ("⚠️ EROP — étape 1 terminée : le CALLER a déclaré ne pas pouvoir fournir de photo. Ce message est une déclaration, pas une preuve photographique. Ton délai de 3 min 30 commence maintenant : envoie volontairement la deuxième capture dans RADAR PAYMENT." if mode == "unavailable" else "📸 EROP — étape 1 terminée : le CALLER a envoyé sa photo de preuve. Ton délai de 3 min 30 commence maintenant : vérifie la photo et envoie volontairement la deuxième capture dans RADAR PAYMENT."))
+            say_async(vendor_id, ("⚠️ EROP — étape 1 terminée : le CALLER a déclaré ne pas pouvoir fournir de photo. Ce message est une déclaration, pas une preuve photographique. Ton délai de 3 min 30 commence maintenant : envoie volontairement la deuxième capture dans RADAR PAYMENT." if mode == "unavailable" else "📸 EROP — étape 1 terminée : le CALLER a envoyé sa photo de preuve. Ton délai de 3 min 30 commence maintenant : vérifie la photo et envoie volontairement la deuxième capture dans RADAR PAYMENT."))
         except Exception as e:
             print("notification preuve EROP au SPITTA impossible:", repr(e))
         return {"ok": True, "deadline": deadline}
@@ -2188,7 +2202,7 @@ def api(path, b):
             chats_save(chats_data, None)
             client_id = c.get("client")
         try:
-            say(client_id, "✅ Le SPITTA a validé ERAF : tout est OK après la deuxième capture.")
+            say_async(client_id, "✅ Le SPITTA a validé ERAF : tout est OK après la deuxième capture.")
         except Exception as e:
             print("notification ERAF au CALLER impossible:", repr(e))
         return {"ok": True}
@@ -2272,7 +2286,7 @@ def api(path, b):
             PROOF_CACHE.pop(proof_file, None)
             return {"error": "Le délai est terminé ou la vente a changé d’état. La capture n’a pas été enregistrée."}
         try:
-            say(client_id, "📸 Le SPITTA a envoyé la capture demandée. La discussion est ouverte.")
+            say_async(client_id, "📸 Le SPITTA a envoyé la capture demandée. La discussion est ouverte.")
         except Exception as e:
             print("notification capture impossible:", repr(e))
         return {"ok": True}
@@ -2323,7 +2337,7 @@ def api(path, b):
 
         def notify_voice():
             try:
-                say(other, "🎤 Nouveau message vocal dans RADAR PAYMENT. Ouvre la mini-app pour l'écouter.")
+                say_async(other, "🎤 Nouveau message vocal dans RADAR PAYMENT. Ouvre la mini-app pour l'écouter.")
             except Exception as e:
                 print("alerte vocal non envoyée:", repr(e))
         threading.Thread(target=notify_voice, daemon=True).start()
@@ -2346,7 +2360,7 @@ def api(path, b):
         other = c.get("vendor") if uid == c.get("client") else c.get("client")
         def notify():
             try:
-                say(other, "💬 Nouveau message dans RADAR PAYMENT. Ouvre la mini-app pour répondre.")
+                say_async(other, "💬 Nouveau message dans RADAR PAYMENT. Ouvre la mini-app pour répondre.")
             except Exception as e:
                 print("alerte nouveau message non envoyée:", repr(e))
         threading.Thread(target=notify, daemon=True).start()
