@@ -1297,9 +1297,9 @@ def api(path, b):
             return {"error": "Seul le propriétaire peut publier un TARGET NUMÉRIQUE."}
         title = re.sub(r"\s+", " ", str(b.get("title", "")).strip())[:90]
         description = str(b.get("description", "")).strip()[:500]
-        price = re.sub(r"\s+", " ", str(b.get("price", "")).strip())[:60]
-        if not title or not price:
-            return {"error": "Le nom et le prix sont obligatoires."}
+        price = "25 €"
+        if not title:
+            return {"error": "Le nom du TARGET NUMÉRIQUE est obligatoire."}
         item = {"id": secrets.token_hex(8), "title": title, "description": description,
                 "price": price, "created": int(time.time()), "created_by": str(uid)}
         with LOCK:
