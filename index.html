@@ -605,7 +605,7 @@ a{color:#7defff}
     <button class="on" data-t="a">DISPONIBILITÉ DE LINK</button>
     <button data-t="b">TARGET DISPONIBLE</button>
     <button data-t="e" id="spitta-tab">TARGET DISPONIBLE</button>
-    <button data-t="f">Messages</button>
+    <button data-t="f">CHAT EN DIRECT</button>
     <button data-t="g" id="digital-tab" hidden>TARGET NUMÉRIQUE</button>
 
     <button data-t="c" id="admin-tab" hidden>Admin</button>
@@ -1738,11 +1738,11 @@ function moveSectionContents(sourceId,targetId,headingText,prepend){
 function simplifyWorkspaceTabs(){
   if(USER_ROLE==="lanceur"){
     moveSectionContents("d","f","Mes actions et paiements",true);
-    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"CHAT EN DIRECT AVEC SPITTA","g":"TARGET NUMÉRIQUE"};
+    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"CHAT EN DIRECT","g":"TARGET NUMÉRIQUE"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="spitta"){
     moveSectionContents("e","b","Espace SPITTA",false);
-    var names={"b":"TARGET DISPONIBLE","f":"Messages"};
+    var names={"b":"TARGET DISPONIBLE","f":"CHAT EN DIRECT"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
     var spittaTab=$("spitta-tab");if(spittaTab)spittaTab.hidden=true;
