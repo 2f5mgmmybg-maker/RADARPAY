@@ -1328,7 +1328,8 @@ def api(path, b):
                          "country": target.get("country") or "À classer", "category": target.get("category") or "À classer",
                          "price": "25 €", "caller_id": str(uid),
                          "caller_name": str(profile.get("pseudo") or user.get("first_name") or "CALLER")[:60],
-                         "status": "awaiting_instructions", "created": int(time.time()), "updated": int(time.time())}
+                         "payment_provider": "nowpayments", "status": "awaiting_payment",
+                         "created": int(time.time()), "updated": int(time.time())}
                 state["digital_orders"].insert(0, order)
                 state["digital_orders"] = state["digital_orders"][:500]
                 private_save()
@@ -2671,6 +2672,16 @@ class Ping(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/health", "/healthz"):
             health = {"ok": True, "service": "RADARPAY"}
+            configuration = {
+                "api_url": bool(API_URL.startswith("https://")),
+                "mini_app_url": bool((SITE or LINK).startswith("https://")),
+                "nowpayments": bool(NOWPAYMENTS_API_KEY and NOWPAYMENTS_IPN_SECRET),
+            }
+            health["configuration"] = configuration
+            health["payments"] = "NOWPayments configuré" if configuration["nowpayments"] else "Paiement crypto non configuré"
+            if not configuration["api_url"] or not configuration["mini_app_url"]:
+                health.update({"ok": False, "unhealthy": True,
+                               "configuration_error": "API_BASE_URL/RENDER_EXTERNAL_URL ou SITE_URL/MINIAPP_LINK absent ou non HTTPS"})
             if DATABASE_URL:
                 try:
                     pool = ensure_db()
@@ -2679,13 +2690,12 @@ class Ping(BaseHTTPRequestHandler):
                     health["storage"] = "PostgreSQL"
                 except Exception as e:
                     print("health check PostgreSQL:", repr(e))
-                    health = {"ok": False, "unhealthy": True, "service": "RADARPAY",
-                              "storage": "PostgreSQL indisponible"}
+                    health.update({"ok": False, "unhealthy": True, "storage": "PostgreSQL indisponible"})
             else:
                 health["storage"] = "GitHub (mode dégradé)"
             if not STORAGE_READY:
-                health = {"ok": False, "unhealthy": True, "service": "RADARPAY",
-                          "storage": "État privé non chargé ou non déchiffrable"}
+                health.update({"ok": False, "unhealthy": True,
+                               "storage": "État privé non chargé ou non déchiffrable"})
             return self._s(health)
         self._s({"ok": True})
 
