@@ -1146,7 +1146,7 @@ def api(path, b):
             return {"error": "Cet onglet est réservé aux comptes CALLER."}
         with LOCK:
             items = list(private_load().setdefault("digital_targets", []))
-        return {"ok": True, "items": [{k: item.get(k) for k in ("id", "title", "description", "price", "created")} for item in items]}
+        return {"ok": True, "items": [{**{k: item.get(k) for k in ("id", "title", "description", "created")}, "price": "25 €"} for item in items]}
 
     if path == "/api/digital/order":
         if role(user) != "lanceur":
@@ -1163,7 +1163,7 @@ def api(path, b):
             regs = state.setdefault("registrations", [])
             profile = next((x for x in regs if str(x.get("user_id")) == str(uid)), {})
             order = {"id": secrets.token_hex(8), "target_id": target_id, "title": target.get("title", ""),
-                     "price": target.get("price", ""), "caller_id": str(uid),
+                     "price": "25 €", "caller_id": str(uid),
                      "caller_name": str(profile.get("pseudo") or user.get("first_name") or "CALLER")[:60],
                      "status": "awaiting_instructions", "created": int(time.time()), "updated": int(time.time())}
             state["digital_orders"].insert(0, order)
@@ -1290,7 +1290,7 @@ def api(path, b):
             return {"error": "Gestion réservée au propriétaire."}
         with LOCK:
             items = list(private_load().setdefault("digital_targets", []))
-        return {"ok": True, "items": items}
+        return {"ok": True, "items": [{**item, "price": "25 €"} for item in items]}
 
     if path == "/api/digital/create":
         if uid != OWNER:
