@@ -1035,7 +1035,7 @@ function showMe(r,fromCode){
   $("admin-tab").hidden=!ok;$("digital-tab").hidden=!ok;
   if(!ok){$("msg").textContent=r.error||"Accès administrateur réservé au propriétaire.";return}
   var digitalTab=$("g");
-  var digitalManager=document.querySelector("#panel > details.admin-rubric:has(> summary)");
+  var digitalManager=Array.from(document.querySelectorAll("#panel details.admin-rubric")).find(function(node){var summary=node.querySelector(":scope > summary");return summary&&summary.textContent.indexOf("Gestion TARGET NUMÉRIQUE")>-1;});
   if(digitalTab&&digitalManager&&digitalManager.querySelector("#digital-add")){
     digitalTab.querySelectorAll("#digital-catalogue,#digital-my-orders").forEach(function(n){n.hidden=true;});
     var intro=digitalTab.querySelector(".lead");if(intro)intro.hidden=true;
