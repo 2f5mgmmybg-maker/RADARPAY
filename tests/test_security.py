@@ -251,6 +251,7 @@ class SecurityTests(unittest.TestCase):
 
     def test_nowpayments_orders_cannot_use_manual_payment_confirmation(self):
         import unittest.mock
+        import unittest.mock
         now = int(time.time())
         user_id = 987654321
         session_token = "test-session-token"
