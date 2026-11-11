@@ -1076,13 +1076,12 @@ function showMe(r,fromCode){
   var digitalTab=$("g");
   var digitalManager=Array.from(document.querySelectorAll("#panel details.admin-rubric")).find(function(node){var summary=node.querySelector(":scope > summary");return summary&&summary.textContent.indexOf("Gestion TARGET NUMÉRIQUE")>-1;});
   if(digitalTab&&digitalManager&&digitalManager.querySelector("#digital-add")){
-    digitalTab.querySelectorAll("#digital-catalogue,#digital-my-orders").forEach(function(n){n.hidden=true;});
-    var intro=digitalTab.querySelector(".lead");if(intro)intro.hidden=true;
+    var myOrders=digitalTab.querySelector("#digital-my-orders");if(myOrders)myOrders.hidden=true;
     digitalTab.appendChild(digitalManager);
   }
   var m=$("mine");m.innerHTML="";
   $("adminchatlist").hidden=r.role!=="owner";
-  loadChatList();loadAdminChats();loadRegistrations();loadMonitor();loadDigitalAdmin();
+  loadChatList();loadAdminChats();loadRegistrations();loadMonitor();loadDigitalAdmin();loadDigitalCatalogue();
   var publications=PHOTOS.filter(function(p){return (r.mine||[]).indexOf(p.id)>-1});
   if(!publications.length){var empty=document.createElement("p");empty.className="lead";empty.textContent="Aucune publication enregistrée pour le moment.";m.appendChild(empty);return}
   publications.forEach(function(p){
@@ -1608,10 +1607,10 @@ function digitalStatus(st){
   return ({awaiting_instructions:"En attente des instructions de paiement",awaiting_payment:"En attente du paiement",payment_reported:"Paiement déclaré — à vérifier",paid:"Paiement confirmé — photo à envoyer",delivered:"Photo envoyée",cancelled:"Annulée"})[st]||st;
 }
 function loadDigitalCatalogue(){
-  if(USER_ROLE!=="lanceur")return Promise.resolve();
+  if(USER_ROLE!=="lanceur"&&!ADMIN)return Promise.resolve();
   var host=$("digital-catalogue");if(!host)return Promise.resolve();
-  host.textContent="Chargement du catalogue…";
-  return call("/api/digital/list",{}).then(function(r){
+  host.hidden=false;host.textContent="Chargement du catalogue…";
+  return call(ADMIN?"/api/digital/admin":"/api/digital/list",{}).then(function(r){
     host.innerHTML="";
     if(!r.items||!r.items.length){host.appendChild(digitalNode("p","lead","Aucun TARGET NUMÉRIQUE disponible pour le moment."));return}
     var countries={};
@@ -1631,6 +1630,7 @@ function loadDigitalCatalogue(){
           if(item.description)card.appendChild(digitalNode("p","lead",item.description));
           card.appendChild(digitalNode("div","digital-meta","Pays : "+country+" · Catégorie : "+category));
           card.appendChild(digitalNode("div","digital-price","Prix : "+(item.price||"25 €")));
+          if(!ADMIN){
           var buy=digitalNode("button","btn s","Acheter ce TARGET");buy.type="button";
           buy.addEventListener("click",function(){
             if(!window.confirm("Créer une commande pour « "+item.title+" » au prix de "+item.price+" ?"))return;
@@ -1640,7 +1640,9 @@ function loadDigitalCatalogue(){
               return loadDigitalMyOrders();
             }).catch(function(e){window.alert(e.message||"Commande impossible.");}).finally(function(){buy.disabled=false;buy.textContent="Acheter ce TARGET"});
           });
-          card.appendChild(buy);host.appendChild(card);
+          card.appendChild(buy);
+          }
+          host.appendChild(card);
         });
       });
     });
@@ -1758,7 +1760,7 @@ tabs.addEventListener("click",function(e){
   tabs.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
   b.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   if(b.dataset.t==="c"){adminOpen();loadAdminPaymentReports();}
-  if(b.dataset.t==="g"){if(USER_ROLE==="lanceur"){loadDigitalCatalogue();loadDigitalMyOrders();}else if(USER_ROLE==="owner"){loadDigitalAdmin();}}
+  if(b.dataset.t==="g"){if(USER_ROLE==="lanceur"){loadDigitalCatalogue();loadDigitalMyOrders();}else if(USER_ROLE==="owner"){loadDigitalCatalogue();loadDigitalAdmin();}}
   if(["d","e","f"].indexOf(b.dataset.t)>-1||(USER_ROLE==="spitta"&&b.dataset.t==="b"))loadChatList();
   document.querySelectorAll("main section").forEach(function(section){section.classList.toggle("on",section.id===b.dataset.t)});
   if(navigator.vibrate)navigator.vibrate(8);
