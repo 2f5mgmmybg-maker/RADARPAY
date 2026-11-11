@@ -1831,7 +1831,7 @@ function loadDigitalCatalogue(){
             call("/api/digital/order",{id:item.id}).then(function(r){
               if(r.invoice_url)openDigitalInvoice(r.invoice_url);
               return loadDigitalMyOrders();
-            }).catch(function(e){window.alert(e.message||"Commande impossible.");}).finally(function(){buy.disabled=false;buy.textContent="Acheter ce TARGET"});
+            }).catch(function(e){window.alert(e.message||"Commande impossible.");loadDigitalMyOrders();}).finally(function(){buy.disabled=false;buy.textContent="Acheter ce TARGET"});
           });
           card.appendChild(buy);
           }
