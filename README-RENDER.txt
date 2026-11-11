@@ -19,6 +19,8 @@ RENDER
 VARIABLES D'ENVIRONNEMENT
 - BOT_TOKEN : token Telegram du bot (secret).
 - OWNER_ID : identifiant numérique Telegram du propriétaire.
+- ADMIN_ACCESS_CODE : code secret administrateur de 6 chiffres, obligatoire pour ouvrir l'espace ADMIN.
+  La session ADMIN expire après 12 h et doit être rouverte après un redémarrage du service.
 - GITHUB_TOKEN : token autorisé à lire/écrire le dépôt RADARPAY (secret).
 - GITHUB_REPO : 2f5mgmmybg-maker/RADARPAY.
 - GITHUB_BRANCH : main.
