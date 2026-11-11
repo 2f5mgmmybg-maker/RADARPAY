@@ -2700,7 +2700,7 @@ class Ping(BaseHTTPRequestHandler):
             configuration = {
                 "api_url": bool(API_URL.startswith("https://")),
                 "mini_app_url": bool((SITE or LINK).startswith("https://")),
-                "admin_access_code": bool(re.fullmatch(r"\\d{6}", admin_code)),
+                "admin_access_code": bool(re.fullmatch(r"\d{6}", admin_code)),
                 "nowpayments": bool(NOWPAYMENTS_API_KEY and NOWPAYMENTS_IPN_SECRET),
             }
             health["configuration"] = configuration
