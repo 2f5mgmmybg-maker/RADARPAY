@@ -1785,7 +1785,7 @@ function simplifyWorkspaceTabs(){
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }else if(USER_ROLE==="owner"){
     var spittaTab=$("spitta-tab");if(spittaTab)spittaTab.hidden=true;
-    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"Messages","g":"TARGET NUMÉRIQUE","c":"Administration"};
+    var names={"a":"DISPONIBILITÉ DE LINK","b":"TARGET DISPONIBLE","f":"CHAT EN DIRECT","g":"TARGET NUMÉRIQUE","c":"Administration"};
     tabs.querySelectorAll("button").forEach(function(b){b.hidden=!names[b.dataset.t];if(names[b.dataset.t])b.textContent=names[b.dataset.t];});
   }
 }
