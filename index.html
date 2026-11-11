@@ -649,7 +649,7 @@ a{color:#7defff}
         <div style="display:grid;gap:9px;margin:12px 0">
           <input class="inp" id="digital-title" maxlength="90" placeholder="Nom du TARGET NUMÉRIQUE">
           <textarea class="inp" id="digital-description" maxlength="500" rows="3" placeholder="Description (facultatif)"></textarea>
-          <input class="inp" id="digital-price" maxlength="60" placeholder="Prix (ex. 150 € ou 0,002 BTC)">
+          <input class="inp" id="digital-price" value="25 € par TARGET" readonly aria-readonly="true">
           <button class="btn s" id="digital-add" type="button">＋ Publier le TARGET NUMÉRIQUE</button>
           <p class="lead" id="digital-admin-message" aria-live="polite"></p>
         </div>
@@ -1676,11 +1676,11 @@ function loadDigitalAdmin(){
   }).catch(function(e){var msg=$("digital-admin-message");if(msg)msg.textContent=e.message||"Chargement admin impossible."});
 }
 if($("digital-add"))$("digital-add").addEventListener("click",function(){
-  var title=$("digital-title").value.trim(),description=$("digital-description").value.trim(),price=$("digital-price").value.trim(),msg=$("digital-admin-message"),btn=$("digital-add");
-  if(!title||!price){msg.textContent="Indique au minimum le nom et le prix.";return}
+  var title=$("digital-title").value.trim(),description=$("digital-description").value.trim(),msg=$("digital-admin-message"),btn=$("digital-add");
+  if(!title){msg.textContent="Indique le nom du TARGET NUMÉRIQUE.";return}
   btn.disabled=true;msg.textContent="Publication…";
-  call("/api/digital/create",{title:title,description:description,price:price}).then(function(){
-    $("digital-title").value="";$("digital-description").value="";$("digital-price").value="";
+  call("/api/digital/create",{title:title,description:description}).then(function(){
+    $("digital-title").value="";$("digital-description").value="";
     msg.textContent="TARGET NUMÉRIQUE publié.";return loadDigitalAdmin();
   }).catch(function(e){msg.textContent=e.message||"Publication impossible."}).finally(function(){btn.disabled=false});
 });
