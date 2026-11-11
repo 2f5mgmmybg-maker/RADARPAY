@@ -1146,7 +1146,7 @@ def api(path, b):
             return {"error": "Cet onglet est réservé aux comptes CALLER."}
         with LOCK:
             items = list(private_load().setdefault("digital_targets", []))
-        return {"ok": True, "items": [{**{k: item.get(k) for k in ("id", "title", "description", "created")}, "price": "25 €"} for item in items]}
+        return {"ok": True, "items": [{**{k: item.get(k) for k in ("id", "title", "description", "created")}, "country": item.get("country") or "À classer", "category": item.get("category") or "À classer", "price": "25 €"} for item in items]}
 
     if path == "/api/digital/order":
         if role(user) != "lanceur":
@@ -1163,6 +1163,7 @@ def api(path, b):
             regs = state.setdefault("registrations", [])
             profile = next((x for x in regs if str(x.get("user_id")) == str(uid)), {})
             order = {"id": secrets.token_hex(8), "target_id": target_id, "title": target.get("title", ""),
+                     "country": target.get("country") or "À classer", "category": target.get("category") or "À classer",
                      "price": "25 €", "caller_id": str(uid),
                      "caller_name": str(profile.get("pseudo") or user.get("first_name") or "CALLER")[:60],
                      "status": "awaiting_instructions", "created": int(time.time()), "updated": int(time.time())}
@@ -1297,16 +1298,23 @@ def api(path, b):
             return {"error": "Seul le propriétaire peut publier un TARGET NUMÉRIQUE."}
         title = re.sub(r"\s+", " ", str(b.get("title", "")).strip())[:90]
         description = str(b.get("description", "")).strip()[:500]
+        country = str(b.get("country", "")).strip()
+        category = re.sub(r"\\s+", " ", str(b.get("category", "")).strip())[:50]
         price = "25 €"
         if not title:
             return {"error": "Le nom du TARGET NUMÉRIQUE est obligatoire."}
+        if country not in ("Belgique", "Suisse", "Luxembourg", "France"):
+            return {"error": "Choisis un pays valide : Belgique, Suisse, Luxembourg ou France."}
+        if not category:
+            return {"error": "La catégorie du TARGET NUMÉRIQUE est obligatoire."}
         item = {"id": secrets.token_hex(8), "title": title, "description": description,
+                "country": country, "category": category,
                 "price": price, "created": int(time.time()), "created_by": str(uid)}
         with LOCK:
             state = private_load()
             state.setdefault("digital_targets", []).insert(0, item)
             private_save()
-        monitor_event("digital_target", "TARGET NUMÉRIQUE publié", "Nom : " + title + " · Prix : " + price, "info", False)
+        monitor_event("digital_target", "TARGET NUMÉRIQUE publié", "Nom : " + title + " · Pays : " + country + " · Catégorie : " + category + " · Prix : " + price, "info", False)
         return {"ok": True, "item": item}
 
     if path == "/api/digital/delete":
