@@ -512,9 +512,34 @@ a{color:#7defff}
 @keyframes presenceGlow{0%,100%{border-color:rgba(57,244,119,.22);box-shadow:0 0 8px rgba(57,244,119,.05)}50%{border-color:rgba(57,244,119,.62);box-shadow:0 0 17px rgba(57,244,119,.16)}}
 @media(max-width:420px){.brand-header{gap:7px}.presence-wrap{padding:6px 8px;gap:6px;font-size:.59rem}.brand-header .refresh{padding:7px 9px}}
  .digital-catalogue{display:grid;gap:12px}.digital-price{font-weight:800;font-size:1.05rem;margin:8px 0;color:var(--ink)}.digital-country-heading{margin:22px 0 4px;padding:12px;border-bottom:1px solid var(--line);font-size:1.12rem;color:var(--sweep)}.digital-category-heading{margin:12px 0 2px;padding:8px 12px;border-left:3px solid var(--sweep);background:rgba(59,130,246,.08);font-size:.98rem}.digital-meta{color:var(--mute);font-size:.82rem;margin:6px 0}
+
+/* Assistance visible en cas de blocage réseau/API */
+#radar-recovery{position:fixed;z-index:100;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;padding:16px;border:1px solid #c5b88f;border-radius:16px;background:#202326;color:#f5f3ed;box-shadow:0 12px 36px rgba(0,0,0,.55);font-size:.88rem;line-height:1.5}
+#radar-recovery[hidden]{display:none}
+#radar-recovery strong{display:block;margin-bottom:6px;font-size:1rem}
+#radar-recovery ol{margin:8px 0 12px;padding-left:22px}
+#radar-recovery li{margin:4px 0}
+#radar-recovery .recovery-actions{display:flex;gap:8px;flex-wrap:wrap}
+#radar-recovery button{min-height:42px;padding:9px 14px;border:1px solid #c5b88f;border-radius:999px;background:#c5b88f;color:#202326;font:700 .85rem Inter,system-ui,sans-serif}
+#radar-recovery button.secondary{background:transparent;color:#f5f3ed;border-color:#666}
+
 </style>
 </head>
 <body>
+<div id="radar-recovery" role="alert" aria-live="assertive" hidden>
+  <strong>La connexion semble bloquée</strong>
+  <div id="radar-recovery-reason">Le serveur ne répond pas pour le moment.</div>
+  <ol>
+    <li>Vérifie ta connexion Internet, puis touche « Réessayer » ou « Actualiser ».</li>
+    <li>Si la page reste bloquée, ferme complètement Telegram puis relance-le.</li>
+    <li>Rouvre RADAR PAYMENT depuis la conversation du bot.</li>
+  </ol>
+  <p>Important : avant de refaire un achat, un paiement ou un envoi, vérifie d’abord son statut pour éviter un doublon.</p>
+  <div class="recovery-actions">
+    <button type="button" id="radar-recovery-reload">Actualiser la page</button>
+    <button type="button" class="secondary" id="radar-recovery-close">Masquer</button>
+  </div>
+</div>
 <div class="rings"></div>
 
 <div id="welcome">
@@ -1020,15 +1045,29 @@ function call(path,body){
         throw new Error(apiMessage);
       }
       if(!r.ok){var message=data.error||("Erreur HTTP "+r.status);if(r.status===401&&message.indexOf("Ouvre l'app depuis Telegram")!==-1)message="Session Telegram expirée. Ferme puis rouvre RADAR PAYMENT depuis Telegram.";throw new Error(message);}
+      hideRecoveryNotice();
       return data;
     });
   }).catch(function(e){
-    if(e && e.name==="AbortError") throw new Error("Le serveur met trop de temps à répondre. Réessaie dans quelques instants.");
-    if(e && (e instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(e.message||""))) throw new Error("Connexion au serveur impossible. Vérifie ta connexion et réessaie. Si le problème persiste, le serveur RADARPAY est peut-être indisponible.");
+    var friendly=null;
+    if(e && e.name==="AbortError") friendly="Le serveur met trop de temps à répondre.";
+    else if(e && (e instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(e.message||""))) friendly="Connexion au serveur impossible. Le réseau ou le serveur RADARPAY ne répond pas.";
+    else if(e && /Erreur HTTP 5\\d\\d|Réponse API invalide/i.test(e.message||"")) friendly="Le serveur a rencontré une erreur temporaire.";
+    if(friendly){showRecoveryNotice(friendly);throw new Error(friendly+" Suis les étapes affichées en bas de l’écran.");}
     throw e;
   }).finally(function(){if(timer)clearTimeout(timer)});
 }
+function showRecoveryNotice(reason){
+  var panel=document.getElementById("radar-recovery"),label=document.getElementById("radar-recovery-reason");
+  if(label)label.textContent=reason||"Le serveur ne répond pas pour le moment.";
+  if(panel)panel.hidden=false;
+}
+function hideRecoveryNotice(){
+  var panel=document.getElementById("radar-recovery");if(panel)panel.hidden=true;
+}
 function $(i){return document.getElementById(i)}
+document.getElementById("radar-recovery-reload").addEventListener("click",function(){window.location.reload()});
+document.getElementById("radar-recovery-close").addEventListener("click",hideRecoveryNotice);
 function ask(){return new Promise(function(res){var t=setTimeout(res,8000);try{if(tgw&&tgw.requestWriteAccess){tgw.requestWriteAccess(function(){clearTimeout(t);res()})}else{clearTimeout(t);res()}}catch(e){clearTimeout(t);res()}})}
 function showMe(r,fromCode){
   var ok=r.role==="owner";ADMIN=ok;$("gate").hidden=ok;$("panel").hidden=!ok;
