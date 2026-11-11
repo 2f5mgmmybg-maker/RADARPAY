@@ -296,14 +296,21 @@ class SecurityTests(unittest.TestCase):
             owner_check = "\n".join(f"{key}={value}" for key, value in sorted(owner_data.items()))
             owner_data["hash"] = hmac.new(secret, owner_check.encode(), hashlib.sha256).hexdigest()
             owner_init = urlencode(owner_data)
+            os.environ["ADMIN_ACCESS_CODE"] = "134679"
+            bot.OWNER_ADMIN_SESSIONS.clear()
+            admin_auth = bot.api("/api/admin/access", {"initData": owner_init, "code": "134679"})
+            admin_token = admin_auth.get("session_token", "")
+            self.assertTrue(admin_token)
             instructions_result = bot.api("/api/digital/instructions", {
-                "initData": owner_init, "id": "order-locked", "instructions": "wallet"
+                "initData": owner_init, "sessionToken": admin_token,
+                "id": "order-locked", "instructions": "wallet"
             })
             self.assertIn("NOWPayments", instructions_result.get("error", ""))
 
             bot.PRIVATE_CACHE["digital_orders"][0]["status"] = "payment_reported"
             admin_result = bot.api("/api/digital/order-status", {
-                "initData": owner_init, "id": "order-locked", "action": "received"
+                "initData": owner_init, "sessionToken": admin_token,
+                "id": "order-locked", "action": "received"
             })
             self.assertIn("IPN signée", admin_result.get("error", ""))
         self.assertEqual(bot.PRIVATE_CACHE["digital_orders"][0]["status"], "payment_reported")
