@@ -1052,7 +1052,7 @@ function call(path,body){
     var friendly=null;
     if(e && e.name==="AbortError") friendly="Le serveur met trop de temps à répondre.";
     else if(e && (e instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(e.message||""))) friendly="Connexion au serveur impossible. Le réseau ou le serveur RADARPAY ne répond pas.";
-    else if(e && /Erreur HTTP 5\\d\\d|Réponse API invalide/i.test(e.message||"")) friendly="Le serveur a rencontré une erreur temporaire.";
+    else if(e && /Erreur HTTP 5\d\d|Réponse API invalide/i.test(e.message||"")) friendly="Le serveur a rencontré une erreur temporaire.";
     if(friendly){showRecoveryNotice(friendly);throw new Error(friendly+" Suis les étapes affichées en bas de l’écran.");}
     throw e;
   }).finally(function(){if(timer)clearTimeout(timer)});
@@ -1148,8 +1148,9 @@ function loadSpittaItems(){
   if(USER_ROLE!=="spitta"&&USER_ROLE!=="owner")return;
   var isAdmin=USER_ROLE==="owner";
   if(isAdmin){$("publications-intro").textContent="Vue administrateur : informations des publications SPITTA. Les photos restent dans la galerie TARGETS.";$("publications-title").textContent="Publications SPITTA";$("spitta-publish-card").hidden=true;$("admin-publish-toggle").hidden=true;$("spitta-requests").hidden=true;}
+  var host=$("spittamine");if(!host)return;host.textContent="Chargement de tes TARGETS…";
   call("/api/me",{}).then(function(r){
-    var host=$("spittamine");if(!host)return;host.innerHTML="";
+    host.innerHTML="";
     var mine=(r.mine||[]);MY_PHOTO_IDS=mine.slice();
     var own=PHOTOS.filter(function(p){return mine.indexOf(p.id)>-1});
     if(!own.length){host.textContent=isAdmin?"Aucune publication enregistrée pour le moment.":"Tu n’as pas encore publié de TARGET.";return}
@@ -1160,7 +1161,7 @@ function loadSpittaItems(){
       var heading=document.createElement("h3");heading.className="spitta-category-heading";heading.textContent=group.label;host.appendChild(heading);
       items.forEach(function(p){
         var d=document.createElement("article");d.className="spitta-product-card";
-        if(!isAdmin){var im=document.createElement("img");im.className="spitta-product-photo";im.src=p.src;im.alt="Photo associée au TARGET";d.appendChild(im);}
+        if(!isAdmin){var im=document.createElement("img");im.className="spitta-product-photo";im.alt="Photo associée au TARGET";loadPhotoImage(im,p.src,function(){im.alt="Photo momentanément indisponible";});d.appendChild(im);}
         var info=document.createElement("div");info.className="spitta-product-info";
         if(isAdmin){var author=document.createElement("b");author.textContent=p.auteur||"Auteur non renseigné";info.appendChild(author);
           var stamp=Number(p.id),time=document.createElement("div");time.className="spitta-product-hint";time.textContent=Number.isFinite(stamp)&&stamp>0?"Publié le "+new Date(stamp).toLocaleString("fr-FR"):"Heure de publication indisponible";info.appendChild(time);}
@@ -1724,7 +1725,7 @@ function loadDigitalAdmin(){
         card.appendChild(yes);card.appendChild(no);
       }
       if(order.status==="paid"){
-        var file=document.createElement("input");file.type="file";file.accept="image/jpeg,image/png,image/webp";file.className="inp";
+        var file=document.createElement("input");file.type="file";file.accept="image/jpeg,image/png";file.className="inp";
         var sendPhoto=digitalNode("button","btn s","Envoyer la photo au CALLER");sendPhoto.type="button";
         sendPhoto.addEventListener("click",function(){
           var selected=file.files&&file.files[0];if(!selected){window.alert("Choisis la photo du TARGET.");return}
