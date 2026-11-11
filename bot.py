@@ -1140,21 +1140,21 @@ def api(path, b):
         if not _has_valid_app_session(profile, b.get("sessionToken", "")):
             return {"error": "Session fermée. Clique sur Se connecter et entre ton code secret à 4 chiffres."}
     if path == "/api/digital/list":
-        if r != "lanceur":
+        if role(user) != "lanceur":
             return {"error": "Cet onglet est réservé aux comptes CALLER."}
         with LOCK:
             items = list(private_load().setdefault("digital_targets", []))
         return {"ok": True, "items": [{k: item.get(k) for k in ("id", "title", "description", "price", "created")} for item in items]}
 
     if path == "/api/digital/admin":
-        if uid != OWNER or r != "owner":
+        if uid != OWNER:
             return {"error": "Gestion réservée au propriétaire."}
         with LOCK:
             items = list(private_load().setdefault("digital_targets", []))
         return {"ok": True, "items": items}
 
     if path == "/api/digital/create":
-        if uid != OWNER or r != "owner":
+        if uid != OWNER:
             return {"error": "Seul le propriétaire peut publier un TARGET NUMÉRIQUE."}
         title = re.sub(r"\s+", " ", str(b.get("title", "")).strip())[:90]
         description = str(b.get("description", "")).strip()[:500]
@@ -1171,7 +1171,7 @@ def api(path, b):
         return {"ok": True, "item": item}
 
     if path == "/api/digital/delete":
-        if uid != OWNER or r != "owner":
+        if uid != OWNER:
             return {"error": "Seul le propriétaire peut supprimer un TARGET NUMÉRIQUE."}
         target_id = str(b.get("id", ""))[:40]
         with LOCK:
@@ -1414,7 +1414,7 @@ def api(path, b):
             print("notification raison paiement:", repr(e))
         return {"ok": True, "late": late}
     if path == "/api/admin/payment-reports":
-        if uid != OWNER or r != "owner":
+        if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
         with LOCK:
             pdata = private_load()
@@ -1425,7 +1425,7 @@ def api(path, b):
             report.pop("proof_file", None)
         return {"ok": True, "reports": reports}
     if path == "/api/admin/payment-file":
-        if uid != OWNER or r != "owner":
+        if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
         report_id = str(b.get("id", ""))[:40]
         with LOCK:
@@ -1447,7 +1447,7 @@ def api(path, b):
             print("lecture preuve paiement admin:", repr(e))
             return {"error": "Impossible de charger ce justificatif."}
     if path == "/api/admin/payment-decision":
-        if uid != OWNER or r != "owner":
+        if uid != OWNER:
             return {"error": "Accès réservé à l’administrateur."}
         report_id = str(b.get("id", ""))[:40]
         decision = str(b.get("decision", ""))
