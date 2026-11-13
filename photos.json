@@ -1,6 +1,6 @@
 {
   "api": "https://radarpay-90js.onrender.com",
-  "maj": "10 novembre",
+  "maj": "13 novembre 2026 à 05:36",
   "photos": [
     {
       "id": "1794342884702-b7d33a96",
@@ -12,17 +12,6 @@
       "categorie": "2500",
       "auteur": "Azerty UHQ",
       "o": "4zyYq_OqcYI="
-    },
-    {
-      "id": "1794342366864-d0fa96e3",
-      "created": 1794342366,
-      "image": "1794342366864-d0fa96e3.jpg",
-      "prix": "5000 €",
-      "pays": "Belgique",
-      "pourcentage": "50",
-      "categorie": "5000",
-      "auteur": "Azerty UHQ",
-      "o": "648NE52p3DM="
     }
   ]
 }
